@@ -10,7 +10,7 @@ import { api } from "@/utils/api";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: (token: string, user: any) => void;
+  onAuthSuccess: (token: string, user: { id: string; email: string; name?: string }) => void;
   mode: 'login' | 'signup';
 }
 

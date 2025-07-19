@@ -19,15 +19,6 @@ interface QuoteItem {
   total: number;
 }
 
-interface VendorQuote {
-  vendorName: string;
-  items: QuoteItem[];
-  terms: {
-    payment: string;
-    warranty: string;
-  };
-}
-
 interface User {
   id: string;
   email: string;

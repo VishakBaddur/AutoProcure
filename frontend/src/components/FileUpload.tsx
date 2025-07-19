@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
 interface FileUploadProps {
-  onFileUpload: (file: File) => Promise<any>;
+  onFileUpload: (file: File) => Promise<unknown>;
 }
 
 type FileStatus = 'pending' | 'uploading' | 'analyzing' | 'done' | 'error';
@@ -15,7 +15,7 @@ type FileStatus = 'pending' | 'uploading' | 'analyzing' | 'done' | 'error';
 interface FileState {
   file: File;
   status: FileStatus;
-  result?: any;
+  result?: unknown;
   error?: string;
 }
 
@@ -48,8 +48,9 @@ export default function FileUpload({ onFileUpload }: FileUploadProps) {
           setFiles(prev => prev.map((f, i) => i === idx ? { ...f, status: 'analyzing' } : f));
           const result = await onFileUpload(fileState.file);
           setFiles(prev => prev.map((f, i) => i === idx ? { ...f, status: 'done', result } : f));
-        } catch (err: any) {
-          setFiles(prev => prev.map((f, i) => i === idx ? { ...f, status: 'error', error: err?.message || 'Upload failed' } : f));
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'Upload failed';
+          setFiles(prev => prev.map((f, i) => i === idx ? { ...f, status: 'error', error: errorMessage } : f));
         }
       })
     );
@@ -100,7 +101,7 @@ export default function FileUpload({ onFileUpload }: FileUploadProps) {
                   {f.status === 'done' && <span className="text-green-600 text-xs">Done</span>}
                   {f.status === 'error' && <span className="text-red-600 text-xs">{f.error}</span>}
                 </div>
-                {f.result && (
+                {Boolean(f.result) && (
                   <div className="mt-2 text-xs text-gray-700 bg-green-50 rounded p-2">
                     Analysis complete. See results above.
                   </div>
