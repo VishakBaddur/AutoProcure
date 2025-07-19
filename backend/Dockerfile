@@ -1,6 +1,10 @@
 # Use Python 3.11 slim image
 FROM python:3.11-slim
 
+# Add build argument to force cache busting
+ARG BUILD_DATE=2024-01-01
+ENV BUILD_DATE=${BUILD_DATE}
+
 # Set working directory
 WORKDIR /app
 
