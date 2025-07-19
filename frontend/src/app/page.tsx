@@ -3,11 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/AuthModal";
@@ -33,25 +28,20 @@ interface VendorQuote {
   };
 }
 
-interface AnalysisResult {
-  quotes: VendorQuote[];
-  comparison: {
-    totalCost: number;
-    deliveryTime: string;
-    vendorCount: number;
-  };
-  recommendation: string;
+interface User {
+  id: string;
+  email: string;
+  name?: string;
 }
 
 export default function Home() {
   const { user, isAuthenticated, login, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [results, setResults] = useState<any[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [results, setResults] = useState<Array<{fileName: string, result: unknown}>>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const handleAuthSuccess = (token: string, userData: any) => {
+  const handleAuthSuccess = (token: string, userData: User) => {
     login(token, userData);
     setShowAuthModal(false);
   };
@@ -63,15 +53,13 @@ export default function Home() {
       throw new Error('Not authenticated');
     }
 
-    setIsAnalyzing(true);
     try {
       const result = await api.uploadFile(file);
       setResults(prev => [...prev, { fileName: file.name, result }]);
       return result;
-    } catch (error: any) {
-      throw new Error(error?.message || 'Upload failed');
-    } finally {
-      setIsAnalyzing(false);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      throw new Error(errorMessage);
     }
   };
 
@@ -173,92 +161,79 @@ export default function Home() {
                     {/* Quotes */}
                     <div>
                       <h3 className="text-lg font-semibold mb-3">Extracted Quotes</h3>
-                      {result.quotes?.map((quote: any, index: number) => (
+                      {(result as {quotes?: unknown[]})?.quotes?.map((quote: unknown, index: number) => (
                         <div key={index} className="border rounded-lg p-4 mb-4">
                           <div className="flex justify-between items-start mb-3">
-                            <h4 className="font-medium">{quote.vendorName}</h4>
-                            <Badge variant="outline">{quote.quoteNumber}</Badge>
+                            <h4 className="font-medium">{(quote as {vendorName?: string})?.vendorName || 'Unknown Vendor'}</h4>
+                            <Badge variant="outline">{(quote as {quoteNumber?: string})?.quoteNumber || 'N/A'}</Badge>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                               <p className="text-sm text-gray-600">Quote Date</p>
-                              <p className="font-medium">{quote.quoteDate}</p>
+                              <p className="font-medium">{(quote as {quoteDate?: string})?.quoteDate || 'N/A'}</p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-600">Valid Until</p>
-                              <p className="font-medium">{quote.validUntil}</p>
+                              <p className="font-medium">{(quote as {validUntil?: string})?.validUntil || 'N/A'}</p>
                             </div>
                           </div>
                           {/* Items */}
                           <div>
                             <h5 className="font-medium mb-2">Items</h5>
                             <div className="space-y-2">
-                              {quote.items?.map((item: any, itemIndex: number) => (
+                              {(quote as {items?: unknown[]})?.items?.map((item: unknown, itemIndex: number) => (
                                 <div key={itemIndex} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                                   <div>
-                                    <p className="font-medium">{item.description}</p>
+                                    <p className="font-medium">{(item as {description?: string})?.description || 'Unknown Item'}</p>
                                     <p className="text-sm text-gray-600">
-                                      Qty: {item.quantity} | Unit: ${item.unitPrice}
+                                      SKU: {(item as {sku?: string})?.sku || 'N/A'} | 
+                                      Qty: {(item as {quantity?: number})?.quantity || 0}
                                     </p>
                                   </div>
-                                  <p className="font-semibold">${item.total}</p>
+                                  <div className="text-right">
+                                    <p className="font-medium">
+                                      ${((item as {unitPrice?: number})?.unitPrice || 0).toFixed(2)}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      Total: ${((item as {total?: number})?.total || 0).toFixed(2)}
+                                    </p>
+                                  </div>
                                 </div>
                               ))}
                             </div>
                           </div>
-                          {/* Terms */}
-                          {quote.terms && (
-                            <div className="mt-4">
-                              <h5 className="font-medium mb-2">Terms & Conditions</h5>
-                              <p className="text-sm text-gray-600">{quote.terms.paymentTerms}</p>
-                              <p className="text-sm text-gray-600">Delivery: {quote.terms.deliveryTerms}</p>
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
-                    {/* Comparison */}
-                    {result.comparison && (
-                      <div>
-                        <h3 className="text-lg font-semibold mb-3">Quote Comparison</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-blue-50 p-4 rounded-lg">
-                            <p className="text-sm text-gray-600">Total Cost</p>
-                            <p className="text-2xl font-bold text-blue-600">
-                              ${result.comparison.totalCost?.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="bg-green-50 p-4 rounded-lg">
-                            <p className="text-sm text-gray-600">Delivery Time</p>
-                            <p className="text-2xl font-bold text-green-600">
-                              {result.comparison.deliveryTime}
-                            </p>
-                          </div>
-                          <div className="bg-purple-50 p-4 rounded-lg">
-                            <p className="text-sm text-gray-600">Vendors Analyzed</p>
-                            <p className="text-2xl font-bold text-purple-600">
-                              {result.comparison.vendorCount}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
                     {/* Recommendation */}
-                    {result.recommendation && (
-                      <div>
-                        <h3 className="text-lg font-semibold mb-3">AI Recommendation</h3>
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <p className="text-gray-800">{result.recommendation}</p>
-                        </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">AI Recommendation</h3>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-blue-900">
+                          {(result as {recommendation?: string})?.recommendation || 'No recommendation available'}
+                        </p>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
 
             {/* Quote History */}
-            {showHistory && <QuoteHistory />}
+            {showHistory && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quote History</CardTitle>
+                  <CardDescription>
+                    View your previous quote analyses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QuoteHistory />
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </main>
@@ -267,8 +242,8 @@ export default function Home() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
         mode={authMode}
+        onAuthSuccess={handleAuthSuccess}
       />
     </div>
   );
