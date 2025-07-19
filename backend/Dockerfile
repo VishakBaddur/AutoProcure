@@ -13,11 +13,11 @@ RUN apt-get update && apt-get install -y \
 RUN curl -fsSL https://ollama.ai/install.sh | sh
 
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY backend/ .
 
 # Download Mistral model during build (this takes time but ensures it's available)
 RUN ollama pull mistral
