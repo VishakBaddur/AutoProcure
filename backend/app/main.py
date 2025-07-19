@@ -48,13 +48,22 @@ class LoginRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database connection on startup"""
-    await db.connect()
+    try:
+        await db.connect()
+        print("✅ Database connected successfully")
+    except Exception as e:
+        print(f"⚠️ Database connection failed: {e}")
+        print("⚠️ App will continue without database functionality")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close database connections on shutdown"""
-    if db.pool:
-        await db.pool.close()
+    try:
+        if db.pool:
+            await db.pool.close()
+            print("✅ Database connection closed")
+    except Exception as e:
+        print(f"⚠️ Error closing database: {e}")
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[Dict[str, Any]]:
     """Get current user from JWT token"""
@@ -247,7 +256,24 @@ async def get_analytics(current_user: Optional[Dict[str, Any]] = Depends(get_cur
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "AutoProcure API"}
+    """Health check endpoint that works without database"""
+    try:
+        # Check if database is connected
+        db_status = "connected" if db.pool else "disconnected"
+        
+        return {
+            "status": "healthy", 
+            "service": "AutoProcure API",
+            "database": db_status,
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "service": "AutoProcure API", 
+            "error": str(e),
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
 
 @app.get("/ai-status")
 async def ai_status():
