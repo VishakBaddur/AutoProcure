@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+pdfplumber
+openpyxl
+httpx
+python-dotenv
+asyncpg
+PyJWT
+
