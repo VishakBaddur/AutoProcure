@@ -8,10 +8,13 @@ ENV BUILD_DATE=${BUILD_DATE}
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including curl for Ollama installation
 RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Ollama
+RUN curl -fsSL https://ollama.ai/install.sh | sh
 
 # Copy requirements and install Python dependencies
 COPY backend/requirements.txt .
@@ -23,5 +26,5 @@ COPY backend/ .
 # Expose port
 EXPOSE 8000
 
-# Start FastAPI application directly
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Start Ollama, download model, and then start FastAPI
+CMD ollama serve & sleep 10 && ollama pull mistral && uvicorn app.main:app --host 0.0.0.0 --port 8000 
