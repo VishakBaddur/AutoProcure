@@ -19,11 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY backend/ .
 
-# Download Mistral model during build (this takes time but ensures it's available)
-RUN ollama pull mistral
-
 # Expose port
 EXPOSE 8000
 
-# Start Ollama in background and then start the FastAPI app
-CMD ollama serve & sleep 10 && uvicorn app.main:app --host 0.0.0.0 --port 8000 
+# Start Ollama, download model, and then start FastAPI
+CMD ollama serve & sleep 5 && ollama pull mistral && uvicorn app.main:app --host 0.0.0.0 --port 8000 
