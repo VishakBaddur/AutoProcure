@@ -27,4 +27,4 @@ COPY backend/ .
 EXPOSE 8000
 
 # Start Ollama, download model, and then start FastAPI
-CMD ollama serve & sleep 10 && ollama pull mistral && uvicorn app.main:app --host 0.0.0.0 --port 8000 
+CMD ollama serve & sleep 10 && ollama pull mistral && uvicorn app.main:app --host 0.0.0.0 --port $PORT 
