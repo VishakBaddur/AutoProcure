@@ -10,15 +10,6 @@ import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
 
-interface QuoteItem {
-  sku: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  deliveryTime: string;
-  total: number;
-}
-
 interface User {
   id: string;
   email: string;
