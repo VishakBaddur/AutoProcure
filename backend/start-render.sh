@@ -9,11 +9,11 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-# Install Ollama if not already installed
+# Install Ollama if not already installed (user installation, no root required)
 if ! command -v ollama &> /dev/null; then
-    log "📦 Installing Ollama..."
-    curl -fsSL https://ollama.ai/install.sh | sh
-    export PATH=$PATH:/usr/local/bin
+    log "📦 Installing Ollama (user installation)..."
+    curl -fsSL https://ollama.ai/install.sh | OLLAMA_HOST=0.0.0.0:11434 sh
+    export PATH=$PATH:$HOME/.local/bin
 else
     log "✅ Ollama already installed"
 fi

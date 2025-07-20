@@ -50,6 +50,9 @@ class AIProcessor:
                     return self._get_fallback_quote()
             elif self.ai_provider == "openai":
                 response = await self._call_openai(prompt)
+            elif self.ai_provider == "fallback":
+                # Use realistic fallback data for demo purposes
+                return self._get_realistic_fallback_quote(text_content)
             else:
                 raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
             
@@ -227,6 +230,35 @@ JSON Response:"""
             terms=QuoteTerms(
                 payment="Manual Review Required",
                 warranty="Manual Review Required"
+            )
+        )
+
+    def _get_realistic_fallback_quote(self, text_content: str) -> VendorQuote:
+        """Provides realistic fallback data for demonstration purposes."""
+        print("Using realistic fallback quote for demonstration.")
+        return VendorQuote(
+            vendorName="Sample Vendor",
+            items=[
+                QuoteItem(
+                    sku="SMPL-001",
+                    description="Sample Product 1",
+                    quantity=10,
+                    unitPrice=10.50,
+                    deliveryTime="5 days",
+                    total=105.00
+                ),
+                QuoteItem(
+                    sku="SMPL-002",
+                    description="Sample Product 2",
+                    quantity=5,
+                    unitPrice=20.00,
+                    deliveryTime="10 days",
+                    total=100.00
+                )
+            ],
+            terms=QuoteTerms(
+                payment="Net 30",
+                warranty="1 year"
             )
         )
 
