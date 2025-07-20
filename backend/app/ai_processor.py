@@ -234,8 +234,9 @@ JSON Response:"""
                                 quantity = int(match.group(2))
                                 unit_price = float(match.group(3).replace(',', ''))
                             
-                            # Skip if values are unreasonable
-                            if quantity > 0 and unit_price > 0 and unit_price < 1000000:
+                            # Skip if values are unreasonable or description is too short
+                            if (quantity > 0 and unit_price > 0 and unit_price < 1000000 and 
+                                len(description) > 2 and not description.isdigit()):
                                 total = quantity * unit_price
                                 sku = f"ITEM-{len(items)+1:03d}"
                                 
