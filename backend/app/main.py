@@ -402,10 +402,23 @@ async def ai_status():
     ai_provider = os.getenv('AI_PROVIDER', 'ollama')
     model_name = os.getenv('AI_MODEL', 'mistral')
     
+    # Test Ollama if it's the provider
+    ollama_working = False
+    if ai_provider == 'ollama':
+        try:
+            # Simple test prompt
+            test_prompt = "Say 'Hello World'"
+            response = await ai_processor._call_ollama(test_prompt)
+            ollama_working = len(response.strip()) > 0
+        except Exception as e:
+            print(f"Ollama test failed: {str(e)}")
+            ollama_working = False
+    
     return {
         "ai_provider": ai_provider,
         "model_name": model_name,
         "ollama_url": os.getenv('OLLAMA_URL', 'http://localhost:11434'),
+        "ollama_working": ollama_working,
         "openai_configured": bool(os.getenv('OPENAI_API_KEY')),
         "database_connected": db.pool is not None,
         "supabase_auth_configured": bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
