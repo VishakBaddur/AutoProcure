@@ -172,110 +172,183 @@ JSON Response:"""
         """Analyze quote using NLP techniques and pattern matching"""
         import re
         
-        # Extract the quote text from the prompt
-        quote_text = prompt.split("QUOTE TEXT:")[-1].strip()
-        
-        # Extract vendor name (look for company patterns)
-        vendor_patterns = [
-            r'(?:from|by|vendor|supplier|company):\s*([A-Z][A-Za-z\s&.,]+)',
-            r'([A-Z][A-Za-z\s&.,]+)\s+(?:Inc|Corp|LLC|Ltd|Company|Co)',
-            r'Quote\s+from\s+([A-Z][A-Za-z\s&.,]+)',
-        ]
-        
-        vendor_name = "Unknown Vendor"
-        for pattern in vendor_patterns:
-            match = re.search(pattern, quote_text, re.IGNORECASE)
-            if match:
-                vendor_name = match.group(1).strip()
-                break
-        
-        # Extract items using pattern matching
-        items = []
-        
-        # Look for common item patterns
-        item_patterns = [
-            r'(\d+)\s*x?\s*([A-Za-z0-9\s\-]+?)\s*@?\s*\$?([\d,]+\.?\d*)',
-            r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*@?\s*\$?([\d,]+\.?\d*)',
-            r'Qty:\s*(\d+).*?Item:\s*([A-Za-z0-9\s\-]+?)\s*Price:\s*\$?([\d,]+\.?\d*)',
-        ]
-        
-        for pattern in item_patterns:
-            matches = re.finditer(pattern, quote_text, re.IGNORECASE)
-            for match in matches:
-                try:
-                    if len(match.groups()) == 3:
-                        if match.group(1).isdigit():
-                            quantity = int(match.group(1))
-                            description = match.group(2).strip()
-                            unit_price = float(match.group(3).replace(',', ''))
-                        else:
-                            description = match.group(1).strip()
-                            quantity = int(match.group(2))
-                            unit_price = float(match.group(3).replace(',', ''))
-                        
-                        total = quantity * unit_price
-                        sku = f"ITEM-{len(items)+1:03d}"
-                        
-                        items.append({
-                            "sku": sku,
-                            "description": description,
-                            "quantity": quantity,
-                            "unitPrice": unit_price,
-                            "deliveryTime": "7-10 days",
-                            "total": total
-                        })
-                except (ValueError, IndexError):
-                    continue
-        
-        # If no items found, create a default item
-        if not items:
-            items.append({
-                "sku": "DEFAULT-001",
-                "description": "Product/Service",
-                "quantity": 1,
-                "unitPrice": 100.0,
-                "deliveryTime": "TBD",
-                "total": 100.0
-            })
-        
-        # Extract payment terms
-        payment_patterns = [
-            r'(?:payment|terms):\s*([A-Za-z0-9\s]+)',
-            r'(net\s+\d+)',
-            r'(due\s+upon\s+receipt)',
-        ]
-        
-        payment_terms = "Net 30"
-        for pattern in payment_patterns:
-            match = re.search(pattern, quote_text, re.IGNORECASE)
-            if match:
-                payment_terms = match.group(1).strip()
-                break
-        
-        # Extract warranty
-        warranty_patterns = [
-            r'(?:warranty|guarantee):\s*([A-Za-z0-9\s]+)',
-            r'(\d+\s+year[s]?\s+warranty)',
-        ]
-        
-        warranty = "Standard warranty"
-        for pattern in warranty_patterns:
-            match = re.search(pattern, quote_text, re.IGNORECASE)
-            if match:
-                warranty = match.group(1).strip()
-                break
-        
-        # Create JSON response
-        result = {
-            "vendorName": vendor_name,
-            "items": items,
-            "terms": {
-                "payment": payment_terms,
-                "warranty": warranty
+        try:
+            # Extract the quote text from the prompt
+            if "QUOTE TEXT:" in prompt:
+                quote_text = prompt.split("QUOTE TEXT:")[-1].strip()
+            else:
+                # If no QUOTE TEXT marker, use the entire prompt
+                quote_text = prompt
+            
+            print(f"Analyzing quote text: {quote_text[:200]}...")
+            
+            # Extract vendor name (look for company patterns)
+            vendor_patterns = [
+                r'(?:from|by|vendor|supplier|company):\s*([A-Z][A-Za-z\s&.,]+)',
+                r'([A-Z][A-Za-z\s&.,]+)\s+(?:Inc|Corp|LLC|Ltd|Company|Co)',
+                r'Quote\s+from\s+([A-Z][A-Za-z\s&.,]+)',
+                r'([A-Z][A-Za-z\s&.,]+)\s+Quote',
+                r'Vendor:\s*([A-Z][A-Za-z\s&.,]+)',
+            ]
+            
+            vendor_name = "Unknown Vendor"
+            for pattern in vendor_patterns:
+                match = re.search(pattern, quote_text, re.IGNORECASE)
+                if match:
+                    vendor_name = match.group(1).strip()
+                    break
+            
+            # If no vendor found, try to extract from filename or first line
+            if vendor_name == "Unknown Vendor":
+                lines = quote_text.split('\n')
+                for line in lines[:5]:  # Check first 5 lines
+                    if any(word in line.lower() for word in ['vendor', 'supplier', 'company', 'inc', 'corp', 'llc']):
+                        vendor_name = line.strip()
+                        break
+            
+            print(f"Extracted vendor: {vendor_name}")
+            
+            # Extract items using pattern matching
+            items = []
+            
+            # Look for common item patterns
+            item_patterns = [
+                r'(\d+)\s*x?\s*([A-Za-z0-9\s\-]+?)\s*@?\s*\$?([\d,]+\.?\d*)',
+                r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*@?\s*\$?([\d,]+\.?\d*)',
+                r'Qty:\s*(\d+).*?Item:\s*([A-Za-z0-9\s\-]+?)\s*Price:\s*\$?([\d,]+\.?\d*)',
+                r'(\d+)\s*([A-Za-z0-9\s\-]+?)\s*\$?([\d,]+\.?\d*)',
+                r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*\$?([\d,]+\.?\d*)',
+            ]
+            
+            for pattern in item_patterns:
+                matches = re.finditer(pattern, quote_text, re.IGNORECASE)
+                for match in matches:
+                    try:
+                        if len(match.groups()) == 3:
+                            if match.group(1).isdigit():
+                                quantity = int(match.group(1))
+                                description = match.group(2).strip()
+                                unit_price = float(match.group(3).replace(',', ''))
+                            else:
+                                description = match.group(1).strip()
+                                quantity = int(match.group(2))
+                                unit_price = float(match.group(3).replace(',', ''))
+                            
+                            # Skip if values are unreasonable
+                            if quantity > 0 and unit_price > 0 and unit_price < 1000000:
+                                total = quantity * unit_price
+                                sku = f"ITEM-{len(items)+1:03d}"
+                                
+                                items.append({
+                                    "sku": sku,
+                                    "description": description,
+                                    "quantity": quantity,
+                                    "unitPrice": unit_price,
+                                    "deliveryTime": "7-10 days",
+                                    "total": total
+                                })
+                                print(f"Extracted item: {quantity}x {description} @ ${unit_price}")
+                    except (ValueError, IndexError) as e:
+                        print(f"Error parsing item: {e}")
+                        continue
+            
+            # If no items found, try to extract any numbers that might be prices
+            if not items:
+                print("No items found with patterns, trying alternative extraction...")
+                # Look for any numbers that might be prices
+                price_pattern = r'\$?([\d,]+\.?\d*)'
+                price_matches = re.findall(price_pattern, quote_text)
+                
+                if price_matches:
+                    # Use the first price found as a default item
+                    try:
+                        unit_price = float(price_matches[0].replace(',', ''))
+                        if unit_price > 0 and unit_price < 1000000:
+                            items.append({
+                                "sku": "DEFAULT-001",
+                                "description": "Product/Service",
+                                "quantity": 1,
+                                "unitPrice": unit_price,
+                                "deliveryTime": "TBD",
+                                "total": unit_price
+                            })
+                            print(f"Created default item with price: ${unit_price}")
+                    except ValueError:
+                        pass
+            
+            # If still no items, create a minimal item
+            if not items:
+                items.append({
+                    "sku": "DEFAULT-001",
+                    "description": "Product/Service",
+                    "quantity": 1,
+                    "unitPrice": 100.0,
+                    "deliveryTime": "TBD",
+                    "total": 100.0
+                })
+                print("Created minimal default item")
+            
+            # Extract payment terms
+            payment_patterns = [
+                r'(?:payment|terms):\s*([A-Za-z0-9\s]+)',
+                r'(net\s+\d+)',
+                r'(due\s+upon\s+receipt)',
+                r'(net\s+30)',
+                r'(net\s+60)',
+            ]
+            
+            payment_terms = "Net 30"
+            for pattern in payment_patterns:
+                match = re.search(pattern, quote_text, re.IGNORECASE)
+                if match:
+                    payment_terms = match.group(1).strip()
+                    break
+            
+            # Extract warranty
+            warranty_patterns = [
+                r'(?:warranty|guarantee):\s*([A-Za-z0-9\s]+)',
+                r'(\d+\s+year[s]?\s+warranty)',
+                r'(standard\s+warranty)',
+            ]
+            
+            warranty = "Standard warranty"
+            for pattern in warranty_patterns:
+                match = re.search(pattern, quote_text, re.IGNORECASE)
+                if match:
+                    warranty = match.group(1).strip()
+                    break
+            
+            # Create JSON response
+            result = {
+                "vendorName": vendor_name,
+                "items": items,
+                "terms": {
+                    "payment": payment_terms,
+                    "warranty": warranty
+                }
             }
-        }
-        
-        return json.dumps(result, indent=2)
+            
+            print(f"Analysis complete. Found {len(items)} items for {vendor_name}")
+            return json.dumps(result, indent=2)
+            
+        except Exception as e:
+            print(f"Error in NLP analysis: {str(e)}")
+            # Return a basic fallback
+            return json.dumps({
+                "vendorName": "Analysis Failed",
+                "items": [{
+                    "sku": "ERROR-001",
+                    "description": "Analysis failed - please check file format",
+                    "quantity": 1,
+                    "unitPrice": 0.0,
+                    "deliveryTime": "TBD",
+                    "total": 0.0
+                }],
+                "terms": {
+                    "payment": "Manual Review Required",
+                    "warranty": "Manual Review Required"
+                }
+            }, indent=2)
 
     def _parse_ai_response(self, response: str) -> Dict[str, Any]:
         """Parse AI response and extract JSON"""

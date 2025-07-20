@@ -424,6 +424,39 @@ async def ai_status():
         "supabase_auth_configured": bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
     }
 
+@app.get("/test-nlp")
+async def test_nlp():
+    """Test NLP analysis with sample quote text"""
+    try:
+        sample_text = """
+        Quote from ABC Supplies Inc.
+        
+        ITEMS:
+        10 x Laptop Computers @ $899.99
+        5 x Monitors @ $299.99
+        
+        Payment: Net 30
+        Warranty: 1 year standard warranty
+        """
+        
+        # Create a simple prompt
+        prompt = f"QUOTE TEXT:\n{sample_text}"
+        
+        # Test the NLP analysis
+        result = ai_processor._analyze_quote_with_nlp(prompt)
+        
+        return {
+            "status": "success",
+            "sample_text": sample_text,
+            "analysis_result": result,
+            "parsed_result": json.loads(result)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
