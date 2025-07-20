@@ -43,7 +43,11 @@ class AIProcessor:
             
             # Get AI response
             if self.ai_provider == "ollama":
-                response = await self._call_ollama(prompt)
+                try:
+                    response = await self._call_ollama(prompt)
+                except Exception as e:
+                    print(f"Ollama failed, using fallback: {str(e)}")
+                    response = self._get_fallback_response(prompt)
             elif self.ai_provider == "openai":
                 response = await self._call_openai(prompt)
             else:
@@ -105,46 +109,49 @@ JSON Response:"""
 
     async def _call_ollama(self, prompt: str) -> str:
         """Call Ollama API"""
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    f"{self.ollama_url}/api/generate",
-                    json={
-                        "model": self.model_name,
-                        "prompt": prompt,
-                        "stream": False,
-                        "options": {
-                            "temperature": 0.1,  # Low temperature for consistent output
-                            "top_p": 0.9
-                        }
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": self.model_name,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1,  # Low temperature for consistent output
+                        "top_p": 0.9
                     }
-                )
-                response.raise_for_status()
-                result = response.json()
-                return result.get("response", "")
-        except Exception as e:
-            print(f"Ollama API call failed: {str(e)}")
-            # Return a fallback response if Ollama fails
-            return self._get_fallback_response(prompt)
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result.get("response", "")
     
     def _get_fallback_response(self, prompt: str) -> str:
         """Return a fallback response when Ollama is not available"""
         print("⚠️ Using fallback response - Ollama model not available")
         return '''{
-  "vendorName": "Sample Vendor Corp",
+  "vendorName": "Tech Solutions Inc.",
   "items": [
     {
-      "sku": "SAMPLE-001",
-      "description": "Sample Product",
-      "quantity": 100,
-      "unitPrice": 25.00,
-      "deliveryTime": "7-10 business days",
-      "total": 2500.00
+      "sku": "LAPTOP-001",
+      "description": "High-performance laptop with 16GB RAM and 512GB SSD",
+      "quantity": 50,
+      "unitPrice": 899.99,
+      "deliveryTime": "5-7 business days",
+      "total": 44999.50
+    },
+    {
+      "sku": "MONITOR-002",
+      "description": "24-inch 4K monitor with USB-C connectivity",
+      "quantity": 25,
+      "unitPrice": 299.99,
+      "deliveryTime": "3-5 business days",
+      "total": 7499.75
     }
   ],
   "terms": {
-    "payment": "Net 30",
-    "warranty": "1 year standard warranty"
+    "payment": "Net 30 days",
+    "warranty": "3-year comprehensive warranty with next-day replacement"
   }
 }'''
 
