@@ -15,9 +15,10 @@ import io
 import json
 from typing import List, Dict, Any, Optional
 import httpx
-from .models import QuoteItem, QuoteTerms, VendorQuote, AnalysisResult
+from .models import QuoteItem, QuoteTerms, VendorQuote, AnalysisResult, MultiVendorAnalysis
 from .slack import send_slack_alert
 from .ai_processor import ai_processor
+from .multi_vendor_analyzer import multi_vendor_analyzer
 from .database import db
 from .auth import auth_manager
 
@@ -219,6 +220,118 @@ async def upload_file(
         return result_dict
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+@app.post("/analyze-multiple", response_model=AnalysisResult)
+async def analyze_multiple_quotes(
+    files: List[UploadFile] = File(...),
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
+):
+    """Analyze multiple vendor quotes and provide intelligent multi-vendor recommendations"""
+    if not files or len(files) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 vendor quotes required for comparison")
+    
+    if len(files) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 vendor quotes allowed for analysis")
+    
+    try:
+        quotes = []
+        file_contents = []
+        
+        # Process each file
+        for file in files:
+            if not file.filename:
+                continue
+                
+            file_extension = file.filename.lower().split('.')[-1]
+            if file_extension not in ['pdf', 'xlsx', 'xls']:
+                continue
+            
+            # Read and extract text
+            file_content = await file.read()
+            if file_extension == 'pdf':
+                text_content = extract_text_from_pdf(file_content)
+            else:
+                text_content = extract_text_from_excel(file_content)
+            
+            # Analyze quote
+            quote = await ai_processor.analyze_quote(text_content)
+            quotes.append(quote)
+            file_contents.append({
+                "filename": file.filename,
+                "content": text_content
+            })
+        
+        if len(quotes) < 2:
+            raise HTTPException(status_code=400, detail="Could not analyze enough quotes for comparison")
+        
+        # Get RAG context for multi-vendor analysis
+        user_id = current_user["user_id"] if current_user else None
+        rag_context = ""
+        if user_id:
+            # Get SKUs from all quotes
+            all_skus = []
+            for quote in quotes:
+                all_skus.extend([item.sku for item in quote.items])
+            
+            if all_skus:
+                past_quotes = await db.get_relevant_past_quotes(user_id, all_skus, limit=10)
+                if past_quotes:
+                    rag_context = "\n".join([
+                        f"Date: {q['created_at']}, Vendor: {q['vendor_name']}, SKU: {q['sku']}, Desc: {q['description']}, Qty: {q['quantity']}, Unit: {q['unit_price']}, Total: {q['total']}" for q in past_quotes
+                    ])
+        
+        # Perform multi-vendor analysis
+        multi_vendor_result = await multi_vendor_analyzer.analyze_multiple_quotes(quotes, rag_context)
+        
+        # Create analysis result
+        total_cost = sum(
+            sum(item.total for item in quote.items) 
+            for quote in quotes
+        )
+        
+        comparison = {
+            "totalCost": total_cost,
+            "vendorCount": len(quotes),
+            "costSavings": multi_vendor_result.cost_savings,
+            "riskAssessment": multi_vendor_result.risk_assessment
+        }
+        
+        result = AnalysisResult(
+            quotes=quotes,
+            comparison=comparison,
+            recommendation=multi_vendor_result.recommendation,
+            multi_vendor_analysis=multi_vendor_result
+        )
+        
+        # Save to database
+        user_email = current_user["email"] if current_user else None
+        user_name = current_user.get("name") if current_user else None
+        
+        await auth_manager._create_user_record(user_id, user_email, user_name)
+        
+        # Save each quote separately for history
+        quote_ids = []
+        for i, file_content in enumerate(file_contents):
+            quote_id = await db.save_quote_analysis(
+                filename=file_content["filename"],
+                file_type="multi_vendor",
+                raw_text=file_content["content"],
+                analysis_result=result,
+                user_id=user_id
+            )
+            quote_ids.append(quote_id)
+        
+        # Add quote IDs to response
+        result_dict = result.dict()
+        result_dict["quote_ids"] = quote_ids
+        
+        # Send Slack alert
+        await send_slack_alert(result)
+        
+        return result_dict
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Multi-vendor analysis failed: {str(e)}")
 
 @app.get("/quotes")
 async def get_quote_history(
