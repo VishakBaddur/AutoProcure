@@ -43,11 +43,7 @@ class AIProcessor:
             
             # Get AI response
             if self.ai_provider == "ollama":
-                try:
-                    response = await self._call_ollama(prompt)
-                except Exception as e:
-                    print(f"Ollama failed, using fallback: {str(e)}")
-                    response = self._get_fallback_response(prompt)
+                response = await self._call_ollama(prompt)
             elif self.ai_provider == "openai":
                 response = await self._call_openai(prompt)
             else:
@@ -61,7 +57,7 @@ class AIProcessor:
             
         except Exception as e:
             print(f"AI analysis failed: {str(e)}")
-            # Fallback to mock data if AI fails
+            # Fallback to error message if AI fails
             return self._get_fallback_quote()
     
     def _create_analysis_prompt(self, text_content: str, rag_context: str = None) -> str:
@@ -125,27 +121,6 @@ JSON Response:"""
             response.raise_for_status()
             result = response.json()
             return result.get("response", "")
-    
-    def _get_fallback_response(self, prompt: str) -> str:
-        """Return a fallback response when Ollama is not available"""
-        print("⚠️ Using fallback response - Ollama model not available")
-        return '''{
-  "vendorName": "Analysis Failed - Manual Review Required",
-  "items": [
-    {
-      "sku": "REVIEW_REQUIRED",
-      "description": "Please manually review the uploaded document",
-      "quantity": 1,
-      "unitPrice": 0.0,
-      "deliveryTime": "TBD",
-      "total": 0.0
-    }
-  ],
-  "terms": {
-    "payment": "Manual Review Required",
-    "warranty": "Manual Review Required"
-  }
-}'''
 
     async def _call_openai(self, prompt: str) -> str:
         """Call OpenAI API"""
