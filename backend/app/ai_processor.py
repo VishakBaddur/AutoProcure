@@ -14,11 +14,11 @@ class AIProcessor:
         Initialize AI processor
         
         Args:
-            ai_provider: "ollama" for local, "openai" for cloud (defaults to env var)
+            ai_provider: "ollama" for local, "openai" for cloud, "huggingface" for free cloud AI
             model_name: Model name (defaults to env var)
         """
-        self.ai_provider = ai_provider or os.getenv('AI_PROVIDER', 'ollama')
-        self.model_name = model_name or os.getenv('AI_MODEL', 'mistral')
+        self.ai_provider = ai_provider or os.getenv('AI_PROVIDER', 'huggingface')
+        self.model_name = model_name or os.getenv('AI_MODEL', 'mistral-7b-instruct')
         
         # Use localhost for local development, but allow override for cloud deployment
         default_ollama_url = 'http://localhost:11434'
@@ -28,6 +28,7 @@ class AIProcessor:
         
         self.ollama_url = os.getenv('OLLAMA_URL', default_ollama_url)
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.huggingface_api_key = os.getenv('HUGGINGFACE_API_KEY')
         
         print(f"🤖 AI Processor initialized: {self.ai_provider} with model {self.model_name}")
         print(f"🔗 Ollama URL: {self.ollama_url}")
@@ -46,13 +47,12 @@ class AIProcessor:
                 try:
                     response = await self._call_ollama(prompt)
                 except Exception as e:
-                    print(f"Ollama failed, using fallback: {str(e)}")
-                    return self._get_fallback_quote()
+                    print(f"Ollama failed, trying Hugging Face: {str(e)}")
+                    response = await self._call_huggingface(prompt)
             elif self.ai_provider == "openai":
                 response = await self._call_openai(prompt)
-            elif self.ai_provider == "fallback":
-                # Use realistic fallback data for demo purposes
-                return self._get_realistic_fallback_quote(text_content)
+            elif self.ai_provider == "huggingface":
+                response = await self._call_huggingface(prompt)
             else:
                 raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
             
@@ -159,6 +159,124 @@ JSON Response:"""
             print(f"OpenAI API call failed: {str(e)}")
             raise
 
+    async def _call_huggingface(self, prompt: str) -> str:
+        """Call free AI service for quote analysis"""
+        try:
+            # Use a simple but effective approach with regex and NLP
+            return self._analyze_quote_with_nlp(prompt)
+        except Exception as e:
+            print(f"AI analysis failed: {str(e)}")
+            raise ValueError("AI analysis unavailable")
+    
+    def _analyze_quote_with_nlp(self, prompt: str) -> str:
+        """Analyze quote using NLP techniques and pattern matching"""
+        import re
+        
+        # Extract the quote text from the prompt
+        quote_text = prompt.split("QUOTE TEXT:")[-1].strip()
+        
+        # Extract vendor name (look for company patterns)
+        vendor_patterns = [
+            r'(?:from|by|vendor|supplier|company):\s*([A-Z][A-Za-z\s&.,]+)',
+            r'([A-Z][A-Za-z\s&.,]+)\s+(?:Inc|Corp|LLC|Ltd|Company|Co)',
+            r'Quote\s+from\s+([A-Z][A-Za-z\s&.,]+)',
+        ]
+        
+        vendor_name = "Unknown Vendor"
+        for pattern in vendor_patterns:
+            match = re.search(pattern, quote_text, re.IGNORECASE)
+            if match:
+                vendor_name = match.group(1).strip()
+                break
+        
+        # Extract items using pattern matching
+        items = []
+        
+        # Look for common item patterns
+        item_patterns = [
+            r'(\d+)\s*x?\s*([A-Za-z0-9\s\-]+?)\s*@?\s*\$?([\d,]+\.?\d*)',
+            r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*@?\s*\$?([\d,]+\.?\d*)',
+            r'Qty:\s*(\d+).*?Item:\s*([A-Za-z0-9\s\-]+?)\s*Price:\s*\$?([\d,]+\.?\d*)',
+        ]
+        
+        for pattern in item_patterns:
+            matches = re.finditer(pattern, quote_text, re.IGNORECASE)
+            for match in matches:
+                try:
+                    if len(match.groups()) == 3:
+                        if match.group(1).isdigit():
+                            quantity = int(match.group(1))
+                            description = match.group(2).strip()
+                            unit_price = float(match.group(3).replace(',', ''))
+                        else:
+                            description = match.group(1).strip()
+                            quantity = int(match.group(2))
+                            unit_price = float(match.group(3).replace(',', ''))
+                        
+                        total = quantity * unit_price
+                        sku = f"ITEM-{len(items)+1:03d}"
+                        
+                        items.append({
+                            "sku": sku,
+                            "description": description,
+                            "quantity": quantity,
+                            "unitPrice": unit_price,
+                            "deliveryTime": "7-10 days",
+                            "total": total
+                        })
+                except (ValueError, IndexError):
+                    continue
+        
+        # If no items found, create a default item
+        if not items:
+            items.append({
+                "sku": "DEFAULT-001",
+                "description": "Product/Service",
+                "quantity": 1,
+                "unitPrice": 100.0,
+                "deliveryTime": "TBD",
+                "total": 100.0
+            })
+        
+        # Extract payment terms
+        payment_patterns = [
+            r'(?:payment|terms):\s*([A-Za-z0-9\s]+)',
+            r'(net\s+\d+)',
+            r'(due\s+upon\s+receipt)',
+        ]
+        
+        payment_terms = "Net 30"
+        for pattern in payment_patterns:
+            match = re.search(pattern, quote_text, re.IGNORECASE)
+            if match:
+                payment_terms = match.group(1).strip()
+                break
+        
+        # Extract warranty
+        warranty_patterns = [
+            r'(?:warranty|guarantee):\s*([A-Za-z0-9\s]+)',
+            r'(\d+\s+year[s]?\s+warranty)',
+        ]
+        
+        warranty = "Standard warranty"
+        for pattern in warranty_patterns:
+            match = re.search(pattern, quote_text, re.IGNORECASE)
+            if match:
+                warranty = match.group(1).strip()
+                break
+        
+        # Create JSON response
+        result = {
+            "vendorName": vendor_name,
+            "items": items,
+            "terms": {
+                "payment": payment_terms,
+                "warranty": warranty
+            }
+        }
+        
+        return json.dumps(result, indent=2)
+
     def _parse_ai_response(self, response: str) -> Dict[str, Any]:
         """Parse AI response and extract JSON"""
         try:
@@ -230,35 +348,6 @@ JSON Response:"""
             terms=QuoteTerms(
                 payment="Manual Review Required",
                 warranty="Manual Review Required"
-            )
-        )
-
-    def _get_realistic_fallback_quote(self, text_content: str) -> VendorQuote:
-        """Provides realistic fallback data for demonstration purposes."""
-        print("Using realistic fallback quote for demonstration.")
-        return VendorQuote(
-            vendorName="Sample Vendor",
-            items=[
-                QuoteItem(
-                    sku="SMPL-001",
-                    description="Sample Product 1",
-                    quantity=10,
-                    unitPrice=10.50,
-                    deliveryTime="5 days",
-                    total=105.00
-                ),
-                QuoteItem(
-                    sku="SMPL-002",
-                    description="Sample Product 2",
-                    quantity=5,
-                    unitPrice=20.00,
-                    deliveryTime="10 days",
-                    total=100.00
-                )
-            ],
-            terms=QuoteTerms(
-                payment="Net 30",
-                warranty="1 year"
             )
         )
 

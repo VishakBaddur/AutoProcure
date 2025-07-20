@@ -10,11 +10,9 @@ services:
       - key: DATABASE_URL
         value: postgresql://postgres.kycsdqamiacdgcjhkedp:Vishak%406@aws-0-a
       - key: AI_PROVIDER
-        value: fallback
+        value: huggingface
       - key: AI_MODEL
-        value: mistral
-      - key: OLLAMA_URL
-        value: http://localhost:11434
+        value: nlp-pattern-matching
       - key: PYTHON_VERSION
         value: 3.11.0
 
