@@ -43,7 +43,11 @@ class AIProcessor:
             
             # Get AI response
             if self.ai_provider == "ollama":
-                response = await self._call_ollama(prompt)
+                try:
+                    response = await self._call_ollama(prompt)
+                except Exception as e:
+                    print(f"Ollama failed, using fallback: {str(e)}")
+                    return self._get_fallback_quote()
             elif self.ai_provider == "openai":
                 response = await self._call_openai(prompt)
             else:
