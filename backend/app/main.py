@@ -181,6 +181,13 @@ async def upload_file(
                 ])
         # Now run the AI analysis again, this time with RAG context
         quote = await ai_processor.analyze_quote(text_content, rag_context=rag_context)
+        
+        # Debug output
+        print(f"[DEBUG] Quote analysis result:")
+        print(f"  Vendor: {quote.vendorName}")
+        print(f"  Items count: {len(quote.items)}")
+        print(f"  First item: {quote.items[0].description if quote.items else 'No items'}")
+        
         # Create comparison and recommendation
         total_cost = sum(item.total for item in quote.items)
         delivery_time = quote.items[0].deliveryTime if quote.items else "N/A"
@@ -190,10 +197,21 @@ async def upload_file(
             "vendorCount": 1
         }
         # Generate smart recommendation
-        if quote.vendorName == "Analysis Failed - Manual Review Required":
+        if quote.vendorName == "Analysis Failed - Manual Review Required" or quote.vendorName == "Analysis Failed":
             recommendation = "AI analysis failed. Please manually review the uploaded document."
+        elif quote.vendorName == "Unknown Vendor":
+            recommendation = f"Quote analyzed successfully. Total value: ${total_cost:,.2f}. Vendor name could not be extracted - please verify manually."
         else:
             recommendation = f"Vendor {quote.vendorName} offers competitive pricing with {delivery_time} delivery. Total quote value: ${total_cost:,.2f}"
+            
+            # Add more detailed recommendation based on the analysis
+            if total_cost > 0:
+                if total_cost > 10000:
+                    recommendation += ". This is a high-value quote - consider negotiating for better terms."
+                elif total_cost > 1000:
+                    recommendation += ". This is a medium-value quote with standard terms."
+                else:
+                    recommendation += ". This is a low-value quote with quick processing potential."
         result = AnalysisResult(
             quotes=[quote],
             comparison=comparison,
