@@ -277,17 +277,10 @@ JSON Response:"""
                     except ValueError:
                         pass
             
-            # If still no items, create a minimal item
+            # If still no items, don't create fake data - just indicate no items found
             if not items:
-                items.append({
-                    "sku": "DEFAULT-001",
-                    "description": "Product/Service",
-                    "quantity": 1,
-                    "unitPrice": 100.0,
-                    "deliveryTime": "TBD",
-                    "total": 100.0
-                })
-                print("Created minimal default item")
+                print("No items could be extracted from the document")
+                # Don't create fake items - let the user know nothing was found
             
             # Extract payment terms
             payment_patterns = [

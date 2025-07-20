@@ -196,22 +196,37 @@ async def upload_file(
             "deliveryTime": delivery_time,
             "vendorCount": 1
         }
-        # Generate smart recommendation
+        # Generate smart recommendation based on actual analysis
         if quote.vendorName == "Analysis Failed - Manual Review Required" or quote.vendorName == "Analysis Failed":
             recommendation = "AI analysis failed. Please manually review the uploaded document."
+        elif not quote.items or len(quote.items) == 0:
+            recommendation = "No items or pricing information could be extracted from the document. Please verify the document contains quote details."
         elif quote.vendorName == "Unknown Vendor":
-            recommendation = f"Quote analyzed successfully. Total value: ${total_cost:,.2f}. Vendor name could not be extracted - please verify manually."
-        else:
-            recommendation = f"Vendor {quote.vendorName} offers competitive pricing with {delivery_time} delivery. Total quote value: ${total_cost:,.2f}"
-            
-            # Add more detailed recommendation based on the analysis
             if total_cost > 0:
+                recommendation = f"Quote analyzed successfully with total value: ${total_cost:,.2f}. Vendor name could not be extracted from the document."
+            else:
+                recommendation = "Quote analyzed but no pricing information could be extracted. Please verify the document format."
+        else:
+            # Only use actual vendor name and data from the analysis
+            recommendation = f"Vendor {quote.vendorName} quote analyzed successfully."
+            
+            # Add pricing information only if we have actual data
+            if total_cost > 0:
+                recommendation += f" Total quote value: ${total_cost:,.2f}."
+                
+                # Add delivery information only if we have it
+                if delivery_time and delivery_time != "TBD":
+                    recommendation += f" Delivery time: {delivery_time}."
+                
+                # Add value-based insights only if we have real data
                 if total_cost > 10000:
-                    recommendation += ". This is a high-value quote - consider negotiating for better terms."
+                    recommendation += " This appears to be a high-value quote."
                 elif total_cost > 1000:
-                    recommendation += ". This is a medium-value quote with standard terms."
+                    recommendation += " This appears to be a medium-value quote."
                 else:
-                    recommendation += ". This is a low-value quote with quick processing potential."
+                    recommendation += " This appears to be a low-value quote."
+            else:
+                recommendation += " No pricing information could be extracted from the document."
         result = AnalysisResult(
             quotes=[quote],
             comparison=comparison,
