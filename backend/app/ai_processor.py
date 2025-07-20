@@ -130,28 +130,20 @@ JSON Response:"""
         """Return a fallback response when Ollama is not available"""
         print("⚠️ Using fallback response - Ollama model not available")
         return '''{
-  "vendorName": "Tech Solutions Inc.",
+  "vendorName": "Analysis Failed - Manual Review Required",
   "items": [
     {
-      "sku": "LAPTOP-001",
-      "description": "High-performance laptop with 16GB RAM and 512GB SSD",
-      "quantity": 50,
-      "unitPrice": 899.99,
-      "deliveryTime": "5-7 business days",
-      "total": 44999.50
-    },
-    {
-      "sku": "MONITOR-002",
-      "description": "24-inch 4K monitor with USB-C connectivity",
-      "quantity": 25,
-      "unitPrice": 299.99,
-      "deliveryTime": "3-5 business days",
-      "total": 7499.75
+      "sku": "REVIEW_REQUIRED",
+      "description": "Please manually review the uploaded document",
+      "quantity": 1,
+      "unitPrice": 0.0,
+      "deliveryTime": "TBD",
+      "total": 0.0
     }
   ],
   "terms": {
-    "payment": "Net 30 days",
-    "warranty": "3-year comprehensive warranty with next-day replacement"
+    "payment": "Manual Review Required",
+    "warranty": "Manual Review Required"
   }
 }'''
 
