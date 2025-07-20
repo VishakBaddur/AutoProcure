@@ -31,7 +31,9 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://auto-procure.vercel.app",
         "https://autoprocure-ai.vercel.app",
-        "https://autoprocure-procurement.vercel.app"
+        "https://autoprocure-procurement.vercel.app",
+        "https://autoprocure-frontend.onrender.com",
+        "https://autoprocure.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
