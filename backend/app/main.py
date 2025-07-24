@@ -90,8 +90,11 @@ def extract_text_from_pdf(file_content: bytes) -> str:
     try:
         with pdfplumber.open(io.BytesIO(file_content)) as pdf:
             text = ""
-            for page in pdf.pages:
-                text += page.extract_text() or ""
+            for page_num, page in enumerate(pdf.pages):
+                page_text = page.extract_text() or ""
+                print(f"=== Extracted PDF Page {page_num+1} Text ===")
+                print(page_text)
+                text += page_text
             return text
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"PDF parsing error: {str(e)}")
@@ -315,6 +318,34 @@ async def analyze_multiple_quotes(
         
         # Perform multi-vendor analysis
         multi_vendor_result = await multi_vendor_analyzer.analyze_multiple_quotes(quotes, rag_context)
+
+        # Suggestion/Conclusion logic
+        def suggest_best_vendor(quotes):
+            # Build a map of best price for each item across vendors
+            item_best = {}
+            for quote in quotes:
+                for item in quote.items:
+                    key = item.description.strip().lower()
+                    if key not in item_best or item.unitPrice < item_best[key]['unitPrice']:
+                        item_best[key] = {
+                            'vendor': quote.vendorName,
+                            'unitPrice': item.unitPrice,
+                            'total': item.total,
+                            'quantity': item.quantity
+                        }
+            split_total = sum(x['unitPrice'] * x['quantity'] for x in item_best.values())
+            vendor_totals = {}
+            for quote in quotes:
+                vendor_totals[quote.vendorName] = sum(item.total for item in quote.items)
+            best_vendor = min(vendor_totals, key=vendor_totals.get)
+            best_vendor_total = vendor_totals[best_vendor]
+            savings = best_vendor_total - split_total
+            if savings > best_vendor_total * 0.05:
+                return f"Split the order: buy each item from the vendor offering the lowest price. This saves ${savings:.2f} compared to buying everything from {best_vendor}."
+            else:
+                return f"Buy everything from {best_vendor} for simplicity. Total cost: ${best_vendor_total:.2f}."
+
+        suggestion = suggest_best_vendor(quotes)
         
         # Create analysis result
         total_cost = sum(
@@ -354,9 +385,10 @@ async def analyze_multiple_quotes(
             )
             quote_ids.append(quote_id)
         
-        # Add quote IDs to response
+        # Add quote IDs and suggestion to response
         result_dict = result.dict()
         result_dict["quote_ids"] = quote_ids
+        result_dict["suggestion"] = suggestion
         
         # Send Slack alert
         await send_slack_alert(result)

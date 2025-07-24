@@ -171,7 +171,7 @@ JSON Response:"""
     def _analyze_quote_with_nlp(self, prompt: str) -> str:
         """Analyze quote using NLP techniques and pattern matching"""
         import re
-        
+        items = []  # Always define at the top to avoid scoping errors
         try:
             # Extract the quote text from the prompt
             if "QUOTE TEXT:" in prompt:
@@ -208,38 +208,38 @@ JSON Response:"""
             
             print(f"Extracted vendor: {vendor_name}")
             
-            # Extract items using pattern matching
-            items = []
-            
-            # Look for common item patterns
+            # Define item_patterns for robust PDF line extraction
             item_patterns = [
-                r'(\d+)\s*x?\s*([A-Za-z0-9\s\-]+?)\s*@?\s*\$?([\d,]+\.?\d*)',
-                r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*@?\s*\$?([\d,]+\.?\d*)',
-                r'Qty:\s*(\d+).*?Item:\s*([A-Za-z0-9\s\-]+?)\s*Price:\s*\$?([\d,]+\.?\d*)',
-                r'(\d+)\s*([A-Za-z0-9\s\-]+?)\s*\$?([\d,]+\.?\d*)',
-                r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*\$?([\d,]+\.?\d*)',
+                r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s]+)\s+(\d+)\s+\$?([\d\.]+)',  # SKU, Description, Quantity, Price
+                r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*\$?([\d,]+\.?\d*)',          # fallback: Description, Quantity, Price
             ]
-            
-            for pattern in item_patterns:
-                matches = re.finditer(pattern, quote_text, re.IGNORECASE)
-                for match in matches:
-                    try:
-                        if len(match.groups()) == 3:
-                            if match.group(1).isdigit():
-                                quantity = int(match.group(1))
+
+            matched_lines = set()
+            lines = quote_text.split('\n')
+            for line in lines:
+                line_clean = line.strip()
+                if not line_clean or line_clean in matched_lines:
+                    continue
+                for pattern in item_patterns:
+                    match = re.match(pattern, line_clean)
+                    if match:
+                        try:
+                            if len(match.groups()) == 4:
+                                sku = match.group(1).strip()
                                 description = match.group(2).strip()
-                                unit_price = float(match.group(3).replace(',', ''))
-                            else:
+                                quantity = int(match.group(3))
+                                unit_price = float(match.group(4))
+                            elif len(match.groups()) == 3:
+                                sku = f"ITEM-{len(items)+1:03d}"
                                 description = match.group(1).strip()
                                 quantity = int(match.group(2))
-                                unit_price = float(match.group(3).replace(',', ''))
-                            
+                                unit_price = float(match.group(3))
+                            else:
+                                continue
                             # Skip if values are unreasonable or description is too short
                             if (quantity > 0 and unit_price > 0 and unit_price < 1000000 and 
                                 len(description) > 2 and not description.isdigit()):
                                 total = quantity * unit_price
-                                sku = f"ITEM-{len(items)+1:03d}"
-                                
                                 items.append({
                                     "sku": sku,
                                     "description": description,
@@ -248,10 +248,12 @@ JSON Response:"""
                                     "deliveryTime": "7-10 days",
                                     "total": total
                                 })
+                                matched_lines.add(line_clean)
                                 print(f"Extracted item: {quantity}x {description} @ ${unit_price}")
-                    except (ValueError, IndexError) as e:
-                        print(f"Error parsing item: {e}")
-                        continue
+                                break  # Only match one pattern per line
+                        except (ValueError, IndexError) as e:
+                            print(f"Error parsing item: {e}")
+                            continue
             
             # If no items found, try to extract any numbers that might be prices
             if not items:
@@ -281,6 +283,22 @@ JSON Response:"""
             if not items:
                 print("No items could be extracted from the document")
                 # Don't create fake items - let the user know nothing was found
+            
+            # Deduplicate/group items by description and unit price
+            def deduplicate_items(items):
+                from collections import defaultdict
+                grouped = defaultdict(lambda: {"sku": "", "description": "", "quantity": 0, "unitPrice": 0.0, "deliveryTime": "", "total": 0.0})
+                for item in items:
+                    key = (item["description"].strip().lower(), round(item["unitPrice"], 2))
+                    grouped[key]["sku"] = item["sku"]
+                    grouped[key]["description"] = item["description"]
+                    grouped[key]["unitPrice"] = item["unitPrice"]
+                    grouped[key]["deliveryTime"] = item["deliveryTime"]
+                    grouped[key]["quantity"] += item["quantity"]
+                    grouped[key]["total"] += item["total"]
+                return list(grouped.values())
+
+            items = deduplicate_items(items)
             
             # Extract payment terms
             payment_patterns = [

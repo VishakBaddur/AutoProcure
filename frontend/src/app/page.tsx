@@ -9,6 +9,7 @@ import AuthModal from "@/components/AuthModal";
 import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
+import { AlertCircle, Sparkles } from 'lucide-react';
 
 interface User {
   id: string;
@@ -52,6 +53,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* AI Coming Soon Banner */}
+      <div className="max-w-2xl mx-auto mt-8 mb-6">
+        <Card className="border-2 border-yellow-400 bg-yellow-50">
+          <CardHeader className="flex flex-row items-center gap-3">
+            <Sparkles className="text-yellow-500" />
+            <div>
+              <CardTitle>AI-Powered Multi-Vendor Optimization <span className="text-yellow-500">Coming Soon!</span></CardTitle>
+              <CardDescription>
+                Soon, AutoProcure will recommend the best vendor(s) for each item, split orders for maximum savings, and explain every decision. For now, you can upload and compare quotes side-by-side.
+              </CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -197,10 +212,65 @@ export default function Home() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Multi-vendor Suggestion/Conclusion */}
+                    {(result as any)?.suggestion && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">Conclusion / Suggestion</h3>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <p className="text-green-900">
+                            {(result as any).suggestion}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
+
+            {/* Simple Best Vendor Comparison Card */}
+            {results.length > 1 && (() => {
+              // Find the best vendor by total price
+              const vendorTotals = results.map(({ fileName, result }) => {
+                const vendor = (result as any)?.quotes?.[0]?.vendorName || fileName;
+                const total = (result as any)?.quotes?.[0]?.items?.reduce((sum: number, item: any) => sum + (item.total || 0), 0) || 0;
+                return { vendor, total };
+              });
+              const best = vendorTotals.reduce((min, v) => v.total < min.total ? v : min, vendorTotals[0]);
+              if (!best || best.total === 0) return null;
+              return (
+                <Card className="border-2 border-green-400 bg-green-50 mt-6">
+                  <CardHeader>
+                    <CardTitle>Best Vendor (Simple Comparison)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-green-900">
+                      <b>{best.vendor}</b> offers the lowest total price: <b>${best.total.toFixed(2)}</b> among all uploaded quotes.<br/>
+                      <span className="text-sm text-gray-700">(This is a basic price comparison. For more advanced analysis, AI-powered recommendations are coming soon!)</span>
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {/* Potential with AI Card */}
+            <Card className="border-2 border-blue-400 bg-blue-50">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <AlertCircle className="text-blue-500" />
+                <div>
+                  <CardTitle>Potential with AI (Coming Soon)</CardTitle>
+                  <CardDescription>
+                    <b>Estimated savings:</b> 10-15% per order<br/>
+                    <b>Time saved:</b> 10+ hours/month<br/>
+                    <b>How?</b> AI will recommend the best vendor(s) for each item, split orders for maximum value, and explain every decision.
+                  </CardDescription>
+                  <p className="text-xs text-gray-500 mt-2">
+                    *This is a preview. AI-powered recommendations will be available soon!*
+                  </p>
+                </div>
+              </CardHeader>
+            </Card>
 
             {/* Quote History */}
             {showHistory && (
@@ -226,7 +296,7 @@ export default function Home() {
         onClose={() => setShowAuthModal(false)}
         mode={authMode}
         onAuthSuccess={handleAuthSuccess}
-      />
+          />
     </div>
   );
 }
