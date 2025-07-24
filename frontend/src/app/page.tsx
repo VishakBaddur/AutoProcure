@@ -17,6 +17,27 @@ interface User {
   name?: string;
 }
 
+interface QuoteItem {
+  sku?: string;
+  description?: string;
+  quantity?: number;
+  unitPrice?: number;
+  deliveryTime?: string;
+  total?: number;
+}
+
+interface Quote {
+  vendorName?: string;
+  items?: QuoteItem[];
+  terms?: Record<string, string>;
+}
+
+interface QuoteAnalysisResult {
+  quotes?: Quote[];
+  suggestion?: string;
+  recommendation?: string;
+}
+
 export default function Home() {
   const { user, isAuthenticated, login, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -158,41 +179,41 @@ export default function Home() {
                     {/* Quotes */}
                     <div>
                       <h3 className="text-lg font-semibold mb-3">Extracted Quotes</h3>
-                      {(result as {quotes?: unknown[]})?.quotes?.map((quote: unknown, index: number) => (
+                      {(result as QuoteAnalysisResult)?.quotes?.map((quote: Quote, index: number) => (
                         <div key={index} className="border rounded-lg p-4 mb-4">
                           <div className="flex justify-between items-start mb-3">
-                            <h4 className="font-medium">{(quote as {vendorName?: string})?.vendorName || 'Unknown Vendor'}</h4>
-                            <Badge variant="outline">{(quote as {quoteNumber?: string})?.quoteNumber || 'N/A'}</Badge>
+                            <h4 className="font-medium">{(quote as Quote)?.vendorName || 'Unknown Vendor'}</h4>
+                            <Badge variant="outline">{(quote as Quote)?.terms?.quoteNumber || 'N/A'}</Badge>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                               <p className="text-sm text-gray-600">Quote Date</p>
-                              <p className="font-medium">{(quote as {quoteDate?: string})?.quoteDate || 'N/A'}</p>
+                              <p className="font-medium">{(quote as Quote)?.terms?.quoteDate || 'N/A'}</p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-600">Valid Until</p>
-                              <p className="font-medium">{(quote as {validUntil?: string})?.validUntil || 'N/A'}</p>
+                              <p className="font-medium">{(quote as Quote)?.terms?.validUntil || 'N/A'}</p>
                             </div>
                           </div>
                           {/* Items */}
                           <div>
                             <h5 className="font-medium mb-2">Items</h5>
                             <div className="space-y-2">
-                              {(quote as {items?: unknown[]})?.items?.map((item: unknown, itemIndex: number) => (
+                              {(quote as Quote)?.items?.map((item: QuoteItem, itemIndex: number) => (
                                 <div key={itemIndex} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                                   <div>
-                                    <p className="font-medium">{(item as {description?: string})?.description || 'Unknown Item'}</p>
+                                    <p className="font-medium">{(item as QuoteItem)?.description || 'Unknown Item'}</p>
                                     <p className="text-sm text-gray-600">
-                                      SKU: {(item as {sku?: string})?.sku || 'N/A'} | 
-                                      Qty: {(item as {quantity?: number})?.quantity || 0}
+                                      SKU: {(item as QuoteItem)?.sku || 'N/A'} | 
+                                      Qty: {(item as QuoteItem)?.quantity || 0}
                                     </p>
                                   </div>
                                   <div className="text-right">
                                     <p className="font-medium">
-                                      ${((item as {unitPrice?: number})?.unitPrice || 0).toFixed(2)}
+                                      ${(item as QuoteItem)?.unitPrice?.toFixed(2) || '0.00'}
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                      Total: ${((item as {total?: number})?.total || 0).toFixed(2)}
+                                      Total: ${(item as QuoteItem)?.total?.toFixed(2) || '0.00'}
                                     </p>
                                   </div>
                                 </div>
@@ -208,18 +229,18 @@ export default function Home() {
                       <h3 className="text-lg font-semibold mb-3">AI Recommendation</h3>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <p className="text-blue-900">
-                          {(result as {recommendation?: string})?.recommendation || 'No recommendation available'}
+                          {(result as QuoteAnalysisResult)?.recommendation || 'No recommendation available'}
                         </p>
                       </div>
                     </div>
 
                     {/* Multi-vendor Suggestion/Conclusion */}
-                    {(result as any)?.suggestion && (
+                    {(result as QuoteAnalysisResult)?.suggestion && (
                       <div>
                         <h3 className="text-lg font-semibold mb-3">Conclusion / Suggestion</h3>
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                           <p className="text-green-900">
-                            {(result as any).suggestion}
+                            {(result as QuoteAnalysisResult).suggestion}
                           </p>
                         </div>
                       </div>
@@ -233,8 +254,8 @@ export default function Home() {
             {results.length > 1 && (() => {
               // Find the best vendor by total price
               const vendorTotals = results.map(({ fileName, result }) => {
-                const vendor = (result as any)?.quotes?.[0]?.vendorName || fileName;
-                const total = (result as any)?.quotes?.[0]?.items?.reduce((sum: number, item: any) => sum + (item.total || 0), 0) || 0;
+                const vendor = (result as QuoteAnalysisResult)?.quotes?.[0]?.vendorName || fileName;
+                const total = (result as QuoteAnalysisResult)?.quotes?.[0]?.items?.reduce((sum: number, item: QuoteItem) => sum + (item.total || 0), 0) || 0;
                 return { vendor, total };
               });
               const best = vendorTotals.reduce((min, v) => v.total < min.total ? v : min, vendorTotals[0]);
