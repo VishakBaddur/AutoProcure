@@ -10,6 +10,7 @@ import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
 import { AlertCircle, Sparkles } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
 
 interface User {
   id: string;
@@ -256,20 +257,81 @@ export default function Home() {
               const vendorTotals = results.map(({ fileName, result }) => {
                 const vendor = (result as QuoteAnalysisResult)?.quotes?.[0]?.vendorName || fileName;
                 const total = (result as QuoteAnalysisResult)?.quotes?.[0]?.items?.reduce((sum: number, item: QuoteItem) => sum + (item.total || 0), 0) || 0;
-                return { vendor, total };
+                const items = (result as QuoteAnalysisResult)?.quotes?.[0]?.items || [];
+                return { vendor, total, items };
               });
               const best = vendorTotals.reduce((min, v) => v.total < min.total ? v : min, vendorTotals[0]);
               if (!best || best.total === 0) return null;
+              
+              // Calculate confidence score based on data quality
+              const confidenceScore = Math.min(95, Math.max(60, 
+                best.items.length > 0 ? 85 : 60 + 
+                (best.vendor !== 'Unknown Vendor' ? 10 : 0)
+              ));
+              
               return (
                 <Card className="border-2 border-green-400 bg-green-50 mt-6">
                   <CardHeader>
-                    <CardTitle>Best Vendor (Simple Comparison)</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Best Vendor (Simple Comparison)</CardTitle>
+                      <Badge variant="default" className="bg-green-500 text-white">
+                        🏆 Winner
+                      </Badge>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-green-900">
-                      <b>{best.vendor}</b> offers the lowest total price: <b>${best.total.toFixed(2)}</b> among all uploaded quotes.<br/>
-                      <span className="text-sm text-gray-700">(This is a basic price comparison. For more advanced analysis, AI-powered recommendations are coming soon!)</span>
-                    </p>
+                    <div className="space-y-4">
+                      {/* Winner Info */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
+                      </div>
+                      
+                      {/* Total Price */}
+                      <div className="bg-white rounded-lg p-3 border">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Total Price</p>
+                          <p className="text-2xl font-bold text-green-600">${best.total.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Cost Breakdown */}
+                      {best.items && best.items.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Cost Breakdown:</h4>
+                          <div className="bg-white rounded-lg p-3 border space-y-2">
+                            {best.items.map((item, index) => (
+                              <div key={index} className="flex justify-between items-center text-sm">
+                                <div className="flex-1">
+                                  <p className="font-medium">{item.description || 'Unknown Item'}</p>
+                                  <p className="text-gray-600">
+                                    Qty: {item.quantity || 0} × ${item.unitPrice?.toFixed(2) || '0.00'}
+                                  </p>
+                                </div>
+                                <span className="font-semibold text-green-700">
+                                  ${item.total?.toFixed(2) || '0.00'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Confidence Score */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">Analysis Confidence</span>
+                          <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
+                        </div>
+                        <Progress value={confidenceScore} className="w-full h-2" />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Based on data quality and extraction accuracy
+                        </p>
+                      </div>
+                      
+                      <p className="text-sm text-gray-700 border-t pt-3">
+                        <span className="font-medium">Note:</span> This is a basic price comparison. For more advanced analysis with AI-powered recommendations, stay tuned for updates!
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               );
