@@ -282,12 +282,146 @@ export default function Home() {
                         </div>
                       </div>
                     )}
+
+                    {/* Enhanced Quote Summary with Winner Features */}
+                    {(result as QuoteAnalysisResult)?.quotes?.[0] && (() => {
+                      const quote = (result as QuoteAnalysisResult).quotes![0];
+                      const total = quote.items?.reduce((sum: number, item: QuoteItem) => sum + (item.total || 0), 0) || 0;
+                      const items = quote.items || [];
+                      
+                      // Calculate confidence score based on data quality
+                      const confidenceScore = Math.min(95, Math.max(60, 
+                        items.length > 0 ? 85 : 60 + 
+                        (quote.vendorName !== 'Unknown Vendor' ? 10 : 0)
+                      ));
+                      
+                      return (
+                        <div className="mt-6">
+                          <Card className="border-2 border-green-400 bg-green-50">
+                            <CardHeader>
+                              <div className="flex items-center justify-between">
+                                <CardTitle>Quote Summary</CardTitle>
+                                <Badge variant="default" className="bg-green-500 text-white">
+                                  📊 Analyzed
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                {/* Currency Selection */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-700">Currency:</span>
+                                  <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
+                                    <SelectTrigger className="w-24">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="USD">
+                                        <div className="flex items-center gap-2">
+                                          <DollarSign className="h-4 w-4" />
+                                          USD
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="EUR">
+                                        <div className="flex items-center gap-2">
+                                          <Euro className="h-4 w-4" />
+                                          EUR
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="INR">
+                                        <div className="flex items-center gap-2">
+                                          <IndianRupee className="h-4 w-4" />
+                                          INR
+                                        </div>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Vendor Info with Logo */}
+                                <div className="flex items-center gap-3">
+                                  <div className="text-3xl">
+                                    {getVendorLogo(quote.vendorName || 'Unknown')}
+                                  </div>
+                                  <div>
+                                    <span className="text-lg font-semibold text-green-900">{quote.vendorName || 'Unknown Vendor'}</span>
+                                    <p className="text-sm text-gray-600">Quote analyzed successfully</p>
+                                  </div>
+                                </div>
+                                
+                                {/* Total Price */}
+                                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                                  <div className="text-center">
+                                    <p className="text-sm text-gray-600">Total Quote Value</p>
+                                    <p className="text-3xl font-bold text-green-600">
+                                      {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(total).toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {selectedCurrency !== 'USD' && `($${total.toFixed(2)} USD)`}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Cost Breakdown with Hover Effects */}
+                                {items.length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 mb-3">Item Breakdown:</h4>
+                                    <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
+                                      {items.map((item, index) => (
+                                        <div 
+                                          key={index} 
+                                          className="flex justify-between items-center p-3 rounded-lg border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group"
+                                        >
+                                          <div className="flex-1">
+                                            <p className="font-medium group-hover:text-green-700 transition-colors">
+                                              {item.description || 'Unknown Item'}
+                                            </p>
+                                            <p className="text-gray-600 text-sm">
+                                              Qty: {item.quantity || 0} × {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.unitPrice || 0).toFixed(2)}
+                                            </p>
+                                            {item.sku && (
+                                              <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                                            )}
+                                          </div>
+                                          <div className="text-right">
+                                            <span className="font-semibold text-green-700 group-hover:text-green-800 transition-colors">
+                                              {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total || 0).toFixed(2)}
+                                            </span>
+                                            {item.deliveryTime && (
+                                              <p className="text-xs text-gray-500 mt-1">
+                                                Delivery: {item.deliveryTime}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Confidence Score */}
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-700">Analysis Confidence</span>
+                                    <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
+                                  </div>
+                                  <Progress value={confidenceScore} className="w-full h-2" />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Based on data quality and extraction accuracy
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>
             ))}
 
-            {/* Simple Best Vendor Comparison Card */}
+            {/* Simple Best Vendor Comparison Card - Only for Multiple Files */}
             {results.length > 1 && (() => {
               // Find the best vendor by total price
               const vendorTotals = results.map(({ fileName, result }) => {
@@ -297,135 +431,289 @@ export default function Home() {
                 return { vendor, total, items };
               });
               const best = vendorTotals.reduce((min, v) => v.total < min.total ? v : min, vendorTotals[0]);
+              const worst = vendorTotals.reduce((max, v) => v.total > max.total ? v : max, vendorTotals[0]);
               if (!best || best.total === 0) return null;
+              
+              // Calculate percentage savings
+              const percentageSavings = worst.total > 0 ? ((worst.total - best.total) / worst.total * 100) : 0;
               
               // Calculate confidence score based on data quality
               const confidenceScore = Math.min(95, Math.max(60, 
                 best.items.length > 0 ? 85 : 60 + 
                 (best.vendor !== 'Unknown Vendor' ? 10 : 0)
               ));
+
+              // Create comparison table data
+              const allItems = new Map<string, { description: string, sku?: string, vendors: Array<{ name: string, price: number, quantity: number, total: number }> }>();
+              
+              vendorTotals.forEach(({ vendor, items }) => {
+                items.forEach(item => {
+                  const key = item.sku || item.description || 'Unknown';
+                  if (!allItems.has(key)) {
+                    allItems.set(key, {
+                      description: item.description || 'Unknown Item',
+                      sku: item.sku,
+                      vendors: []
+                    });
+                  }
+                  allItems.get(key)!.vendors.push({
+                    name: vendor,
+                    price: item.unitPrice || 0,
+                    quantity: item.quantity || 0,
+                    total: item.total || 0
+                  });
+                });
+              });
+
+              // Find cheapest vendor for each item
+              const cheapestPerItem = new Map<string, string>();
+              allItems.forEach((itemData, key) => {
+                const cheapest = itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0]);
+                cheapestPerItem.set(key, cheapest.name);
+              });
+
+              // Generate email content
+              const generateEmailContent = () => {
+                const subject = encodeURIComponent(`Vendor Quote Comparison - ${best.vendor} is ${percentageSavings.toFixed(1)}% cheaper`);
+                const body = encodeURIComponent(`
+Vendor Quote Comparison Report
+
+Summary:
+- Best Overall: ${best.vendor} ($${best.total.toFixed(2)})
+- Savings: ${percentageSavings.toFixed(1)}% compared to ${worst.vendor}
+- Total Savings: $${(worst.total - best.total).toFixed(2)}
+
+Detailed Comparison:
+${Array.from(allItems.entries()).map(([key, itemData]) => {
+  const cheapest = itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0]);
+  return `\n${itemData.description} (${itemData.sku || 'No SKU'}):
+${itemData.vendors.map(v => `  ${v.name}: $${v.total.toFixed(2)} (${v.quantity} × $${v.price.toFixed(2)})`).join('\n')}
+  → Best: ${cheapest.name} ($${cheapest.total.toFixed(2)})`;
+}).join('\n')}
+
+Generated by AutoProcure AI
+                `);
+                return `mailto:?subject=${subject}&body=${body}`;
+              };
+
+              // Generate downloadable report
+              const generateReport = () => {
+                const report = {
+                  summary: {
+                    bestVendor: best.vendor,
+                    bestTotal: best.total,
+                    worstVendor: worst.vendor,
+                    worstTotal: worst.total,
+                    percentageSavings: percentageSavings,
+                    totalSavings: worst.total - best.total
+                  },
+                  comparison: Array.from(allItems.entries()).map(([key, itemData]) => ({
+                    item: itemData.description,
+                    sku: itemData.sku,
+                    vendors: itemData.vendors,
+                    cheapest: itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0])
+                  })),
+                  generatedAt: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vendor-comparison-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              };
               
               return (
-                <Card className="border-2 border-green-400 bg-green-50 mt-6">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Best Vendor (Simple Comparison)</CardTitle>
-                      <Badge variant="default" className="bg-green-500 text-white">
-                        🏆 Winner
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Currency Selection */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Currency:</span>
-                        <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USD">
-                              <div className="flex items-center gap-2">
-                                <DollarSign className="h-4 w-4" />
-                                USD
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="EUR">
-                              <div className="flex items-center gap-2">
-                                <Euro className="h-4 w-4" />
-                                EUR
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="INR">
-                              <div className="flex items-center gap-2">
-                                <IndianRupee className="h-4 w-4" />
-                                INR
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                <div className="space-y-6">
+                  {/* Summary Card */}
+                  <Card className="border-2 border-green-400 bg-green-50">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>🏆 Best Vendor Summary</CardTitle>
+                        <Badge variant="default" className="bg-green-500 text-white">
+                          🏆 Winner
+                        </Badge>
                       </div>
-                      
-                      {/* Winner Info with Logo */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">
-                          {getVendorLogo(best.vendor)}
-                        </div>
-                        <div>
-                          <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
-                          <p className="text-sm text-gray-600">Best overall value</p>
-                        </div>
-                      </div>
-                      
-                      {/* Total Price */}
-                      <div className="bg-white rounded-lg p-4 border shadow-sm">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600">Total Price</p>
-                          <p className="text-3xl font-bold text-green-600">
-                            {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(best.total).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {selectedCurrency !== 'USD' && `($${best.total.toFixed(2)} USD)`}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Cost Breakdown with Hover Effects */}
-                      {best.items && best.items.length > 0 && (
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-3">Cost Breakdown:</h4>
-                          <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
-                            {best.items.map((item, index) => (
-                              <div 
-                                key={index} 
-                                className="flex justify-between items-center p-3 rounded-lg border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group"
-                              >
-                                <div className="flex-1">
-                                  <p className="font-medium group-hover:text-green-700 transition-colors">
-                                    {item.description || 'Unknown Item'}
-                                  </p>
-                                  <p className="text-gray-600 text-sm">
-                                    Qty: {item.quantity || 0} × {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.unitPrice || 0).toFixed(2)}
-                                  </p>
-                                  {item.sku && (
-                                    <p className="text-xs text-gray-500">SKU: {item.sku}</p>
-                                  )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Currency Selection */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700">Currency:</span>
+                          <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USD">
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-4 w-4" />
+                                  USD
                                 </div>
-                                <div className="text-right">
-                                  <span className="font-semibold text-green-700 group-hover:text-green-800 transition-colors">
-                                    {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total || 0).toFixed(2)}
-                                  </span>
-                                  {item.deliveryTime && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Delivery: {item.deliveryTime}
-                                    </p>
-                                  )}
+                              </SelectItem>
+                              <SelectItem value="EUR">
+                                <div className="flex items-center gap-2">
+                                  <Euro className="h-4 w-4" />
+                                  EUR
                                 </div>
-                              </div>
-                            ))}
+                              </SelectItem>
+                              <SelectItem value="INR">
+                                <div className="flex items-center gap-2">
+                                  <IndianRupee className="h-4 w-4" />
+                                  INR
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Winner Info with Logo */}
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl">
+                            {getVendorLogo(best.vendor)}
+                          </div>
+                          <div>
+                            <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
+                            <p className="text-sm text-gray-600">Best overall value</p>
                           </div>
                         </div>
-                      )}
-                      
-                      {/* Confidence Score */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Analysis Confidence</span>
-                          <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
+                        
+                        {/* Savings Summary */}
+                        <div className="bg-white rounded-lg p-4 border shadow-sm">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-600">Total Price</p>
+                            <p className="text-3xl font-bold text-green-600">
+                              {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(best.total).toFixed(2)}
+                            </p>
+                            <p className="text-lg font-semibold text-green-700 mt-2">
+                              {percentageSavings.toFixed(1)}% cheaper than {worst.vendor}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Savings: {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(worst.total - best.total).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {selectedCurrency !== 'USD' && `($${best.total.toFixed(2)} USD)`}
+                            </p>
+                          </div>
                         </div>
-                        <Progress value={confidenceScore} className="w-full h-2" />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Based on data quality and extraction accuracy
-                        </p>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                          <Button 
+                            onClick={generateEmailContent}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                          >
+                            📧 Email to Team
+                          </Button>
+                          <Button 
+                            onClick={generateReport}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            📄 Download Report
+                          </Button>
+                        </div>
                       </div>
-                      
-                      <p className="text-sm text-gray-700 border-t pt-3">
-                        <span className="font-medium">Note:</span> This is a basic price comparison. For more advanced analysis with AI-powered recommendations, stay tuned for updates!
+                    </CardContent>
+                  </Card>
+
+                  {/* Comparison Table */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>📊 Item-by-Item Comparison</CardTitle>
+                      <CardDescription>
+                        Compare pricing across all vendors. Green highlights indicate the best price for each item.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b-2 border-gray-200">
+                              <th className="text-left p-3 font-semibold">Item</th>
+                              {vendorTotals.map(({ vendor }) => (
+                                <th key={vendor} className="text-center p-3 font-semibold">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <span className="text-lg">{getVendorLogo(vendor)}</span>
+                                    <span className="text-sm">{vendor}</span>
+                                  </div>
+                                </th>
+                              ))}
+                              <th className="text-center p-3 font-semibold text-green-600">Best Price</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from(allItems.entries()).map(([key, itemData]) => {
+                              const cheapest = itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0]);
+                              return (
+                                <tr key={key} className="border-b border-gray-100 hover:bg-gray-50">
+                                  <td className="p-3">
+                                    <div>
+                                      <p className="font-medium">{itemData.description}</p>
+                                      {itemData.sku && (
+                                        <p className="text-xs text-gray-500">SKU: {itemData.sku}</p>
+                                      )}
+                                    </div>
+                                  </td>
+                                  {vendorTotals.map(({ vendor }) => {
+                                    const vendorItem = itemData.vendors.find(v => v.name === vendor);
+                                    const isCheapest = vendorItem && vendorItem.name === cheapest.name;
+                                    return (
+                                      <td key={vendor} className={`text-center p-3 ${isCheapest ? 'bg-green-50 border-2 border-green-200' : ''}`}>
+                                        {vendorItem ? (
+                                          <div>
+                                            <p className="font-semibold">{CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(vendorItem.total).toFixed(2)}</p>
+                                            <p className="text-xs text-gray-600">
+                                              {vendorItem.quantity} × {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(vendorItem.price).toFixed(2)}
+                                            </p>
+                                            {isCheapest && (
+                                              <Badge variant="default" className="bg-green-500 text-white text-xs mt-1">
+                                                Best
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400">-</span>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                  <td className="text-center p-3 bg-green-50">
+                                    <div>
+                                      <p className="font-bold text-green-700">{CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(cheapest.total).toFixed(2)}</p>
+                                      <p className="text-xs text-green-600">{cheapest.name}</p>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Confidence Score */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>📈 Analysis Confidence</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Data Quality Score</span>
+                        <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
+                      </div>
+                      <Progress value={confidenceScore} className="w-full h-2" />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Based on data quality and extraction accuracy
                       </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               );
             })()}
 
