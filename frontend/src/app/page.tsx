@@ -10,7 +10,7 @@ import AuthModal from "@/components/AuthModal";
 import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
-import { AlertCircle, Sparkles, Building2, DollarSign, Euro, IndianRupee } from 'lucide-react';
+import { AlertCircle, Sparkles, DollarSign, Euro, IndianRupee } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface User {
