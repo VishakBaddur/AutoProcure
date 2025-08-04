@@ -4,12 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/AuthModal";
 import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
-import { AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Sparkles, Building2, DollarSign, Euro, IndianRupee } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface User {
@@ -39,12 +40,26 @@ interface QuoteAnalysisResult {
   recommendation?: string;
 }
 
+// Currency conversion rates (simplified - in real app, use live rates)
+const CURRENCY_RATES = {
+  USD: 1,
+  EUR: 0.85,
+  INR: 83.5
+};
+
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  EUR: '€',
+  INR: '₹'
+};
+
 export default function Home() {
   const { user, isAuthenticated, login, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [results, setResults] = useState<Array<{fileName: string, result: unknown}>>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'EUR' | 'INR'>('USD');
 
   const handleAuthSuccess = (token: string, userData: User) => {
     login(token, userData);
@@ -71,6 +86,27 @@ export default function Home() {
   const openAuthModal = (mode: 'login' | 'signup') => {
     setAuthMode(mode);
     setShowAuthModal(true);
+  };
+
+  // Convert price to selected currency
+  const convertPrice = (price: number) => {
+    return price * CURRENCY_RATES[selectedCurrency];
+  };
+
+  // Get vendor logo based on vendor name
+  const getVendorLogo = (vendorName: string) => {
+    const name = vendorName.toLowerCase();
+    if (name.includes('amazon') || name.includes('aws')) return '🛒';
+    if (name.includes('microsoft') || name.includes('msft')) return '🪟';
+    if (name.includes('google') || name.includes('alphabet')) return '🔍';
+    if (name.includes('apple')) return '🍎';
+    if (name.includes('dell')) return '💻';
+    if (name.includes('hp') || name.includes('hewlett')) return '🖥️';
+    if (name.includes('cisco')) return '🌐';
+    if (name.includes('oracle')) return '🗄️';
+    if (name.includes('sap')) return '📊';
+    if (name.includes('salesforce')) return '☁️';
+    return '🏢'; // Default building icon
   };
 
   return (
@@ -281,35 +317,91 @@ export default function Home() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Winner Info */}
+                      {/* Currency Selection */}
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
+                        <span className="text-sm font-medium text-gray-700">Currency:</span>
+                        <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="USD">
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="h-4 w-4" />
+                                USD
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="EUR">
+                              <div className="flex items-center gap-2">
+                                <Euro className="h-4 w-4" />
+                                EUR
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="INR">
+                              <div className="flex items-center gap-2">
+                                <IndianRupee className="h-4 w-4" />
+                                INR
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       
-                      {/* Total Price */}
-                      <div className="bg-white rounded-lg p-3 border">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600">Total Price</p>
-                          <p className="text-2xl font-bold text-green-600">${best.total.toFixed(2)}</p>
+                      {/* Winner Info with Logo */}
+                      <div className="flex items-center gap-3">
+                        <div className="text-3xl">
+                          {getVendorLogo(best.vendor)}
+                        </div>
+                        <div>
+                          <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
+                          <p className="text-sm text-gray-600">Best overall value</p>
                         </div>
                       </div>
                       
-                      {/* Cost Breakdown */}
+                      {/* Total Price */}
+                      <div className="bg-white rounded-lg p-4 border shadow-sm">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Total Price</p>
+                          <p className="text-3xl font-bold text-green-600">
+                            {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(best.total).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {selectedCurrency !== 'USD' && `($${best.total.toFixed(2)} USD)`}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Cost Breakdown with Hover Effects */}
                       {best.items && best.items.length > 0 && (
                         <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Cost Breakdown:</h4>
-                          <div className="bg-white rounded-lg p-3 border space-y-2">
+                          <h4 className="font-medium text-gray-900 mb-3">Cost Breakdown:</h4>
+                          <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
                             {best.items.map((item, index) => (
-                              <div key={index} className="flex justify-between items-center text-sm">
+                              <div 
+                                key={index} 
+                                className="flex justify-between items-center p-3 rounded-lg border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group"
+                              >
                                 <div className="flex-1">
-                                  <p className="font-medium">{item.description || 'Unknown Item'}</p>
-                                  <p className="text-gray-600">
-                                    Qty: {item.quantity || 0} × ${item.unitPrice?.toFixed(2) || '0.00'}
+                                  <p className="font-medium group-hover:text-green-700 transition-colors">
+                                    {item.description || 'Unknown Item'}
                                   </p>
+                                  <p className="text-gray-600 text-sm">
+                                    Qty: {item.quantity || 0} × {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.unitPrice || 0).toFixed(2)}
+                                  </p>
+                                  {item.sku && (
+                                    <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                                  )}
                                 </div>
-                                <span className="font-semibold text-green-700">
-                                  ${item.total?.toFixed(2) || '0.00'}
-                                </span>
+                                <div className="text-right">
+                                  <span className="font-semibold text-green-700 group-hover:text-green-800 transition-colors">
+                                    {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total || 0).toFixed(2)}
+                                  </span>
+                                  {item.deliveryTime && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Delivery: {item.deliveryTime}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -318,7 +410,7 @@ export default function Home() {
                       
                       {/* Confidence Score */}
                       <div>
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-gray-700">Analysis Confidence</span>
                           <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
                         </div>
