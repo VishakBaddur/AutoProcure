@@ -20,7 +20,6 @@ from .slack import send_slack_alert
 from .ai_processor import ai_processor
 from .multi_vendor_analyzer import multi_vendor_analyzer
 from .database import db
-from .auth import auth_manager
 from .pdf_processor import enhanced_pdf_processor
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
@@ -42,49 +41,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Security
-security = HTTPBearer()
-
-# Request models
-class SignupRequest(BaseModel):
-    email: str
-    password: str
-    name: Optional[str] = None
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database connection on startup"""
-    try:
-        await db.connect()
-        print("✅ Database connected successfully")
-    except Exception as e:
-        print(f"⚠️ Database connection failed: {e}")
-        print("⚠️ App will continue without database functionality")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close database connections on shutdown"""
-    try:
-        if db.pool:
-            await db.pool.close()
-            print("✅ Database connection closed")
-    except Exception as e:
-        print(f"⚠️ Error closing database: {e}")
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[Dict[str, Any]]:
-    """Get current user from JWT token"""
-    try:
-        token = credentials.credentials
-        user = await auth_manager.verify_token(token)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return user
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+# Remove authentication dependencies for beta
+# Remove: from .auth import auth_manager
+# Remove: security = HTTPBearer()
+# Remove: get_current_user function
+# Remove: SignupRequest, LoginRequest, /auth/signup, /auth/login, /auth/me endpoints
+# Remove: current_user and Depends(get_current_user) from all endpoints
 
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF using enhanced processor with OCR fallback"""
@@ -137,48 +99,39 @@ def extract_text_from_excel(file_content: bytes) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Excel parsing error: {str(e)}")
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database connection on startup"""
+    try:
+        await db.connect()
+        print("✅ Database connected successfully")
+    except Exception as e:
+        print(f"⚠️ Database connection failed: {e}")
+        print("⚠️ App will continue without database functionality")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connections on shutdown"""
+    try:
+        if db.pool:
+            await db.pool.close()
+            print("✅ Database connection closed")
+    except Exception as e:
+        print(f"⚠️ Error closing database: {e}")
+
+# Remove get_current_user and all auth endpoints
+# Remove current_user from upload_file, analyze_multiple_quotes, get_quote_history, get_quote, get_analytics
+
+# For endpoints that used current_user, set user_id, user_email, user_name to None
+# For quote history and analytics, return all data (or empty if not available)
+
 @app.get("/")
 async def root():
     return {"message": "AutoProcure API is running!"}
 
-# Authentication endpoints
-@app.post("/auth/signup")
-async def signup(request: SignupRequest):
-    """Create a new user account"""
-    try:
-        result = await auth_manager.create_user(request.email, request.password, request.name)
-        if result["success"]:
-            return {"message": result["message"], "user_id": result["user_id"]}
-        else:
-            raise HTTPException(status_code=400, detail=result["error"])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
-
-@app.post("/auth/login")
-async def login(request: LoginRequest):
-    """Login user and get access token"""
-    try:
-        result = await auth_manager.login_user(request.email, request.password)
-        if result["success"]:
-            return {
-                "message": result["message"],
-                "user_id": result["user_id"],
-                "access_token": result["access_token"]
-            }
-        else:
-            raise HTTPException(status_code=401, detail=result["error"])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
-
-@app.get("/auth/me")
-async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user
-
 @app.post("/upload", response_model=AnalysisResult)
 async def upload_file(
     file: UploadFile = File(...),
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
 ):
     """Upload and analyze vendor quote files with RAG context"""
     # Validate file type
@@ -196,7 +149,7 @@ async def upload_file(
         else:
             text_content = extract_text_from_excel(file_content)
         # --- RAG: Retrieve relevant past quotes for context ---
-        user_id = current_user["user_id"] if current_user else None
+        user_id = None # Set user_id to None for public endpoints
         # For RAG, we need SKUs. We'll extract them after AI analysis, so for the first run, just analyze as usual.
         initial_quote = await ai_processor.analyze_quote(text_content)
         skus = [item.sku for item in initial_quote.items]
@@ -261,11 +214,11 @@ async def upload_file(
             recommendation=recommendation
         )
         # Save to database with user ID
-        user_email = current_user["email"] if current_user else None
-        user_name = current_user.get("name") if current_user else None
+        user_email = None # Set user_email to None for public endpoints
+        user_name = None # Set user_name to None for public endpoints
         print(f"[UPLOAD] user_id={user_id}, email={user_email}, name={user_name}")
         # Defensive: ensure user exists in users table
-        await auth_manager._create_user_record(user_id, user_email, user_name)
+        # await auth_manager._create_user_record(user_id, user_email, user_name) # Removed auth_manager call
         quote_id = await db.save_quote_analysis(
             filename=file.filename,
             file_type=file_extension,
@@ -285,7 +238,6 @@ async def upload_file(
 @app.post("/analyze-multiple", response_model=AnalysisResult)
 async def analyze_multiple_quotes(
     files: List[UploadFile] = File(...),
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
 ):
     """Analyze multiple vendor quotes and provide intelligent multi-vendor recommendations"""
     if not files or len(files) < 2:
@@ -326,7 +278,7 @@ async def analyze_multiple_quotes(
             raise HTTPException(status_code=400, detail="Could not analyze enough quotes for comparison")
         
         # Get RAG context for multi-vendor analysis
-        user_id = current_user["user_id"] if current_user else None
+        user_id = None # Set user_id to None for public endpoints
         rag_context = ""
         if user_id:
             # Get SKUs from all quotes
@@ -393,10 +345,10 @@ async def analyze_multiple_quotes(
         )
         
         # Save to database
-        user_email = current_user["email"] if current_user else None
-        user_name = current_user.get("name") if current_user else None
+        user_email = None # Set user_email to None for public endpoints
+        user_name = None # Set user_name to None for public endpoints
         
-        await auth_manager._create_user_record(user_id, user_email, user_name)
+        # await auth_manager._create_user_record(user_id, user_email, user_name) # Removed auth_manager call
         
         # Save each quote separately for history
         quote_ids = []
@@ -426,11 +378,10 @@ async def analyze_multiple_quotes(
 @app.get("/quotes")
 async def get_quote_history(
     limit: int = 10,
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
 ):
     """Get quote history for current user"""
     try:
-        user_id = current_user["user_id"] if current_user else None
+        user_id = None # Set user_id to None for public endpoints
         quotes = await db.get_quote_history(user_id=user_id, limit=limit)
         return {"quotes": quotes}
     except Exception as e:
@@ -439,7 +390,6 @@ async def get_quote_history(
 @app.get("/quotes/{quote_id}")
 async def get_quote(
     quote_id: str,
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
 ):
     """Get specific quote by ID"""
     try:
@@ -448,18 +398,19 @@ async def get_quote(
             raise HTTPException(status_code=404, detail="Quote not found")
         
         # Check if user owns this quote (if authenticated)
-        if current_user and quote.get("user_id") and quote["user_id"] != current_user["user_id"]:
-            raise HTTPException(status_code=403, detail="Access denied")
+        # if current_user and quote.get("user_id") and quote["user_id"] != current_user["user_id"]: # Removed auth check
+        #     raise HTTPException(status_code=403, detail="Access denied")
             
         return quote
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get quote: {str(e)}")
 
 @app.get("/analytics")
-async def get_analytics(current_user: Optional[Dict[str, Any]] = Depends(get_current_user)):
+async def get_analytics(
+):
     """Get analytics data for current user"""
     try:
-        user_id = current_user["user_id"] if current_user else None
+        user_id = None # Set user_id to None for public endpoints
         analytics = await db.get_analytics(user_id=user_id)
         return analytics
     except Exception as e:
