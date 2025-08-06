@@ -21,6 +21,7 @@ from .ai_processor import ai_processor
 from .multi_vendor_analyzer import multi_vendor_analyzer
 from .database import db
 from .auth import auth_manager
+from .pdf_processor import enhanced_pdf_processor
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
 
@@ -86,18 +87,42 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def extract_text_from_pdf(file_content: bytes) -> str:
-    """Extract text from PDF using pdfplumber"""
+    """Extract text from PDF using enhanced processor with OCR fallback"""
     try:
-        with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-            text = ""
-            for page_num, page in enumerate(pdf.pages):
-                page_text = page.extract_text() or ""
-                print(f"=== Extracted PDF Page {page_num+1} Text ===")
-                print(page_text)
-                text += page_text
-            return text
+        # Use enhanced PDF processor
+        result = enhanced_pdf_processor.extract_text_enhanced(file_content)
+        
+        # Log extraction method used
+        print(f"[PDF EXTRACTION] Method: {result['extraction_method']}, OCR used: {result['ocr_used']}")
+        print(f"[PDF EXTRACTION] Tables found: {len(result['tables'])}")
+        
+        # If tables were found, add them to the text for better analysis
+        if result['tables']:
+            table_text = "\n\n=== EXTRACTED TABLES ===\n"
+            for i, table in enumerate(result['tables']):
+                table_text += f"\nTable {i+1} (Method: {table['method']}, Accuracy: {table['accuracy']}%):\n"
+                if table['headers']:
+                    table_text += " | ".join(str(h) for h in table['headers']) + "\n"
+                    table_text += "-" * 50 + "\n"
+                for row in table['data'][:5]:  # Limit to first 5 rows
+                    table_text += " | ".join(str(v) for v in row.values()) + "\n"
+            result['text'] += table_text
+        
+        return result['text']
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"PDF parsing error: {str(e)}")
+        print(f"[PDF EXTRACTION ERROR] {str(e)}")
+        # Fallback to original method
+        try:
+            with pdfplumber.open(io.BytesIO(file_content)) as pdf:
+                text = ""
+                for page_num, page in enumerate(pdf.pages):
+                    page_text = page.extract_text() or ""
+                    print(f"=== Extracted PDF Page {page_num+1} Text ===")
+                    print(page_text)
+                    text += page_text
+                return text
+        except Exception as fallback_error:
+            raise HTTPException(status_code=400, detail=f"PDF parsing error: {str(fallback_error)}")
 
 def extract_text_from_excel(file_content: bytes) -> str:
     """Extract text from Excel using openpyxl"""
