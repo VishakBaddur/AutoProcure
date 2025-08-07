@@ -8,14 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
-import { AlertCircle, Sparkles, DollarSign, Euro, IndianRupee, Info, TrendingUp, Target, Zap } from 'lucide-react';
+import { AlertCircle, DollarSign, Euro, IndianRupee, Info, TrendingUp, Target, Zap } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
 
 interface QuoteItem {
   sku: string;
@@ -172,7 +166,7 @@ export default function Home() {
             </div>
             <CardTitle className="text-xl text-gray-700 mb-4">
               Procurement teams are losing {CURRENCY_SYMBOLS[selectedCurrency]}10–50K/month to price mismatches and hidden cost traps. 
-              AutoProcure instantly tells you where you're overpaying — and which vendor wins on value.
+              AutoProcure instantly tells you where you&apos;re overpaying — and which vendor wins on value.
             </CardTitle>
             <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
               <div className="flex items-center gap-2">
@@ -197,7 +191,7 @@ export default function Home() {
         <Card className="border-2 border-blue-400 bg-blue-50">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold text-blue-900 mb-2">
-              Upload Two Supplier Quotes. See How Much You're Being Overcharged — Instantly.
+              Upload Two Supplier Quotes. See How Much You&apos;re Being Overcharged — Instantly.
             </CardTitle>
             <CardDescription className="text-lg">
               No login required. No friction. Just upload and see your savings in seconds.
