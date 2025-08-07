@@ -109,6 +109,59 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header with Global Currency Selector */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold text-gray-900">AutoProcure</h1>
+              <Badge variant="secondary" className="ml-3">
+                AI-Powered Procurement
+              </Badge>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {/* Global Currency Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Currency:</span>
+                <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        USD
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="EUR">
+                      <div className="flex items-center gap-2">
+                        <Euro className="h-4 w-4" />
+                        EUR
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="INR">
+                      <div className="flex items-center gap-2">
+                        <IndianRupee className="h-4 w-4" />
+                        INR
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                {showHistory ? 'Hide History' : 'Quote History'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section with New Positioning */}
       <div className="max-w-4xl mx-auto mt-8 mb-6">
         <Card className="border-2 border-green-400 bg-gradient-to-r from-green-50 to-blue-50">
@@ -118,7 +171,7 @@ export default function Home() {
               <h1 className="text-3xl font-bold text-gray-900">Stop Overpaying on Procurement</h1>
             </div>
             <CardTitle className="text-xl text-gray-700 mb-4">
-              Procurement teams are losing ₹10–50K/month to price mismatches and hidden cost traps. 
+              Procurement teams are losing {CURRENCY_SYMBOLS[selectedCurrency]}10–50K/month to price mismatches and hidden cost traps. 
               AutoProcure instantly tells you where you're overpaying — and which vendor wins on value.
             </CardTitle>
             <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
@@ -165,29 +218,6 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">AutoProcure</h1>
-              <Badge variant="secondary" className="ml-3">
-                AI-Powered Procurement
-              </Badge>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowHistory(!showHistory)}
-              >
-                {showHistory ? 'Hide History' : 'Quote History'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -236,36 +266,6 @@ export default function Home() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
-                            {/* Currency Selection */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-700">Currency:</span>
-                              <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
-                                <SelectTrigger className="w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="USD">
-                                    <div className="flex items-center gap-2">
-                                      <DollarSign className="h-4 w-4" />
-                                      USD
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="EUR">
-                                    <div className="flex items-center gap-2">
-                                      <Euro className="h-4 w-4" />
-                                      EUR
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="INR">
-                                    <div className="flex items-center gap-2">
-                                      <IndianRupee className="h-4 w-4" />
-                                      INR
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
                             {/* Vendor Info with Logo */}
                             <div className="flex items-center gap-3">
                               <div className="text-3xl">
@@ -453,36 +453,6 @@ Best regards
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Currency Selection */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Currency:</span>
-                        <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USD">
-                              <div className="flex items-center gap-2">
-                                <DollarSign className="h-4 w-4" />
-                                USD
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="EUR">
-                              <div className="flex items-center gap-2">
-                                <Euro className="h-4 w-4" />
-                                EUR
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="INR">
-                              <div className="flex items-center gap-2">
-                                <IndianRupee className="h-4 w-4" />
-                                INR
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
                       {/* Winner Info with Logo */}
                       <div className="flex items-center gap-3">
                         <div className="text-3xl">
