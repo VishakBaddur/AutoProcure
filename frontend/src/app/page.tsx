@@ -66,7 +66,6 @@ export default function Home() {
   useEffect(() => {
     if (results.length >= 2) {
       const allQuotes = results.map(r => (r.result as QuoteAnalysisResult).quotes[0]).filter(Boolean);
-      console.log('useEffect - All quotes:', allQuotes);
       
       if (allQuotes.length >= 2) {
         // Calculate total for each vendor
@@ -75,8 +74,6 @@ export default function Home() {
           total: quote.items.reduce((sum, item) => sum + item.total, 0),
           items: quote.items
         }));
-        
-        console.log('useEffect - Vendor totals:', vendorTotals);
 
         const best = vendorTotals.reduce((min, current) => 
           current.total < min.total ? current : min
@@ -87,7 +84,6 @@ export default function Home() {
         );
 
         const savings = worst.total - best.total;
-        console.log('useEffect - Calculated savings:', savings, 'Best:', best.total, 'Worst:', worst.total);
         setTotalSavings(savings);
       }
     } else {
@@ -633,28 +629,6 @@ Best regards
                 <p className="text-xs text-gray-500 mt-2">
                   *Based on average 10-15% savings per quote comparison
                 </p>
-                {/* Debug info */}
-                <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
-                  <p><b>Debug:</b> Results count: {results.length}, Total savings: {totalSavings}</p>
-                  {results.length >= 2 && (() => {
-                    const allQuotes = results.map(r => (r.result as QuoteAnalysisResult).quotes[0]).filter(Boolean);
-                    if (allQuotes.length >= 2) {
-                      const vendorTotals = allQuotes.map(quote => ({
-                        vendor: quote.vendorName,
-                        total: quote.items.reduce((sum, item) => sum + item.total, 0),
-                      }));
-                      return (
-                        <div>
-                          <p>Vendor totals: {vendorTotals.map(v => `${v.vendor}: ${v.total}`).join(', ')}</p>
-                          <p>Best: {Math.min(...vendorTotals.map(v => v.total))}</p>
-                          <p>Worst: {Math.max(...vendorTotals.map(v => v.total))}</p>
-                          <p>Calculated savings: {Math.max(...vendorTotals.map(v => v.total)) - Math.min(...vendorTotals.map(v => v.total))}</p>
-                        </div>
-                      );
-                    }
-                    return <p>Not enough quotes to calculate</p>;
-                  })()}
-                </div>
               </div>
             </CardHeader>
           </Card>
