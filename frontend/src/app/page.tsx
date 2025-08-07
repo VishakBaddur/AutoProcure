@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth } from "@/contexts/AuthContext";
-import AuthModal from "@/components/AuthModal";
 import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
@@ -20,24 +18,35 @@ interface User {
 }
 
 interface QuoteItem {
-  sku?: string;
-  description?: string;
-  quantity?: number;
-  unitPrice?: number;
-  deliveryTime?: string;
-  total?: number;
+  sku: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  deliveryTime: string;
 }
 
 interface Quote {
-  vendorName?: string;
-  items?: QuoteItem[];
-  terms?: Record<string, string>;
+  vendorName: string;
+  items: QuoteItem[];
+  terms: {
+    paymentTerms: string;
+    deliveryTerms: string;
+    warranty: string;
+  };
 }
 
 interface QuoteAnalysisResult {
-  quotes?: Quote[];
+  quotes: Quote[];
+  comparison: {
+    totalCost: number;
+    deliveryTime: string;
+    vendorCount: number;
+    costSavings?: number;
+    riskAssessment?: string;
+  };
+  recommendation: string;
   suggestion?: string;
-  recommendation?: string;
 }
 
 // Currency conversion rates (simplified - in real app, use live rates)
@@ -54,25 +63,11 @@ const CURRENCY_SYMBOLS = {
 };
 
 export default function Home() {
-  const { user, isAuthenticated, login, logout } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [results, setResults] = useState<Array<{fileName: string, result: unknown}>>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'EUR' | 'INR'>('USD');
 
-  const handleAuthSuccess = (token: string, userData: User) => {
-    login(token, userData);
-    setShowAuthModal(false);
-  };
-
   const handleFileUpload = async (file: File) => {
-    if (!isAuthenticated) {
-      setAuthMode('login');
-      setShowAuthModal(true);
-      throw new Error('Not authenticated');
-    }
-
     try {
       const result = await api.uploadFile(file);
       setResults(prev => [...prev, { fileName: file.name, result }]);
@@ -81,11 +76,6 @@ export default function Home() {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       throw new Error(errorMessage);
     }
-  };
-
-  const openAuthModal = (mode: 'login' | 'signup') => {
-    setAuthMode(mode);
-    setShowAuthModal(true);
   };
 
   // Convert price to selected currency
@@ -125,6 +115,7 @@ export default function Home() {
           </CardHeader>
         </Card>
       </div>
+      
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -137,31 +128,12 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {isAuthenticated ? (
-                <>
-                  <span className="text-sm text-gray-600">
-                    Welcome, {user?.name || user?.email}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowHistory(!showHistory)}
-                  >
-                    {showHistory ? 'Hide History' : 'Quote History'}
-                  </Button>
-                  <Button variant="outline" onClick={logout}>
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={() => openAuthModal('login')}>
-                    Login
-                  </Button>
-                  <Button onClick={() => openAuthModal('signup')}>
-                    Sign Up
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="outline"
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                {showHistory ? 'Hide History' : 'Quote History'}
+              </Button>
             </div>
           </div>
         </div>
@@ -169,612 +141,449 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!isAuthenticated ? (
-          <div className="text-center py-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Welcome to AutoProcure
-            </h2>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Streamline your procurement process with AI-powered quote analysis, 
-              vendor comparison, and intelligent recommendations.
-            </p>
-            <div className="space-x-4">
-              <Button size="lg" onClick={() => openAuthModal('signup')}>
-                Get Started
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => openAuthModal('login')}>
-                Sign In
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* File Upload Section */}
-            <Card>
+        <div className="space-y-8">
+          {/* File Upload Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Vendor Quotes</CardTitle>
+              <CardDescription>
+                Upload one or more PDF or Excel files to analyze quotes and get AI-powered insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileUpload onFileUpload={handleFileUpload} />
+            </CardContent>
+          </Card>
+
+          {/* Analysis Results for Each File */}
+          {results.length > 0 && results.map(({ fileName, result }, idx) => (
+            <Card key={fileName + idx}>
               <CardHeader>
-                <CardTitle>Upload Vendor Quotes</CardTitle>
+                <CardTitle>Analysis Results: {fileName}</CardTitle>
                 <CardDescription>
-                  Upload one or more PDF or Excel files to analyze quotes and get AI-powered insights
+                  AI-powered insights and recommendations
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUpload onFileUpload={handleFileUpload} />
-              </CardContent>
-            </Card>
+                {/* Enhanced Quote Summary for Individual Files */}
+                {(() => {
+                  const quoteResult = result as QuoteAnalysisResult;
+                  const quote = quoteResult.quotes[0];
+                  
+                  if (!quote || !quote.items || quote.items.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Analysis Failed</h3>
+                        <p className="text-gray-600">Could not extract quote information from this file. Please check the file format and try again.</p>
+                      </div>
+                    );
+                  }
 
-            {/* Analysis Results for Each File */}
-            {results.length > 0 && results.map(({ fileName, result }, idx) => (
-              <Card key={fileName + idx}>
-                <CardHeader>
-                  <CardTitle>Analysis Results: {fileName}</CardTitle>
-                  <CardDescription>
-                    AI-powered insights and recommendations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* Quotes */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Extracted Quotes</h3>
-                      {(result as QuoteAnalysisResult)?.quotes?.map((quote: Quote, index: number) => (
-                        <div key={index} className="border rounded-lg p-4 mb-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <h4 className="font-medium">{(quote as Quote)?.vendorName || 'Unknown Vendor'}</h4>
-                            <Badge variant="outline">{(quote as Quote)?.terms?.quoteNumber || 'N/A'}</Badge>
+                  const totalCost = quote.items.reduce((sum, item) => sum + item.total, 0);
+                  const confidenceScore = Math.min(95, Math.max(60, 
+                    quote.items.length > 0 ? 85 : 60 + (quote.vendorName !== 'Unknown Vendor' ? 10 : 0)
+                  ));
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Enhanced Quote Summary Card */}
+                      <Card className="border-2 border-blue-400 bg-blue-50">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle>📋 Quote Summary</CardTitle>
+                            <Badge variant="default" className="bg-blue-500 text-white">
+                              {confidenceScore}% Confidence
+                            </Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <p className="text-sm text-gray-600">Quote Date</p>
-                              <p className="font-medium">{(quote as Quote)?.terms?.quoteDate || 'N/A'}</p>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {/* Currency Selection */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-700">Currency:</span>
+                              <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="USD">
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="h-4 w-4" />
+                                      USD
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="EUR">
+                                    <div className="flex items-center gap-2">
+                                      <Euro className="h-4 w-4" />
+                                      EUR
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="INR">
+                                    <div className="flex items-center gap-2">
+                                      <IndianRupee className="h-4 w-4" />
+                                      INR
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Valid Until</p>
-                              <p className="font-medium">{(quote as Quote)?.terms?.validUntil || 'N/A'}</p>
+                            
+                            {/* Vendor Info with Logo */}
+                            <div className="flex items-center gap-3">
+                              <div className="text-3xl">
+                                {getVendorLogo(quote.vendorName)}
+                              </div>
+                              <div>
+                                <span className="text-lg font-semibold text-blue-900">{quote.vendorName}</span>
+                                <p className="text-sm text-gray-600">Quote analyzed successfully</p>
+                              </div>
                             </div>
-                          </div>
-                          {/* Items */}
-                          <div>
-                            <h5 className="font-medium mb-2">Items</h5>
+
+                            {/* Total Cost */}
+                            <div className="bg-white p-4 rounded-lg border">
+                              <div className="text-center">
+                                <p className="text-sm text-gray-600">Total Quote Value</p>
+                                <p className="text-3xl font-bold text-blue-900">
+                                  {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalCost).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Cost Breakdown */}
                             <div className="space-y-2">
-                              {(quote as Quote)?.items?.map((item: QuoteItem, itemIndex: number) => (
-                                <div key={itemIndex} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                  <div>
-                                    <p className="font-medium">{(item as QuoteItem)?.description || 'Unknown Item'}</p>
-                                    <p className="text-sm text-gray-600">
-                                      SKU: {(item as QuoteItem)?.sku || 'N/A'} | 
-                                      Qty: {(item as QuoteItem)?.quantity || 0}
-                                    </p>
+                              <h4 className="font-semibold text-gray-900">Cost Breakdown:</h4>
+                              <div className="space-y-1">
+                                {quote.items.map((item, index) => (
+                                  <div key={index} className="flex justify-between text-sm hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group p-2 rounded">
+                                    <span className="flex-1">{item.description}</span>
+                                    <span className="font-medium">
+                                      {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total).toLocaleString()}
+                                    </span>
                                   </div>
-                                  <div className="text-right">
-                                    <p className="font-medium">
-                                      ${(item as QuoteItem)?.unitPrice?.toFixed(2) || '0.00'}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      Total: ${(item as QuoteItem)?.total?.toFixed(2) || '0.00'}
-                                    </p>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Confidence Score */}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">Data Quality Score:</span>
+                                <div className="relative group">
+                                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                    Invoice scan quality, vendor formatting consistency, data extraction accuracy, and field completeness
                                   </div>
                                 </div>
-                              ))}
+                              </div>
+                              <Progress value={confidenceScore} className="h-2" />
+                              <p className="text-xs text-gray-500">{confidenceScore}% - {confidenceScore >= 80 ? 'Excellent' : confidenceScore >= 60 ? 'Good' : 'Fair'} data quality</p>
                             </div>
+
+                            {/* Recommendation */}
+                            {quoteResult.recommendation && (
+                              <div className="bg-white p-4 rounded-lg border">
+                                <h4 className="font-semibold text-gray-900 mb-2">AI Recommendation:</h4>
+                                <p className="text-gray-700">{quoteResult.recommendation}</p>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        </CardContent>
+                      </Card>
                     </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          ))}
 
-                    {/* Recommendation */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">AI Recommendation</h3>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-blue-900">
-                          {(result as QuoteAnalysisResult)?.recommendation || 'No recommendation available'}
-                        </p>
+          {/* Multi-Vendor Comparison (only show if multiple files) */}
+          {results.length > 1 && (() => {
+            const allQuotes = results.map(r => (r.result as QuoteAnalysisResult).quotes[0]).filter(Boolean);
+            
+            if (allQuotes.length < 2) return null;
+
+            const vendorTotals = allQuotes.map(quote => ({
+              vendor: quote.vendorName,
+              total: quote.items.reduce((sum, item) => sum + item.total, 0),
+              items: quote.items
+            }));
+
+            const best = vendorTotals.reduce((min, current) => 
+              current.total < min.total ? current : min
+            );
+
+            const worst = vendorTotals.reduce((max, current) => 
+              current.total > max.total ? current : max
+            );
+
+            const percentageSavings = ((worst.total - best.total) / worst.total * 100);
+
+            // Generate email content
+            const generateEmailContent = () => {
+              const subject = encodeURIComponent(`Vendor Quote Comparison - ${best.vendor} Recommended`);
+              const body = encodeURIComponent(`
+Hi Team,
+
+I've analyzed ${allQuotes.length} vendor quotes for our procurement:
+
+🏆 RECOMMENDED: ${best.vendor}
+Total Cost: ${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(best.total).toLocaleString()}
+Savings: ${percentageSavings.toFixed(1)}% vs ${worst.vendor}
+
+Detailed comparison attached.
+
+Best regards
+              `);
+              window.open(`mailto:?subject=${subject}&body=${body}`);
+            };
+
+            // Generate report download
+            const generateReport = () => {
+              const report = {
+                analysisDate: new Date().toISOString(),
+                vendorCount: allQuotes.length,
+                recommendedVendor: best.vendor,
+                totalSavings: worst.total - best.total,
+                percentageSavings: percentageSavings,
+                detailedComparison: vendorTotals,
+                currency: selectedCurrency
+              };
+              
+              const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `vendor-comparison-${new Date().toISOString().split('T')[0]}.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            };
+
+            // Build item comparison map
+            const allItems = new Map<string, { [vendor: string]: number }>();
+            const cheapestPerItem = new Map<string, { vendor: string; price: number }>();
+
+            vendorTotals.forEach(({ vendor, items }) => {
+              items.forEach(item => {
+                const key = item.description.trim().toLowerCase();
+                if (!allItems.has(key)) {
+                  allItems.set(key, {});
+                }
+                allItems.get(key)![vendor] = item.unitPrice;
+                
+                if (!cheapestPerItem.has(key) || item.unitPrice < cheapestPerItem.get(key)!.price) {
+                  cheapestPerItem.set(key, { vendor, price: item.unitPrice });
+                }
+              });
+            });
+
+            return (
+              <div className="space-y-6">
+                {/* Summary Card */}
+                <Card className="border-2 border-green-400 bg-green-50">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>🏆 Best Vendor Summary</CardTitle>
+                      <Badge variant="default" className="bg-green-500 text-white">
+                        🏆 Winner
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Currency Selection */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Currency:</span>
+                        <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="USD">
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="h-4 w-4" />
+                                USD
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="EUR">
+                              <div className="flex items-center gap-2">
+                                <Euro className="h-4 w-4" />
+                                EUR
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="INR">
+                              <div className="flex items-center gap-2">
+                                <IndianRupee className="h-4 w-4" />
+                                INR
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
+                      
+                      {/* Winner Info with Logo */}
+                      <div className="flex items-center gap-3">
+                        <div className="text-3xl">
+                          {getVendorLogo(best.vendor)}
+                        </div>
+                        <div>
+                          <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
+                          <p className="text-sm text-gray-600">Best overall value</p>
+                        </div>
+                      </div>
 
-                    {/* Multi-vendor Suggestion/Conclusion */}
-                    {(result as QuoteAnalysisResult)?.suggestion && (
-                      <div>
-                        <h3 className="text-lg font-semibold mb-3">Conclusion / Suggestion</h3>
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <p className="text-green-900">
-                            {(result as QuoteAnalysisResult).suggestion}
+                      {/* Total Cost */}
+                      <div className="bg-white p-4 rounded-lg border">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Total Cost</p>
+                          <p className="text-3xl font-bold text-green-900">
+                            {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(best.total).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-green-600">
+                            Saves {percentageSavings.toFixed(1)}% vs {worst.vendor}
                           </p>
                         </div>
                       </div>
-                    )}
 
-                    {/* Enhanced Quote Summary with Winner Features */}
-                    {(result as QuoteAnalysisResult)?.quotes?.[0] && (() => {
-                      const quote = (result as QuoteAnalysisResult).quotes![0];
-                      const total = quote.items?.reduce((sum: number, item: QuoteItem) => sum + (item.total || 0), 0) || 0;
-                      const items = quote.items || [];
-                      
-                      // Calculate confidence score based on data quality
-                      const confidenceScore = Math.min(95, Math.max(60, 
-                        items.length > 0 ? 85 : 60 + 
-                        (quote.vendorName !== 'Unknown Vendor' ? 10 : 0)
-                      ));
-                      
-                      return (
-                        <div className="mt-6">
-                          <Card className="border-2 border-green-400 bg-green-50">
-                            <CardHeader>
-                              <div className="flex items-center justify-between">
-                                <CardTitle>Quote Summary</CardTitle>
-                                <Badge variant="default" className="bg-green-500 text-white">
-                                  📊 Analyzed
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                {/* Currency Selection */}
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-gray-700">Currency:</span>
-                                  <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
-                                    <SelectTrigger className="w-24">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="USD">
-                                        <div className="flex items-center gap-2">
-                                          <DollarSign className="h-4 w-4" />
-                                          USD
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="EUR">
-                                        <div className="flex items-center gap-2">
-                                          <Euro className="h-4 w-4" />
-                                          EUR
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="INR">
-                                        <div className="flex items-center gap-2">
-                                          <IndianRupee className="h-4 w-4" />
-                                          INR
-                                        </div>
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                
-                                {/* Vendor Info with Logo */}
-                                <div className="flex items-center gap-3">
-                                  <div className="text-3xl">
-                                    {getVendorLogo(quote.vendorName || 'Unknown')}
-                                  </div>
-                                  <div>
-                                    <span className="text-lg font-semibold text-green-900">{quote.vendorName || 'Unknown Vendor'}</span>
-                                    <p className="text-sm text-gray-600">Quote analyzed successfully</p>
-                                  </div>
-                                </div>
-                                
-                                {/* Total Price */}
-                                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                                  <div className="text-center">
-                                    <p className="text-sm text-gray-600">Total Quote Value</p>
-                                    <p className="text-3xl font-bold text-green-600">
-                                      {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(total).toFixed(2)}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {selectedCurrency !== 'USD' && `($${total.toFixed(2)} USD)`}
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                {/* Cost Breakdown with Hover Effects */}
-                                {items.length > 0 && (
-                                  <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Item Breakdown:</h4>
-                                    <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
-                                      {items.map((item, index) => (
-                                        <div 
-                                          key={index} 
-                                          className="flex justify-between items-center p-3 rounded-lg border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group"
-                                        >
-                                          <div className="flex-1">
-                                            <p className="font-medium group-hover:text-green-700 transition-colors">
-                                              {item.description || 'Unknown Item'}
-                                            </p>
-                                            <p className="text-gray-600 text-sm">
-                                              Qty: {item.quantity || 0} × {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.unitPrice || 0).toFixed(2)}
-                                            </p>
-                                            {item.sku && (
-                                              <p className="text-xs text-gray-500">SKU: {item.sku}</p>
-                                            )}
-                                          </div>
-                                          <div className="text-right">
-                                            <span className="font-semibold text-green-700 group-hover:text-green-800 transition-colors">
-                                              {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total || 0).toFixed(2)}
-                                            </span>
-                                            {item.deliveryTime && (
-                                              <p className="text-xs text-gray-500 mt-1">
-                                                Delivery: {item.deliveryTime}
-                                              </p>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Confidence Score */}
-                                <div>
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium text-gray-700">Analysis Confidence</span>
-                                    <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
-                                  </div>
-                                  <Progress value={confidenceScore} className="w-full h-2" />
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Based on data quality and extraction accuracy
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Simple Best Vendor Comparison Card - Only for Multiple Files */}
-            {results.length > 1 && (() => {
-              // Find the best vendor by total price
-              const vendorTotals = results.map(({ fileName, result }) => {
-                const vendor = (result as QuoteAnalysisResult)?.quotes?.[0]?.vendorName || fileName;
-                const total = (result as QuoteAnalysisResult)?.quotes?.[0]?.items?.reduce((sum: number, item: QuoteItem) => sum + (item.total || 0), 0) || 0;
-                const items = (result as QuoteAnalysisResult)?.quotes?.[0]?.items || [];
-                return { vendor, total, items };
-              });
-              const best = vendorTotals.reduce((min, v) => v.total < min.total ? v : min, vendorTotals[0]);
-              const worst = vendorTotals.reduce((max, v) => v.total > max.total ? v : max, vendorTotals[0]);
-              if (!best || best.total === 0) return null;
-              
-              // Calculate percentage savings
-              const percentageSavings = worst.total > 0 ? ((worst.total - best.total) / worst.total * 100) : 0;
-              
-              // Calculate confidence score based on data quality
-              const confidenceScore = Math.min(95, Math.max(60, 
-                best.items.length > 0 ? 85 : 60 + 
-                (best.vendor !== 'Unknown Vendor' ? 10 : 0)
-              ));
-
-              // Create comparison table data
-              const allItems = new Map<string, { description: string, sku?: string, vendors: Array<{ name: string, price: number, quantity: number, total: number }> }>();
-              
-              vendorTotals.forEach(({ vendor, items }) => {
-                items.forEach(item => {
-                  const key = item.sku || item.description || 'Unknown';
-                  if (!allItems.has(key)) {
-                    allItems.set(key, {
-                      description: item.description || 'Unknown Item',
-                      sku: item.sku,
-                      vendors: []
-                    });
-                  }
-                  allItems.get(key)!.vendors.push({
-                    name: vendor,
-                    price: item.unitPrice || 0,
-                    quantity: item.quantity || 0,
-                    total: item.total || 0
-                  });
-                });
-              });
-
-              // Find cheapest vendor for each item
-              const cheapestPerItem = new Map<string, string>();
-              allItems.forEach((itemData) => {
-                const cheapest = itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0]);
-                cheapestPerItem.set(itemData.description || 'Unknown Item', cheapest.name);
-              });
-
-              // Generate email content
-              const generateEmailContent = () => {
-                const subject = encodeURIComponent(`Vendor Quote Comparison - ${best.vendor} is ${percentageSavings.toFixed(1)}% cheaper`);
-                const body = encodeURIComponent(`
-Vendor Quote Comparison Report
-
-Summary:
-- Best Overall: ${best.vendor} ($${best.total.toFixed(2)})
-- Savings: ${percentageSavings.toFixed(1)}% compared to ${worst.vendor}
-- Total Savings: $${(worst.total - best.total).toFixed(2)}
-
-Detailed Comparison:
-${Array.from(allItems.entries()).map(([, itemData]) => {
-  const cheapest = itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0]);
-  return `\n${itemData.description} (${itemData.sku || 'No SKU'}):
-${itemData.vendors.map(v => `  ${v.name}: $${v.total.toFixed(2)} (${v.quantity} × $${v.price.toFixed(2)})`).join('\n')}
-  → Best: ${cheapest.name} ($${cheapest.total.toFixed(2)})`;
-}).join('\n')}
-
-Generated by AutoProcure AI
-                `);
-                return `mailto:?subject=${subject}&body=${body}`;
-              };
-
-              // Generate downloadable report
-              const generateReport = () => {
-                const report = {
-                  summary: {
-                    bestVendor: best.vendor,
-                    bestTotal: best.total,
-                    worstVendor: worst.vendor,
-                    worstTotal: worst.total,
-                    percentageSavings: percentageSavings,
-                    totalSavings: worst.total - best.total
-                  },
-                  comparison: Array.from(allItems.entries()).map(([, itemData]) => ({
-                    item: itemData.description,
-                    sku: itemData.sku,
-                    vendors: itemData.vendors,
-                    cheapest: itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0])
-                  })),
-                  generatedAt: new Date().toISOString()
-                };
-                
-                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `vendor-comparison-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              };
-              
-              return (
-                <div className="space-y-6">
-                  {/* Summary Card */}
-                  <Card className="border-2 border-green-400 bg-green-50">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle>🏆 Best Vendor Summary</CardTitle>
-                        <Badge variant="default" className="bg-green-500 text-white">
-                          🏆 Winner
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {/* Currency Selection */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">Currency:</span>
-                          <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="USD">
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="h-4 w-4" />
-                                  USD
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="EUR">
-                                <div className="flex items-center gap-2">
-                                  <Euro className="h-4 w-4" />
-                                  EUR
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="INR">
-                                <div className="flex items-center gap-2">
-                                  <IndianRupee className="h-4 w-4" />
-                                  INR
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {/* Winner Info with Logo */}
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl">
-                            {getVendorLogo(best.vendor)}
-                          </div>
-                          <div>
-                            <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
-                            <p className="text-sm text-gray-600">Best overall value</p>
-                          </div>
-                        </div>
-                        
-                        {/* Savings Summary */}
-                        <div className="bg-white rounded-lg p-4 border shadow-sm">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Total Price</p>
-                            <p className="text-3xl font-bold text-green-600">
-                              {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(best.total).toFixed(2)}
-                            </p>
-                            <p className="text-lg font-semibold text-green-700 mt-2">
-                              {percentageSavings.toFixed(1)}% cheaper than {worst.vendor}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Savings: {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(worst.total - best.total).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {selectedCurrency !== 'USD' && `($${best.total.toFixed(2)} USD)`}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex gap-3">
-                          <Button 
-                            onClick={generateEmailContent}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          >
-                            <div className="flex items-center justify-center gap-2">
-                              <span>📧</span>
-                              <span>Email to Team</span>
+                      {/* Cost Breakdown */}
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-900">Cost Breakdown:</h4>
+                        <div className="space-y-1">
+                          {best.items.map((item, index) => (
+                            <div key={index} className="flex justify-between text-sm hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group p-2 rounded">
+                              <span className="flex-1">{item.description}</span>
+                              <span className="font-medium">
+                                {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total).toLocaleString()}
+                              </span>
                             </div>
-                          </Button>
-                          <Button 
-                            onClick={generateReport}
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            <div className="flex items-center justify-center gap-2">
-                              <span>📄</span>
-                              <span>Download Report</span>
-                            </div>
-                          </Button>
+                          ))}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
 
-                  {/* Comparison Table */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>📊 Item-by-Item Comparison</CardTitle>
-                      <CardDescription>
-                        Compare pricing across all vendors. Green highlights indicate the best price for each item.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b-2 border-gray-200">
-                              <th className="text-left p-3 font-semibold">Item</th>
-                              {vendorTotals.map(({ vendor }) => (
-                                <th key={vendor} className="text-center p-3 font-semibold">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <span className="text-lg">{getVendorLogo(vendor)}</span>
-                                    <span className="text-sm">{vendor}</span>
-                                  </div>
-                                </th>
-                              ))}
-                              <th className="text-center p-3 font-semibold text-green-600">Best Price</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Array.from(allItems.entries()).map(([key, itemData]) => {
-                              const cheapest = itemData.vendors.reduce((min, v) => v.total < min.total ? v : min, itemData.vendors[0]);
-                              return (
-                                <tr key={key} className="border-b border-gray-100 hover:bg-gray-50">
-                                  <td className="p-3">
-                                    <div>
-                                      <p className="font-medium">{itemData.description}</p>
-                                      {itemData.sku && (
-                                        <p className="text-xs text-gray-500">SKU: {itemData.sku}</p>
-                                      )}
-                                    </div>
-                                  </td>
-                                  {vendorTotals.map(({ vendor }) => {
-                                    const vendorItem = itemData.vendors.find(v => v.name === vendor);
-                                    const isCheapest = vendorItem && vendorItem.name === cheapest.name;
-                                    return (
-                                      <td key={vendor} className={`text-center p-3 ${isCheapest ? 'bg-green-50 border-2 border-green-200' : ''}`}>
-                                        {vendorItem ? (
-                                          <div>
-                                            <p className="font-semibold">{CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(vendorItem.total).toFixed(2)}</p>
-                                            <p className="text-xs text-gray-600">
-                                              {vendorItem.quantity} × {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(vendorItem.price).toFixed(2)}
-                                            </p>
-                                            {isCheapest && (
-                                              <Badge variant="default" className="bg-green-500 text-white text-xs mt-1">
-                                                Best
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <span className="text-gray-400">-</span>
-                                        )}
-                                      </td>
-                                    );
-                                  })}
-                                  <td className="text-center p-3 bg-green-50">
-                                    <div className="flex flex-col items-center justify-center">
-                                      <p className="font-bold text-green-700">{CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(cheapest.total).toFixed(2)}</p>
-                                      <p className="text-xs text-green-600">{cheapest.name}</p>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Confidence Score */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>📈 Analysis Confidence</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">Data Quality Score</span>
-                          <div className="relative group">
-                            <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                              Based on: Invoice scan quality, vendor formatting consistency, data extraction accuracy, and field completeness
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                            </div>
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                        <Button 
+                          onClick={generateEmailContent}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            <span>📧</span>
+                            <span>Email to Team</span>
                           </div>
-                        </div>
-                        <span className="text-sm font-semibold text-green-600">{confidenceScore}%</span>
+                        </Button>
+                        <Button 
+                          onClick={generateReport}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            <span>📄</span>
+                            <span>Download Report</span>
+                          </div>
+                        </Button>
                       </div>
-                      <Progress value={confidenceScore} className="w-full h-2" />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Based on data quality and extraction accuracy
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              );
-            })()}
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Potential with AI Card */}
-            <Card className="border-2 border-blue-400 bg-blue-50">
-              <CardHeader className="flex flex-row items-center gap-3">
-                <AlertCircle className="text-blue-500" />
-                <div>
-                  <CardTitle>Potential with AI (Coming Soon)</CardTitle>
-                  <CardDescription>
-                    <b>Estimated savings:</b> 10-15% per order<br/>
-                    <b>Time saved:</b> 10+ hours/month<br/>
-                    <b>How?</b> AI will recommend the best vendor(s) for each item, split orders for maximum value, and explain every decision.
-                  </CardDescription>
-                  <p className="text-xs text-gray-500 mt-2">
-                    *This is a preview. AI-powered recommendations will be available soon!*
-                  </p>
-                </div>
+                {/* Comparison Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>📊 Item-by-Item Comparison</CardTitle>
+                    <CardDescription>
+                      Compare pricing across all vendors. Green highlights indicate the best price for each item.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-gray-200">
+                            <th className="text-left p-3 font-semibold">Item</th>
+                            {vendorTotals.map(({ vendor }) => (
+                              <th key={vendor} className="text-center p-3 font-semibold">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-lg">{getVendorLogo(vendor)}</span>
+                                  <span className="text-sm">{vendor}</span>
+                                </div>
+                              </th>
+                            ))}
+                            <th className="text-center p-3 font-semibold text-green-600">Best Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.from(allItems.entries()).map(([itemName, vendorPrices], index) => {
+                            const cheapest = cheapestPerItem.get(itemName);
+                            return (
+                              <tr key={index} className="border-b border-gray-100">
+                                <td className="p-3 text-sm font-medium">{itemName}</td>
+                                {vendorTotals.map(({ vendor }) => {
+                                  const price = vendorPrices[vendor];
+                                  const isCheapest = cheapest && cheapest.vendor === vendor;
+                                  return (
+                                    <td key={vendor} className={`p-3 text-center text-sm ${isCheapest ? 'bg-green-50 text-green-700 font-semibold' : ''}`}>
+                                      {price ? `${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(price).toFixed(2)}` : '-'}
+                                    </td>
+                                  );
+                                })}
+                                <td className="p-3 text-center text-sm font-semibold text-green-600">
+                                  <div className="flex flex-col items-center justify-center">
+                                    {cheapest ? (
+                                      <>
+                                        <span>{CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(cheapest.price).toFixed(2)}</span>
+                                        <span className="text-xs text-gray-500">{cheapest.vendor}</span>
+                                      </>
+                                    ) : '-'}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
+          {/* Coming Soon Features */}
+          <Card className="border-2 border-blue-400 bg-blue-50">
+            <CardHeader className="flex flex-row items-center gap-3">
+              <AlertCircle className="text-blue-500" />
+              <div>
+                <CardTitle>Potential with AI (Coming Soon)</CardTitle>
+                <CardDescription>
+                  <b>Estimated savings:</b> 10-15% per order<br/>
+                  <b>Time saved:</b> 10+ hours/month<br/>
+                  <b>How?</b> AI will recommend the best vendor(s) for each item, split orders for maximum value, and explain every decision.
+                </CardDescription>
+                <p className="text-xs text-gray-500 mt-2">
+                  *This is a preview. AI-powered recommendations will be available soon!*
+                </p>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* Quote History */}
+          {showHistory && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Quote History</CardTitle>
+                <CardDescription>
+                  View your previous quote analyses
+                </CardDescription>
               </CardHeader>
+              <CardContent>
+                <QuoteHistory />
+              </CardContent>
             </Card>
-
-            {/* Quote History */}
-            {showHistory && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quote History</CardTitle>
-                  <CardDescription>
-                    View your previous quote analyses
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <QuoteHistory />
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </main>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        mode={authMode}
-        onAuthSuccess={handleAuthSuccess}
-          />
     </div>
   );
 }
