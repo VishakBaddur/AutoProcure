@@ -67,10 +67,28 @@ export default function Home() {
       const result = await api.uploadFile(file);
       setResults(prev => [...prev, { fileName: file.name, result }]);
       
-      // Calculate and update total savings
-      const quoteResult = result as QuoteAnalysisResult;
-      if (quoteResult.comparison.costSavings) {
-        setTotalSavings(prev => prev + quoteResult.comparison.costSavings!);
+      // Calculate savings when we have multiple quotes to compare
+      const newResults = [...results, { fileName: file.name, result }];
+      if (newResults.length >= 2) {
+        const allQuotes = newResults.map(r => (r.result as QuoteAnalysisResult).quotes[0]).filter(Boolean);
+        if (allQuotes.length >= 2) {
+          const vendorTotals = allQuotes.map(quote => ({
+            vendor: quote.vendorName,
+            total: quote.items.reduce((sum, item) => sum + item.total, 0),
+            items: quote.items
+          }));
+
+          const best = vendorTotals.reduce((min, current) => 
+            current.total < min.total ? current : min
+          );
+
+          const worst = vendorTotals.reduce((max, current) => 
+            current.total > max.total ? current : max
+          );
+
+          const savings = worst.total - best.total;
+          setTotalSavings(savings);
+        }
       }
       
       return result;
