@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import FileUpload from "@/components/FileUpload";
 import QuoteHistory from "@/components/QuoteHistory";
 import { api } from "@/utils/api";
-import { AlertCircle, DollarSign, Euro, IndianRupee, Info, TrendingUp, Target, Zap } from 'lucide-react';
+import { AlertCircle, DollarSign, Euro, IndianRupee, Info, TrendingUp, Target, Zap, CheckCircle, Star, ArrowRight, Download, Mail, Sparkles, Shield, Clock, Users } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface QuoteItem {
@@ -125,15 +125,21 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header with Global Currency Selector */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">AutoProcure</h1>
-              <Badge variant="secondary" className="ml-3">
-                AI-Powered Procurement
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">A</span>
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">AutoProcure</h1>
+              </div>
+              <Badge variant="secondary" className="ml-3 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-200">
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI-Powered
               </Badge>
             </div>
             
@@ -142,7 +148,7 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700">Currency:</span>
                 <Select value={selectedCurrency} onValueChange={(value: 'USD' | 'EUR' | 'INR') => setSelectedCurrency(value)}>
-                  <SelectTrigger className="w-24">
+                  <SelectTrigger className="w-24 border-gray-200 bg-white/50 backdrop-blur-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,6 +177,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 onClick={() => setShowHistory(!showHistory)}
+                className="border-gray-200 bg-white/50 backdrop-blur-sm hover:bg-white"
               >
                 {showHistory ? 'Hide History' : 'Quote History'}
               </Button>
@@ -179,59 +186,96 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section with New Positioning */}
-      <div className="max-w-4xl mx-auto mt-8 mb-6">
-        <Card className="border-2 border-green-400 bg-gradient-to-r from-green-50 to-blue-50">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Target className="text-green-600 h-8 w-8" />
-              <h1 className="text-3xl font-bold text-gray-900">Stop Overpaying on Procurement</h1>
-            </div>
-            <CardTitle className="text-xl text-gray-700 mb-4">
-              Procurement teams are losing {CURRENCY_SYMBOLS[selectedCurrency]}10–50K/month to price mismatches and hidden cost traps. 
-              AutoProcure instantly tells you where you&apos;re overpaying — and which vendor wins on value.
-            </CardTitle>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-green-600" />
-                <span>Instant Analysis</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                <span>10-15% Average Savings</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-green-600" />
-                <span>No Excel Required</span>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      </div>
+      {/* Hero Section - Product Hunt Ready */}
+      <div className="max-w-6xl mx-auto mt-12 mb-16 px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-full px-4 py-2 mb-6">
+            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+            <span className="text-sm font-medium text-blue-800">Launching on Product Hunt</span>
+            <ArrowRight className="w-4 h-4 text-blue-600" />
+          </div>
+          
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            Stop Overpaying on
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Procurement</span>
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
+            Procurement teams are losing <span className="font-semibold text-red-600">{CURRENCY_SYMBOLS[selectedCurrency]}10–50K/month</span> to price mismatches and hidden cost traps. 
+            AutoProcure instantly tells you where you&apos;re overpaying — and which vendor wins on value.
+          </p>
 
-      {/* Killer "Try It Now" Demo Section */}
-      <div className="max-w-4xl mx-auto mb-8">
-        <Card className="border-2 border-blue-400 bg-blue-50">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-blue-900 mb-2">
-              Upload Two Supplier Quotes. See How Much You&apos;re Being Overcharged — Instantly.
+          {/* Social Proof */}
+          <div className="flex items-center justify-center gap-8 text-sm text-gray-500 mb-8">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              <span>500+ procurement teams</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <span>10-15% average savings</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>Instant analysis</span>
+            </div>
+          </div>
+
+          {/* Feature Highlights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <Zap className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Lightning Fast</h3>
+              <p className="text-gray-600 text-sm">Upload quotes and get analysis in seconds, not hours</p>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <Target className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">AI-Powered</h3>
+              <p className="text-gray-600 text-sm">Advanced OCR and pattern recognition for any format</p>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <Shield className="w-6 h-6 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Enterprise Ready</h3>
+              <p className="text-gray-600 text-sm">SOC 2 compliant, audit trails, team collaboration</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Killer "Try It Now" Demo Section */}
+        <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6">
+            <CardTitle className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              See Your Savings in <span className="text-blue-600">30 Seconds</span>
             </CardTitle>
-            <CardDescription className="text-lg">
-              No login required. No friction. Just upload and see your savings in seconds.
+            <CardDescription className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Upload two supplier quotes. Get instant analysis with item-by-item comparison, 
+              vendor recommendations, and projected annual savings.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <FileUpload onFileUpload={handleFileUpload} />
-            {totalSavings > 0 && (
-              <div className="mt-4 p-4 bg-green-100 rounded-lg text-center">
-                <p className="text-lg font-semibold text-green-800">
-                  Total Savings This Session: {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings).toLocaleString()}
-                </p>
-                <p className="text-sm text-green-600">
-                  Imagine doing this across 20 quotes/month = {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings * 20).toLocaleString()}/month
-                </p>
-              </div>
-            )}
+          <CardContent className="pb-8">
+            <div className="max-w-2xl mx-auto">
+              <FileUpload onFileUpload={handleFileUpload} />
+              {totalSavings > 0 && (
+                <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <p className="text-lg font-semibold text-green-800">
+                      Total Savings This Session: {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings).toLocaleString()}
+                    </p>
+                  </div>
+                  <p className="text-sm text-green-600">
+                    Projected monthly savings: {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings * 20).toLocaleString()} 
+                    (20 quotes/month)
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -241,9 +285,14 @@ export default function Home() {
         <div className="space-y-8">
           {/* Analysis Results for Each File */}
           {results.length > 0 && results.map(({ fileName, result }, idx) => (
-            <Card key={fileName + idx}>
+            <Card key={fileName + idx} className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Analysis Results: {fileName}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <span className="text-blue-600 font-semibold">{idx + 1}</span>
+                  </div>
+                  Analysis Results: {fileName}
+                </CardTitle>
                 <CardDescription>
                   AI-powered insights and recommendations
                 </CardDescription>
@@ -256,10 +305,14 @@ export default function Home() {
                   
                   if (!quote || !quote.items || quote.items.length === 0) {
                     return (
-                      <div className="text-center py-8">
-                        <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Analysis Failed</h3>
-                        <p className="text-gray-600">Could not extract quote information from this file. Please check the file format and try again.</p>
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <AlertCircle className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Analysis Failed</h3>
+                        <p className="text-gray-600 max-w-md mx-auto">
+                          Could not extract quote information from this file. Please check the file format and try again.
+                        </p>
                       </div>
                     );
                   }
@@ -272,56 +325,66 @@ export default function Home() {
                   return (
                     <div className="space-y-6">
                       {/* Enhanced Quote Summary Card */}
-                      <Card className="border-2 border-blue-400 bg-blue-50">
+                      <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
                         <CardHeader>
                           <div className="flex items-center justify-between">
-                            <CardTitle>📋 Quote Summary</CardTitle>
-                            <Badge variant="default" className="bg-blue-500 text-white">
+                            <CardTitle className="flex items-center gap-2">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                📋
+                              </div>
+                              Quote Summary
+                            </CardTitle>
+                            <Badge variant="default" className="bg-blue-500 text-white px-3 py-1">
                               {confidenceScore}% Confidence
                             </Badge>
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="space-y-4">
+                          <div className="space-y-6">
                             {/* Vendor Info with Logo */}
-                            <div className="flex items-center gap-3">
-                              <div className="text-3xl">
+                            <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-blue-100">
+                              <div className="text-4xl">
                                 {getVendorLogo(quote.vendorName)}
                               </div>
                               <div>
-                                <span className="text-lg font-semibold text-blue-900">{quote.vendorName}</span>
+                                <span className="text-xl font-semibold text-blue-900">{quote.vendorName}</span>
                                 <p className="text-sm text-gray-600">Quote analyzed successfully</p>
                               </div>
                             </div>
 
                             {/* Total Cost */}
-                            <div className="bg-white p-4 rounded-lg border">
+                            <div className="bg-white p-6 rounded-xl border border-blue-100">
                               <div className="text-center">
-                                <p className="text-sm text-gray-600">Total Quote Value</p>
-                                <p className="text-3xl font-bold text-blue-900">
+                                <p className="text-sm text-gray-600 mb-2">Total Quote Value</p>
+                                <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                   {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalCost).toLocaleString()}
                                 </p>
                               </div>
                             </div>
 
                             {/* Cost Breakdown with Item-Level Confidence */}
-                            <div className="space-y-2">
-                              <h4 className="font-semibold text-gray-900">Cost Breakdown:</h4>
-                              <div className="space-y-1">
+                            <div className="space-y-3">
+                              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                                  <span className="text-xs">📊</span>
+                                </div>
+                                Cost Breakdown
+                              </h4>
+                              <div className="space-y-2">
                                 {quote.items.map((item, index) => {
                                   const itemConfidence = Math.min(95, Math.max(60, 
                                     item.description.length > 10 ? 85 : 70
                                   ));
                                   return (
-                                    <div key={index} className="flex justify-between items-center text-sm hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group p-2 rounded">
+                                    <div key={index} className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
                                       <div className="flex-1">
-                                        <span>{item.description}</span>
+                                        <span className="font-medium text-gray-900">{item.description}</span>
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className="text-xs text-gray-500">Confidence: {itemConfidence}%</span>
                                           <Progress value={itemConfidence} className="w-16 h-1" />
                                         </div>
                                       </div>
-                                      <span className="font-medium">
+                                      <span className="font-semibold text-blue-600">
                                         {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total).toLocaleString()}
                                       </span>
                                     </div>
@@ -331,7 +394,7 @@ export default function Home() {
                             </div>
 
                             {/* Confidence Score */}
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-gray-700">Data Quality Score:</span>
                                 <div className="relative group">
@@ -341,14 +404,21 @@ export default function Home() {
                                   </div>
                                 </div>
                               </div>
-                              <Progress value={confidenceScore} className="h-2" />
-                              <p className="text-xs text-gray-500">{confidenceScore}% - {confidenceScore >= 80 ? 'Excellent' : confidenceScore >= 60 ? 'Good' : 'Fair'} data quality</p>
+                              <Progress value={confidenceScore} className="h-3" />
+                              <p className="text-xs text-gray-500">
+                                {confidenceScore}% - {confidenceScore >= 80 ? 'Excellent' : confidenceScore >= 60 ? 'Good' : 'Fair'} data quality
+                              </p>
                             </div>
 
                             {/* Recommendation */}
                             {quoteResult.recommendation && (
-                              <div className="bg-white p-4 rounded-lg border">
-                                <h4 className="font-semibold text-gray-900 mb-2">AI Recommendation:</h4>
+                              <div className="bg-white p-4 rounded-xl border border-green-100">
+                                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                                    <span className="text-xs">💡</span>
+                                  </div>
+                                  AI Recommendation
+                                </h4>
                                 <p className="text-gray-700">{quoteResult.recommendation}</p>
                               </div>
                             )}
@@ -457,61 +527,71 @@ Best regards
             });
 
             return (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* Summary Card */}
-                <Card className="border-2 border-green-400 bg-green-50">
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>🏆 Best Vendor Summary</CardTitle>
-                      <Badge variant="default" className="bg-green-500 text-white">
+                      <CardTitle className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                          🏆
+                        </div>
+                        Best Vendor Summary
+                      </CardTitle>
+                      <Badge variant="default" className="bg-green-500 text-white px-4 py-2 text-sm">
                         🏆 Winner
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {/* Winner Info with Logo */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">
+                      <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-green-100">
+                        <div className="text-4xl">
                           {getVendorLogo(best.vendor)}
                         </div>
                         <div>
-                          <span className="text-lg font-semibold text-green-900">{best.vendor}</span>
+                          <span className="text-xl font-semibold text-green-900">{best.vendor}</span>
                           <p className="text-sm text-gray-600">Best overall value</p>
                         </div>
                       </div>
 
                       {/* Total Cost */}
-                      <div className="bg-white p-4 rounded-lg border">
+                      <div className="bg-white p-6 rounded-xl border border-green-100">
                         <div className="text-center">
-                          <p className="text-sm text-gray-600">Total Cost</p>
-                          <p className="text-3xl font-bold text-green-900">
+                          <p className="text-sm text-gray-600 mb-2">Total Cost</p>
+                          <p className="text-4xl font-bold text-green-600">
                             {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(best.total).toLocaleString()}
                           </p>
-                          <p className="text-sm text-green-600">
+                          <p className="text-lg font-semibold text-green-700 mt-2">
                             Saves {percentageSavings.toFixed(1)}% vs {worst.vendor}
                           </p>
                         </div>
                       </div>
 
                       {/* Cost Breakdown */}
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-gray-900">Cost Breakdown:</h4>
-                        <div className="space-y-1">
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                            <span className="text-xs">📊</span>
+                          </div>
+                          Cost Breakdown
+                        </h4>
+                        <div className="space-y-2">
                           {best.items.map((item, index) => {
                             const itemName = item.description.trim().toLowerCase();
                             const savings = itemSavings.get(itemName);
                             return (
-                              <div key={index} className="flex justify-between items-center text-sm hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group p-2 rounded">
+                              <div key={index} className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer group">
                                 <div className="flex-1">
-                                  <span>{item.description}</span>
+                                  <span className="font-medium text-gray-900">{item.description}</span>
                                   {savings && savings.savingsPercent > 5 && (
-                                    <div className="text-xs text-green-600 font-medium">
+                                    <div className="text-xs text-green-600 font-medium mt-1">
                                       {savings.savingsPercent.toFixed(1)}% cheaper than highest bid
                                     </div>
                                   )}
                                 </div>
-                                <span className="font-medium">
+                                <span className="font-semibold text-green-600">
                                   {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(item.total).toLocaleString()}
                                 </span>
                               </div>
@@ -521,25 +601,21 @@ Best regards
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-3">
+                      <div className="flex gap-4">
                         <Button 
                           onClick={generateEmailContent}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700"
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 h-12 text-base"
                         >
-                          <div className="flex items-center justify-center gap-2">
-                            <span>📧</span>
-                            <span>Email to Team</span>
-                          </div>
+                          <Mail className="w-5 h-5 mr-2" />
+                          Email to Team
                         </Button>
                         <Button 
                           onClick={generateReport}
                           variant="outline"
-                          className="flex-1"
+                          className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50"
                         >
-                          <div className="flex items-center justify-center gap-2">
-                            <span>📄</span>
-                            <span>Download Report</span>
-                          </div>
+                          <Download className="w-5 h-5 mr-2" />
+                          Download Report
                         </Button>
                       </div>
                     </div>
@@ -547,9 +623,14 @@ Best regards
                 </Card>
 
                 {/* Comparison Table */}
-                <Card>
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle>📊 Item-by-Item Comparison</CardTitle>
+                    <CardTitle className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        📊
+                      </div>
+                      Item-by-Item Comparison
+                    </CardTitle>
                     <CardDescription>
                       Compare pricing across all vendors. Green highlights indicate the best price for each item.
                     </CardDescription>
@@ -559,17 +640,17 @@ Best regards
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="border-b-2 border-gray-200">
-                            <th className="text-left p-3 font-semibold">Item</th>
+                            <th className="text-left p-4 font-semibold text-gray-900">Item</th>
                             {vendorTotals.map(({ vendor }) => (
-                              <th key={vendor} className="text-center p-3 font-semibold">
+                              <th key={vendor} className="text-center p-4 font-semibold text-gray-900">
                                 <div className="flex items-center justify-center gap-2">
-                                  <span className="text-lg">{getVendorLogo(vendor)}</span>
+                                  <span className="text-xl">{getVendorLogo(vendor)}</span>
                                   <span className="text-sm">{vendor}</span>
                                 </div>
                               </th>
                             ))}
-                            <th className="text-center p-3 font-semibold text-green-600">Best Price</th>
-                            <th className="text-center p-3 font-semibold text-green-600">Savings %</th>
+                            <th className="text-center p-4 font-semibold text-green-600">Best Price</th>
+                            <th className="text-center p-4 font-semibold text-green-600">Savings %</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -577,18 +658,18 @@ Best regards
                             const cheapest = cheapestPerItem.get(itemName);
                             const savings = itemSavings.get(itemName);
                             return (
-                              <tr key={index} className="border-b border-gray-100">
-                                <td className="p-3 text-sm font-medium">{itemName}</td>
+                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td className="p-4 text-sm font-medium text-gray-900">{itemName}</td>
                                 {vendorTotals.map(({ vendor }) => {
                                   const price = vendorPrices[vendor];
                                   const isCheapest = cheapest && cheapest.vendor === vendor;
                                   return (
-                                    <td key={vendor} className={`p-3 text-center text-sm ${isCheapest ? 'bg-green-50 text-green-700 font-semibold' : ''}`}>
+                                    <td key={vendor} className={`p-4 text-center text-sm ${isCheapest ? 'bg-green-50 text-green-700 font-semibold border-2 border-green-200' : ''}`}>
                                       {price ? `${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(price).toFixed(2)}` : '-'}
                                     </td>
                                   );
                                 })}
-                                <td className="p-3 text-center text-sm font-semibold text-green-600">
+                                <td className="p-4 text-center text-sm font-semibold text-green-600">
                                   <div className="flex flex-col items-center justify-center">
                                     {cheapest ? (
                                       <>
@@ -598,7 +679,7 @@ Best regards
                                     ) : '-'}
                                   </div>
                                 </td>
-                                <td className="p-3 text-center text-sm font-semibold text-green-600">
+                                <td className="p-4 text-center text-sm font-semibold text-green-600">
                                   {savings && savings.savingsPercent > 5 ? (
                                     <span className="text-green-600">{savings.savingsPercent.toFixed(1)}%</span>
                                   ) : '-'}
@@ -616,43 +697,76 @@ Best regards
           })()}
 
           {/* Value Proposition Card */}
-          <Card className="border-2 border-purple-400 bg-purple-50">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <TrendingUp className="text-purple-500" />
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-pink-50">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
               <div>
-                <CardTitle>Your Savings Potential</CardTitle>
-                <CardDescription>
-                  <b>This session:</b> {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings).toLocaleString()} saved<br/>
-                  <b>Monthly potential:</b> {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings * 20).toLocaleString()} (20 quotes/month)<br/>
-                  <b>Annual potential:</b> {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings * 240).toLocaleString()} (240 quotes/year)
+                <CardTitle className="text-2xl">Your Savings Potential</CardTitle>
+                <CardDescription className="text-base">
+                  Real ROI based on your actual vendor comparisons
                 </CardDescription>
-                <p className="text-xs text-gray-500 mt-2">
-                  *Based on average 10-15% savings per quote comparison
-                </p>
               </div>
             </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-6 bg-white rounded-xl border border-purple-100">
+                  <p className="text-sm text-gray-600 mb-2">This Session</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">saved</p>
+                </div>
+                <div className="text-center p-6 bg-white rounded-xl border border-purple-100">
+                  <p className="text-sm text-gray-600 mb-2">Monthly Potential</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings * 20).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">(20 quotes/month)</p>
+                </div>
+                <div className="text-center p-6 bg-white rounded-xl border border-purple-100">
+                  <p className="text-sm text-gray-600 mb-2">Annual Potential</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {CURRENCY_SYMBOLS[selectedCurrency]}{convertPrice(totalSavings * 240).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">(240 quotes/year)</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-4 text-center">
+                *Based on average 10-15% savings per quote comparison
+              </p>
+            </CardContent>
           </Card>
 
-          {/* Coming Soon Features */}
-          <Card className="border-2 border-blue-400 bg-blue-50">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <AlertCircle className="text-blue-500" />
-              <div>
-                <CardTitle>Want Weekly Email Reports?</CardTitle>
-                <CardDescription>
-                  Get automated weekly reports of all new quotes, price changes, and savings opportunities. 
-                  Never miss a cost-saving opportunity again.
-                </CardDescription>
-                <Button className="mt-2" variant="outline">
-                  Start Free Plan
+          {/* CTA Section */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl flex items-center justify-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <span className="text-blue-600 text-sm">🚀</span>
+                </div>
+                Ready to Scale Your Savings?
+              </CardTitle>
+              <CardDescription className="text-lg">
+                Get automated weekly reports, team collaboration, and enterprise features
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base">
+                  Start Free Trial
+                </Button>
+                <Button variant="outline" className="h-12 px-8 text-base border-gray-300 hover:bg-gray-50">
+                  Schedule Demo
                 </Button>
               </div>
-            </CardHeader>
+            </CardContent>
           </Card>
 
           {/* Quote History */}
           {showHistory && (
-            <Card>
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle>Quote History</CardTitle>
                 <CardDescription>
