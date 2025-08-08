@@ -61,6 +61,7 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'EUR' | 'INR'>('USD');
   const [totalSavings, setTotalSavings] = useState(0);
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
   // Recalculate savings whenever results change
   useEffect(() => {
@@ -90,6 +91,24 @@ export default function Home() {
       setTotalSavings(0);
     }
   }, [results]);
+
+  // Close download dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.download-dropdown')) {
+        setShowDownloadDropdown(false);
+      }
+    };
+
+    if (showDownloadDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDownloadDropdown]);
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -474,7 +493,7 @@ Best regards
             };
 
             // Generate report download
-            const generateReport = () => {
+            const generateReport = (format: 'pdf' | 'csv' | 'json') => {
               const report = {
                 analysisDate: new Date().toISOString(),
                 vendorCount: allQuotes.length,
@@ -484,16 +503,132 @@ Best regards
                 detailedComparison: vendorTotals,
                 currency: selectedCurrency
               };
-              
-              const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `vendor-comparison-${new Date().toISOString().split('T')[0]}.json`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
+
+              if (format === 'json') {
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vendor-comparison-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } else if (format === 'csv') {
+                // Generate CSV for comparison table
+                const headers = ['Item', ...vendorTotals.map(v => v.vendor), 'Best Price', 'Savings %'];
+                const rows = Array.from(allItems.entries()).map(([itemName, vendorPrices]) => {
+                  const cheapest = cheapestPerItem.get(itemName);
+                  const savings = itemSavings.get(itemName);
+                  return [
+                    itemName,
+                    ...vendorTotals.map(({ vendor }) => vendorPrices[vendor] || ''),
+                    cheapest ? cheapest.price : '',
+                    savings && savings.savingsPercent > 5 ? `${savings.savingsPercent.toFixed(1)}%` : ''
+                  ];
+                });
+                
+                const csvContent = [headers, ...rows]
+                  .map(row => row.map(cell => `"${cell}"`).join(','))
+                  .join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vendor-comparison-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } else if (format === 'pdf') {
+                // Generate PDF report
+                const pdfContent = `
+                  <html>
+                    <head>
+                      <style>
+                        body { font-family: Arial, sans-serif; margin: 40px; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .title { font-size: 24px; font-weight: bold; color: #1f2937; }
+                        .subtitle { font-size: 16px; color: #6b7280; margin-top: 10px; }
+                        .summary { background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                        .winner { background: #d1fae5; padding: 15px; border-radius: 8px; margin: 15px 0; }
+                        .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        .table th, .table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+                        .table th { background: #f9fafb; font-weight: bold; }
+                        .highlight { background: #d1fae5; font-weight: bold; }
+                        .savings { color: #059669; font-weight: bold; }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="header">
+                        <div class="title">Vendor Quote Comparison Report</div>
+                        <div class="subtitle">Generated on ${new Date().toLocaleDateString()}</div>
+                      </div>
+                      
+                      <div class="summary">
+                        <h3>Executive Summary</h3>
+                        <p><strong>Recommended Vendor:</strong> ${best.vendor}</p>
+                        <p><strong>Total Savings:</strong> ${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(worst.total - best.total).toLocaleString()} (${percentageSavings.toFixed(1)}%)</p>
+                        <p><strong>Vendors Compared:</strong> ${allQuotes.length}</p>
+                      </div>
+                      
+                      <div class="winner">
+                        <h3>🏆 Winner: ${best.vendor}</h3>
+                        <p><strong>Total Cost:</strong> ${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(best.total).toLocaleString()}</p>
+                        <p><strong>Savings vs Highest Bid:</strong> ${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(worst.total - best.total).toLocaleString()} (${percentageSavings.toFixed(1)}%)</p>
+                      </div>
+                      
+                      <h3>Item-by-Item Comparison</h3>
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            ${vendorTotals.map(v => `<th>${v.vendor}</th>`).join('')}
+                            <th>Best Price</th>
+                            <th>Savings %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${Array.from(allItems.entries()).map(([itemName, vendorPrices]) => {
+                            const cheapest = cheapestPerItem.get(itemName);
+                            const savings = itemSavings.get(itemName);
+                            return `
+                              <tr>
+                                <td>${itemName}</td>
+                                ${vendorTotals.map(({ vendor }) => {
+                                  const price = vendorPrices[vendor];
+                                  const isCheapest = cheapest && cheapest.vendor === vendor;
+                                  return `<td class="${isCheapest ? 'highlight' : ''}">${price ? `${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(price).toFixed(2)}` : '-'}</td>`;
+                                }).join('')}
+                                <td class="highlight">${cheapest ? `${CURRENCY_SYMBOLS[selectedCurrency]}${convertPrice(cheapest.price).toFixed(2)} (${cheapest.vendor})` : '-'}</td>
+                                <td class="savings">${savings && savings.savingsPercent > 5 ? `${savings.savingsPercent.toFixed(1)}%` : '-'}</td>
+                              </tr>
+                            `;
+                          }).join('')}
+                        </tbody>
+                      </table>
+                      
+                      <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-radius: 8px;">
+                        <h3>💡 Recommendations</h3>
+                        <p>• Consider ${best.vendor} for the best overall value</p>
+                        <p>• Review items with >10% savings for bulk purchasing opportunities</p>
+                        <p>• Negotiate with ${worst.vendor} on items where they're significantly higher</p>
+                      </div>
+                    </body>
+                  </html>
+                `;
+                
+                const blob = new Blob([pdfContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vendor-comparison-report-${new Date().toISOString().split('T')[0]}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }
             };
 
             // Build item comparison map with savings percentages
@@ -609,14 +744,49 @@ Best regards
                           <Mail className="w-5 h-5 mr-2" />
                           Email to Team
                         </Button>
-                        <Button 
-                          onClick={generateReport}
-                          variant="outline"
-                          className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50"
-                        >
-                          <Download className="w-5 h-5 mr-2" />
-                          Download Report
-                        </Button>
+                        <div className="relative download-dropdown">
+                          <Button 
+                            onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+                            variant="outline"
+                            className="h-12 text-base border-gray-300 hover:bg-gray-50 pr-8"
+                          >
+                            <Download className="w-5 h-5 mr-2" />
+                            Download Report
+                          </Button>
+                          {showDownloadDropdown && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px]">
+                              <div className="p-1">
+                                <button
+                                  onClick={() => {
+                                    generateReport('pdf');
+                                    setShowDownloadDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+                                >
+                                  📄 PDF Report
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    generateReport('csv');
+                                    setShowDownloadDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+                                >
+                                  📊 CSV Comparison Table
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    generateReport('json');
+                                    setShowDownloadDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+                                >
+                                  🔧 JSON Data
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
