@@ -21,6 +21,7 @@ from .ai_processor import ai_processor
 from .multi_vendor_analyzer import multi_vendor_analyzer
 from .database import db
 from .pdf_processor import enhanced_pdf_processor
+from .excel_processor import enhanced_excel_processor
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
 
@@ -143,15 +144,23 @@ async def upload_file(
     try:
         # Read file content
         file_content = await file.read()
-        # Extract text based on file type
+        # Extract text or structured data based on file type
         if file_extension == 'pdf':
             text_content = extract_text_from_pdf(file_content)
+            quote = await ai_processor.analyze_quote(text_content)
         else:
-            text_content = extract_text_from_excel(file_content)
+            # Try structured Excel parse first
+            structured_quote = enhanced_excel_processor.parse(file_content, filename=file.filename)
+            if structured_quote and structured_quote.items:
+                quote = structured_quote
+            else:
+                # Fallback to text extraction + NLP
+                text_content = extract_text_from_excel(file_content)
+                quote = await ai_processor.analyze_quote(text_content)
         # --- RAG: Retrieve relevant past quotes for context ---
         user_id = None # Set user_id to None for public endpoints
         # For RAG, we need SKUs. We'll extract them after AI analysis, so for the first run, just analyze as usual.
-        initial_quote = await ai_processor.analyze_quote(text_content)
+        initial_quote = quote
         skus = [item.sku for item in initial_quote.items]
         rag_context = ""
         if user_id and skus:
@@ -160,8 +169,9 @@ async def upload_file(
                 rag_context = "\n".join([
                     f"Date: {q['created_at']}, Vendor: {q['vendor_name']}, SKU: {q['sku']}, Desc: {q['description']}, Qty: {q['quantity']}, Unit: {q['unit_price']}, Total: {q['total']}" for q in past_quotes
                 ])
-        # Now run the AI analysis again, this time with RAG context
-        quote = await ai_processor.analyze_quote(text_content, rag_context=rag_context)
+        # If initial analysis was text-based, re-run with RAG context where applicable
+        if not isinstance(quote, VendorQuote) or not quote.items:
+            quote = await ai_processor.analyze_quote(text_content, rag_context=rag_context)
         
         # Debug output
         print(f"[DEBUG] Quote analysis result:")
@@ -263,11 +273,19 @@ async def analyze_multiple_quotes(
             file_content = await file.read()
             if file_extension == 'pdf':
                 text_content = extract_text_from_pdf(file_content)
+                parsed_quote = await ai_processor.analyze_quote(text_content)
             else:
-                text_content = extract_text_from_excel(file_content)
+                # Structured Excel first
+                structured_quote = enhanced_excel_processor.parse(file_content, filename=file.filename)
+                if structured_quote and structured_quote.items:
+                    parsed_quote = structured_quote
+                    text_content = "\n".join([f"{it.quantity} x {it.description} @ {it.unitPrice}" for it in structured_quote.items])
+                else:
+                    text_content = extract_text_from_excel(file_content)
+                    parsed_quote = await ai_processor.analyze_quote(text_content)
             
             # Analyze quote
-            quote = await ai_processor.analyze_quote(text_content)
+            quote = parsed_quote
             quotes.append(quote)
             file_contents.append({
                 "filename": file.filename,
