@@ -502,11 +502,8 @@ async def test_nlp():
         Warranty: 1 year standard warranty
         """
         
-        # Create a simple prompt
-        prompt = f"QUOTE TEXT:\n{sample_text}"
-        
-        # Test the NLP analysis
-        result = ai_processor._analyze_quote_with_nlp(prompt)
+        # Test the NLP analysis directly with the text
+        result = ai_processor._analyze_quote_with_nlp(sample_text)
         
         return {
             "status": "success",
