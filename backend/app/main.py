@@ -190,6 +190,10 @@ async def upload_file(
         # Generate smart recommendation based on actual analysis
         if quote.vendorName == "Analysis Failed - Manual Review Required" or quote.vendorName == "Analysis Failed":
             recommendation = "AI analysis failed. Please manually review the uploaded document."
+        elif quote.vendorName.startswith("Document Type:"):
+            # Handle non-quote documents
+            doc_type = quote.vendorName.replace("Document Type: ", "")
+            recommendation = f"This appears to be a {doc_type.lower()}, not a vendor quote. Please upload a vendor quote with itemized pricing for analysis."
         elif not quote.items or len(quote.items) == 0:
             recommendation = "No items or pricing information could be extracted from the document. Please verify the document contains quote details."
         elif quote.vendorName == "Unknown Vendor":

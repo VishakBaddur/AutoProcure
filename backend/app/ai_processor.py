@@ -64,8 +64,15 @@ class AIProcessor:
             
         except Exception as e:
             print(f"AI analysis failed: {str(e)}")
-            # Fallback to error message if AI fails
-            return self._get_fallback_quote()
+            # Fallback to NLP analysis
+            try:
+                nlp_result = self._analyze_quote_with_nlp(text_content)
+                quote_data = json.loads(nlp_result)
+                return self._create_vendor_quote(quote_data)
+            except Exception as nlp_error:
+                print(f"NLP fallback also failed: {str(nlp_error)}")
+                # Final fallback to error message
+                return self._get_fallback_quote()
     
     def _create_analysis_prompt(self, text_content: str, rag_context: str = None) -> str:
         """Create a detailed prompt for quote analysis, optionally with RAG context."""
@@ -168,27 +175,26 @@ JSON Response:"""
             print(f"AI analysis failed: {str(e)}")
             raise ValueError("AI analysis unavailable")
     
-    def _analyze_quote_with_nlp(self, prompt: str) -> str:
-        """Analyze quote using NLP techniques and pattern matching"""
-        import re
-        items = []  # Always define at the top to avoid scoping errors
+    def _analyze_quote_with_nlp(self, quote_text: str) -> str:
+        """Analyze quote using NLP patterns and return JSON string"""
         try:
-            # Extract the quote text from the prompt
-            if "QUOTE TEXT:" in prompt:
-                quote_text = prompt.split("QUOTE TEXT:")[-1].strip()
-            else:
-                # If no QUOTE TEXT marker, use the entire prompt
-                quote_text = prompt
+            # First, detect document type to avoid misclassification
+            document_type = self._detect_document_type(quote_text)
+            if document_type != "quote":
+                return json.dumps({
+                    "vendorName": f"Document Type: {document_type.title()}",
+                    "items": [],
+                    "terms": {"payment": "N/A", "warranty": "N/A"},
+                    "analysis_note": f"This appears to be a {document_type}, not a vendor quote. Please upload a vendor quote for analysis."
+                })
             
-            print(f"Analyzing quote text: {quote_text[:200]}...")
-            
-            # Extract vendor name (look for company patterns)
+            # Extract vendor name with improved patterns
             vendor_patterns = [
-                r'(?:from|by|vendor|supplier|company):\s*([A-Z][A-Za-z\s&.,]+)',
-                r'([A-Z][A-Za-z\s&.,]+)\s+(?:Inc|Corp|LLC|Ltd|Company|Co)',
-                r'Quote\s+from\s+([A-Z][A-Za-z\s&.,]+)',
-                r'([A-Z][A-Za-z\s&.,]+)\s+Quote',
-                r'Vendor:\s*([A-Z][A-Za-z\s&.,]+)',
+                r'vendor[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
+                r'quote from\s*([A-Za-z0-9\s&.,\-]+)',
+                r'supplier[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
+                r'company[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
+                r'([A-Za-z0-9\s&.,\-]+)\s+(?:inc|corp|llc|ltd|company)',
             ]
             
             vendor_name = "Unknown Vendor"
@@ -215,6 +221,7 @@ JSON Response:"""
             ]
 
             matched_lines = set()
+            items = []
             lines = quote_text.split('\n')
             for line in lines:
                 line_clean = line.strip()
@@ -236,53 +243,46 @@ JSON Response:"""
                                 unit_price = float(match.group(3))
                             else:
                                 continue
-                            # Skip if values are unreasonable or description is too short
-                            if (quantity > 0 and unit_price > 0 and unit_price < 1000000 and 
-                                len(description) > 2 and not description.isdigit()):
-                                total = quantity * unit_price
-                                items.append({
-                                    "sku": sku,
-                                    "description": description,
-                                    "quantity": quantity,
-                                    "unitPrice": unit_price,
-                                    "deliveryTime": "7-10 days",
-                                    "total": total
-                                })
-                                matched_lines.add(line_clean)
-                                print(f"Extracted item: {quantity}x {description} @ ${unit_price}")
-                                break  # Only match one pattern per line
+                            
+                            # Enhanced validation for reasonable values
+                            if not self._validate_item_values(quantity, unit_price, description):
+                                continue
+                                
+                            total = quantity * unit_price
+                            items.append({
+                                "sku": sku,
+                                "description": description,
+                                "quantity": quantity,
+                                "unitPrice": unit_price,
+                                "deliveryTime": "7-10 days",
+                                "total": total
+                            })
+                            matched_lines.add(line_clean)
+                            print(f"Extracted item: {quantity}x {description} @ ${unit_price}")
+                            break  # Only match one pattern per line
                         except (ValueError, IndexError) as e:
                             print(f"Error parsing item: {e}")
                             continue
             
-            # If no items found, try to extract any numbers that might be prices
+            # If no items found, don't create fake data
             if not items:
-                print("No items found with patterns, trying alternative extraction...")
-                # Look for any numbers that might be prices
-                price_pattern = r'\$?([\d,]+\.?\d*)'
-                price_matches = re.findall(price_pattern, quote_text)
-                
-                if price_matches:
-                    # Use the first price found as a default item
-                    try:
-                        unit_price = float(price_matches[0].replace(',', ''))
-                        if unit_price > 0 and unit_price < 1000000:
-                            items.append({
-                                "sku": "DEFAULT-001",
-                                "description": "Product/Service",
-                                "quantity": 1,
-                                "unitPrice": unit_price,
-                                "deliveryTime": "TBD",
-                                "total": unit_price
-                            })
-                            print(f"Created default item with price: ${unit_price}")
-                    except ValueError:
-                        pass
+                print("No valid items could be extracted from the document")
+                return json.dumps({
+                    "vendorName": vendor_name,
+                    "items": [],
+                    "terms": {"payment": "N/A", "warranty": "N/A"},
+                    "analysis_note": "No pricing information could be extracted. Please ensure this is a vendor quote with itemized pricing."
+                })
             
-            # If still no items, don't create fake data - just indicate no items found
-            if not items:
-                print("No items could be extracted from the document")
-                # Don't create fake items - let the user know nothing was found
+            # Validate total quote value
+            total_quote_value = sum(item["total"] for item in items)
+            if not self._validate_quote_total(total_quote_value):
+                return json.dumps({
+                    "vendorName": vendor_name,
+                    "items": [],
+                    "terms": {"payment": "N/A", "warranty": "N/A"},
+                    "analysis_note": f"Extracted total value (${total_quote_value:,.2f}) appears to be outside reasonable range for a vendor quote. Please verify the document."
+                })
             
             # Deduplicate/group items by description and unit price
             def deduplicate_items(items):
@@ -300,37 +300,33 @@ JSON Response:"""
 
             items = deduplicate_items(items)
             
-            # Extract payment terms
-            payment_patterns = [
-                r'(?:payment|terms):\s*([A-Za-z0-9\s]+)',
-                r'(net\s+\d+)',
-                r'(due\s+upon\s+receipt)',
-                r'(net\s+30)',
-                r'(net\s+60)',
-            ]
-            
+            # Extract terms
             payment_terms = "Net 30"
+            warranty = "Standard warranty"
+            
+            # Look for payment terms
+            payment_patterns = [
+                r'payment[:\-]\s*([A-Za-z0-9\s]+)',
+                r'terms[:\-]\s*([A-Za-z0-9\s]+)',
+                r'net\s+(\d+)',
+            ]
             for pattern in payment_patterns:
                 match = re.search(pattern, quote_text, re.IGNORECASE)
                 if match:
                     payment_terms = match.group(1).strip()
                     break
             
-            # Extract warranty
+            # Look for warranty
             warranty_patterns = [
-                r'(?:warranty|guarantee):\s*([A-Za-z0-9\s]+)',
-                r'(\d+\s+year[s]?\s+warranty)',
-                r'(standard\s+warranty)',
+                r'warranty[:\-]\s*([A-Za-z0-9\s]+)',
+                r'guarantee[:\-]\s*([A-Za-z0-9\s]+)',
             ]
-            
-            warranty = "Standard warranty"
             for pattern in warranty_patterns:
                 match = re.search(pattern, quote_text, re.IGNORECASE)
                 if match:
                     warranty = match.group(1).strip()
                     break
             
-            # Create JSON response
             result = {
                 "vendorName": vendor_name,
                 "items": items,
@@ -340,27 +336,73 @@ JSON Response:"""
                 }
             }
             
-            print(f"Analysis complete. Found {len(items)} items for {vendor_name}")
-            return json.dumps(result, indent=2)
+            return json.dumps(result)
             
         except Exception as e:
-            print(f"Error in NLP analysis: {str(e)}")
-            # Return a basic fallback
+            print(f"NLP analysis failed: {str(e)}")
             return json.dumps({
                 "vendorName": "Analysis Failed",
-                "items": [{
-                    "sku": "ERROR-001",
-                    "description": "Analysis failed - please check file format",
-                    "quantity": 1,
-                    "unitPrice": 0.0,
-                    "deliveryTime": "TBD",
-                    "total": 0.0
-                }],
-                "terms": {
-                    "payment": "Manual Review Required",
-                    "warranty": "Manual Review Required"
-                }
-            }, indent=2)
+                "items": [],
+                "terms": {"payment": "N/A", "warranty": "N/A"},
+                "analysis_note": f"Analysis failed: {str(e)}"
+            })
+
+    def _detect_document_type(self, text: str) -> str:
+        """Detect if document is a quote, receipt, invoice, or other type"""
+        text_lower = text.lower()
+        
+        # Receipt indicators
+        receipt_indicators = [
+            "receipt", "payment received", "paid", "total paid", "amount paid",
+            "thank you for your purchase", "transaction", "sale", "purchase"
+        ]
+        if any(indicator in text_lower for indicator in receipt_indicators):
+            return "receipt"
+        
+        # Invoice indicators
+        invoice_indicators = [
+            "invoice", "bill", "amount due", "please pay", "payment due",
+            "invoice number", "bill to", "ship to"
+        ]
+        if any(indicator in text_lower for indicator in invoice_indicators):
+            return "invoice"
+        
+        # Quote indicators
+        quote_indicators = [
+            "quote", "quotation", "proposal", "estimate", "pricing",
+            "vendor", "supplier", "terms and conditions", "valid until",
+            "quote number", "proposal number"
+        ]
+        if any(indicator in text_lower for indicator in quote_indicators):
+            return "quote"
+        
+        # Default to quote if unclear
+        return "quote"
+
+    def _validate_item_values(self, quantity: int, unit_price: float, description: str) -> bool:
+        """Validate that item values are reasonable"""
+        # Quantity validation
+        if quantity <= 0 or quantity > 100000:
+            return False
+        
+        # Unit price validation (reasonable range for most procurement items)
+        if unit_price <= 0 or unit_price > 100000:
+            return False
+        
+        # Description validation
+        if len(description) < 2 or description.isdigit():
+            return False
+        
+        return True
+
+    def _validate_quote_total(self, total: float) -> bool:
+        """Validate that quote total is reasonable"""
+        # Most vendor quotes are between $10 and $10M
+        # Receipts and small purchases are typically under $10K
+        if total < 10 or total > 10000000:
+            return False
+        
+        return True
 
     def _parse_ai_response(self, response: str) -> Dict[str, Any]:
         """Parse AI response and extract JSON"""
@@ -383,38 +425,57 @@ JSON Response:"""
             print(f"Raw response: {response}")
             raise ValueError(f"Invalid JSON response: {str(e)}")
 
-    def _create_vendor_quote(self, data: Dict[str, Any]) -> VendorQuote:
+    def _create_vendor_quote(self, quote_data: Dict[str, Any]) -> VendorQuote:
         """Convert parsed data to VendorQuote model"""
         try:
-            # Validate and create items
-            items = []
-            for item_data in data.get("items", []):
-                item = QuoteItem(
-                    sku=item_data.get("sku", "UNKNOWN"),
-                    description=item_data.get("description", "Unknown Product"),
-                    quantity=int(item_data.get("quantity", 0)),
-                    unitPrice=float(item_data.get("unitPrice", 0.0)),
-                    deliveryTime=item_data.get("deliveryTime", "TBD"),
-                    total=float(item_data.get("total", 0.0))
+            # Handle analysis notes for non-quote documents
+            if "analysis_note" in quote_data:
+                # This is a special case for non-quote documents
+                return VendorQuote(
+                    vendorName=quote_data.get("vendorName", "Analysis Failed"),
+                    items=[],
+                    terms=QuoteTerms(
+                        payment=quote_data.get("terms", {}).get("payment", "N/A"),
+                        warranty=quote_data.get("terms", {}).get("warranty", "N/A")
+                    )
                 )
-                items.append(item)
             
-            # Create terms
+            # Normal quote processing
+            vendor_name = quote_data.get("vendorName", "Unknown Vendor")
+            
+            # Convert items
+            items = []
+            for item_data in quote_data.get("items", []):
+                try:
+                    item = QuoteItem(
+                        sku=item_data.get("sku", "N/A"),
+                        description=item_data.get("description", "Unknown Item"),
+                        quantity=item_data.get("quantity", 1),
+                        unitPrice=item_data.get("unitPrice", 0.0),
+                        deliveryTime=item_data.get("deliveryTime", "TBD"),
+                        total=item_data.get("total", 0.0)
+                    )
+                    items.append(item)
+                except Exception as e:
+                    print(f"Error creating item: {e}")
+                    continue
+            
+            # Convert terms
+            terms_data = quote_data.get("terms", {})
             terms = QuoteTerms(
-                payment=data.get("terms", {}).get("payment", "TBD"),
-                warranty=data.get("terms", {}).get("warranty", "TBD")
+                payment=terms_data.get("payment", "TBD"),
+                warranty=terms_data.get("warranty", "TBD")
             )
             
-            # Create vendor quote
             return VendorQuote(
-                vendorName=data.get("vendorName", "Unknown Vendor"),
+                vendorName=vendor_name,
                 items=items,
                 terms=terms
             )
             
         except Exception as e:
-            print(f"Error creating VendorQuote: {str(e)}")
-            raise
+            print(f"Error creating VendorQuote: {e}")
+            return self._get_fallback_quote()
 
     def _get_fallback_quote(self) -> VendorQuote:
         """Fallback quote when AI analysis fails"""
