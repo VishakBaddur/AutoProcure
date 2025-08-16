@@ -1,6 +1,7 @@
 import json
 import httpx
 import os
+import re
 from dotenv import load_dotenv
 from typing import Dict, Any, Optional
 from .models import VendorQuote, QuoteItem, QuoteTerms
