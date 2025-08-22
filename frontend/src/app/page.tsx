@@ -13,6 +13,10 @@ import Image from 'next/image';
 
 export default function LandingPage() {
   const [currentDemoStep, setCurrentDemoStep] = useState(0);
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -21,6 +25,46 @@ export default function LandingPage() {
     
     return () => clearInterval(interval);
   }, []);
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes('@')) {
+      setSubmitMessage('Please enter a valid email address');
+      setSubmitSuccess(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitMessage('');
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://autoprocure-backend.onrender.com'}/waitlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSubmitMessage('Thank you! You\'ve been added to our waitlist.');
+        setSubmitSuccess(true);
+        setEmail('');
+      } else {
+        setSubmitMessage(data.message || 'Something went wrong. Please try again.');
+        setSubmitSuccess(false);
+      }
+    } catch (error) {
+      console.error('Waitlist submission error:', error);
+      setSubmitMessage('Network error. Please try again.');
+      setSubmitSuccess(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const demoSteps = [
     {
@@ -238,16 +282,29 @@ export default function LandingPage() {
             </p>
             
             <div className="max-w-md mx-auto mb-12">
-              <div className="flex">
+              <form onSubmit={handleEmailSubmit} className="flex">
                 <input
                   type="email"
                   placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="flex-1 px-4 py-3 rounded-l-lg border-0 bg-gray-800 text-white placeholder-gray-400 focus:ring-2 focus:ring-gray-600 focus:outline-none"
+                  disabled={isSubmitting}
                 />
-                <button className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-6 py-3 rounded-r-lg font-semibold hover:from-gray-600 hover:to-gray-800 transition-all duration-200 hover:scale-105 border border-gray-600">
-                  Join Waitlist
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-6 py-3 rounded-r-lg font-semibold hover:from-gray-600 hover:to-gray-800 transition-all duration-200 hover:scale-105 border border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Joining...' : 'Join Waitlist'}
                 </button>
-              </div>
+              </form>
+              
+              {submitMessage && (
+                <div className={`mt-4 text-center text-sm ${submitSuccess ? 'text-green-400' : 'text-red-400'}`}>
+                  {submitMessage}
+                </div>
+              )}
             </div>
             
             <div className="flex justify-center space-x-8 text-gray-400">

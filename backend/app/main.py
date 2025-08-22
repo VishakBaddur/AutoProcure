@@ -49,6 +49,15 @@ app.add_middleware(
 # Remove: SignupRequest, LoginRequest, /auth/signup, /auth/login, /auth/me endpoints
 # Remove: current_user and Depends(get_current_user) from all endpoints
 
+# Waitlist models
+class WaitlistRequest(BaseModel):
+    email: str
+
+class WaitlistResponse(BaseModel):
+    success: bool
+    message: str
+    id: Optional[str] = None
+
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF using enhanced processor with OCR fallback"""
     try:
@@ -516,6 +525,42 @@ async def test_nlp():
             "status": "error",
             "error": str(e)
         }
+
+@app.post("/waitlist", response_model=WaitlistResponse)
+async def join_waitlist(request: WaitlistRequest):
+    """Add email to waitlist"""
+    try:
+        # Basic email validation
+        if not request.email or '@' not in request.email:
+            raise HTTPException(status_code=400, detail="Invalid email address")
+        
+        result = await db.add_to_waitlist(request.email)
+        
+        if result["success"]:
+            return WaitlistResponse(
+                success=True,
+                message=result["message"],
+                id=result.get("id")
+            )
+        else:
+            return WaitlistResponse(
+                success=False,
+                message=result["message"]
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to join waitlist: {str(e)}")
+
+@app.get("/waitlist/count")
+async def get_waitlist_count():
+    """Get total number of waitlist subscribers"""
+    try:
+        count = await db.get_waitlist_count()
+        return {"count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get waitlist count: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

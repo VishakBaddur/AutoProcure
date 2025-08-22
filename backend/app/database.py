@@ -49,6 +49,16 @@ class Database:
                 )
             """)
             
+            # Waitlist table for email collection
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS waitlist (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    status VARCHAR(50) DEFAULT 'pending'
+                )
+            """)
+            
             # Quotes table
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS quotes (
@@ -89,6 +99,7 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_quotes_user_id ON quotes(user_id);
                 CREATE INDEX IF NOT EXISTS idx_quotes_created_at ON quotes(created_at);
                 CREATE INDEX IF NOT EXISTS idx_quote_items_quote_id ON quote_items(quote_id);
+                CREATE INDEX IF NOT EXISTS idx_waitlist_email ON waitlist(email);
             """)
             
             print("✅ Database tables created successfully")
@@ -268,6 +279,48 @@ class Database:
         except Exception as e:
             print(f"❌ Failed to get relevant past quotes for RAG: {str(e)}")
             return []
+
+    async def add_to_waitlist(self, email: str) -> Dict[str, Any]:
+        """Add email to waitlist"""
+        if not self.pool:
+            return {"success": False, "message": "Database not connected"}
+        
+        try:
+            async with self.pool.acquire() as conn:
+                # Check if email already exists
+                existing = await conn.fetchrow("""
+                    SELECT id FROM waitlist WHERE email = $1
+                """, email)
+                
+                if existing:
+                    return {"success": False, "message": "Email already registered"}
+                
+                # Add to waitlist
+                waitlist_id = await conn.fetchval("""
+                    INSERT INTO waitlist (email) VALUES ($1) RETURNING id
+                """, email)
+                
+                print(f"✅ Email added to waitlist: {email}")
+                return {"success": True, "message": "Successfully joined waitlist", "id": str(waitlist_id)}
+                
+        except Exception as e:
+            print(f"❌ Failed to add email to waitlist: {str(e)}")
+            return {"success": False, "message": "Failed to join waitlist"}
+
+    async def get_waitlist_count(self) -> int:
+        """Get total number of waitlist subscribers"""
+        if not self.pool:
+            return 0
+        
+        try:
+            async with self.pool.acquire() as conn:
+                count = await conn.fetchval("""
+                    SELECT COUNT(*) FROM waitlist
+                """)
+                return count or 0
+        except Exception as e:
+            print(f"❌ Failed to get waitlist count: {str(e)}")
+            return 0
 
 # Global database instance
 db = Database() 
