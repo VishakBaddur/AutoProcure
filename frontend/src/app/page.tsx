@@ -4,13 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   ArrowRight, 
   Zap, 
-  TrendingUp, 
   FileText, 
   Play,
-  Building2,
   Calculator,
   Target
 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LandingPage() {
   const [currentDemoStep, setCurrentDemoStep] = useState(0);
@@ -50,6 +49,33 @@ export default function LandingPage() {
     }
   ];
 
+  const features = [
+    {
+      icon: "/images/feature-extract.jpeg",
+      title: "Extract Messy Quotes",
+      description: "Handles PDFs, Excel, scanned docs, and more",
+      gradient: "from-gray-700 to-gray-900"
+    },
+    {
+      icon: "/images/feature-compare.png",
+      title: "Normalize & Compare",
+      description: "Standardizes data across different vendor formats",
+      gradient: "from-gray-800 to-black"
+    },
+    {
+      icon: "/images/feature-leaks.png",
+      title: "Spot Cost Leaks",
+      description: "Identifies hidden charges and pricing anomalies",
+      gradient: "from-black to-gray-800"
+    },
+    {
+      icon: "/images/feature-save.png",
+      title: "Save Time & Money",
+      description: "Reduces analysis time from hours to minutes",
+      gradient: "from-gray-900 to-gray-700"
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       {/* Navigation */}
@@ -57,12 +83,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-gray-300 to-white bg-clip-text text-transparent">
-                AutoProcure
-              </span>
+              <Image 
+                src="/images/logo.svg" 
+                alt="AutoProcure"
+                width={150}
+                height={40}
+                className="h-8 w-auto"
+              />
             </div>
             
             <div className="hidden md:flex items-center space-x-8">
@@ -122,39 +149,20 @@ export default function LandingPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                icon: FileText,
-                title: "Extract Messy Quotes",
-                description: "Handles PDFs, Excel, scanned docs, and more",
-                gradient: "from-gray-700 to-gray-900"
-              },
-              {
-                icon: Calculator,
-                title: "Normalize & Compare",
-                description: "Standardizes data across different vendor formats",
-                gradient: "from-gray-800 to-black"
-              },
-              {
-                icon: Target,
-                title: "Spot Cost Leaks",
-                description: "Identifies hidden charges and pricing anomalies",
-                gradient: "from-black to-gray-800"
-              },
-              {
-                icon: TrendingUp,
-                title: "Save Time & Money",
-                description: "Reduces analysis time from hours to minutes",
-                gradient: "from-gray-900 to-gray-700"
-              }
-            ].map((feature, index) => (
+            {features.map((feature, index) => (
               <div
                 key={index}
                 className="group bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700 hover:border-gray-600 hover:shadow-2xl hover:shadow-gray-900/50 transition-all duration-300 hover:-translate-y-2 animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-gray-600`}>
-                  <feature.icon className="w-8 h-8 text-white" />
+                <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-gray-600 overflow-hidden`}>
+                  <Image 
+                    src={feature.icon} 
+                    alt={feature.title}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-contain"
+                  />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-4">
                   {feature.title}
