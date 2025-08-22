@@ -341,17 +341,25 @@ async def analyze_multiple_quotes(
                             'total': item.total,
                             'quantity': item.quantity
                         }
-            split_total = sum(x['unitPrice'] * x['quantity'] for x in item_best.values())
+            
+            # Calculate totals for each vendor
             vendor_totals = {}
             for quote in quotes:
                 vendor_totals[quote.vendorName] = sum(item.total for item in quote.items)
+            
+            # Find best single vendor
             best_vendor = min(vendor_totals, key=vendor_totals.get)
             best_vendor_total = vendor_totals[best_vendor]
+            
+            # Calculate split order savings
+            split_total = sum(x['unitPrice'] * x['quantity'] for x in item_best.values())
             savings = best_vendor_total - split_total
-            if savings > best_vendor_total * 0.05:
-                return f"Split the order: buy each item from the vendor offering the lowest price. This saves ${savings:.2f} compared to buying everything from {best_vendor}."
+            
+            # Generate recommendation
+            if savings > best_vendor_total * 0.05:  # More than 5% savings
+                return f"🎯 **RECOMMENDATION**: Split your order across vendors for maximum savings! You can save ${savings:.2f} by purchasing each item from the vendor offering the lowest price, compared to buying everything from {best_vendor} (${best_vendor_total:.2f})."
             else:
-                return f"Buy everything from {best_vendor} for simplicity. Total cost: ${best_vendor_total:.2f}."
+                return f"🎯 **RECOMMENDATION**: Choose {best_vendor} for simplicity and reliability. Total cost: ${best_vendor_total:.2f}. The savings from splitting the order (${savings:.2f}) don't justify the additional complexity."
 
         suggestion = suggest_best_vendor(quotes)
         
@@ -371,7 +379,7 @@ async def analyze_multiple_quotes(
         result = AnalysisResult(
             quotes=quotes,
             comparison=comparison,
-            recommendation=multi_vendor_result.recommendation,
+            recommendation=suggestion,  # Use the clean suggestion instead of AI's raw output
             multi_vendor_analysis=multi_vendor_result
         )
         
