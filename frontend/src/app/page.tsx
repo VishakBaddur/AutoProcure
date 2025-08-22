@@ -28,49 +28,49 @@ export default function LandingPage() {
       title: "Upload Vendor Quotes",
       description: "Drag & drop PDFs, Excel files, or scanned documents",
       icon: FileText,
-      color: "from-blue-500 to-purple-600"
+      color: "from-gray-700 to-gray-900"
     },
     {
       title: "AI Extracts & Normalizes",
       description: "Instantly converts messy quotes into structured data",
       icon: Zap,
-      color: "from-purple-500 to-pink-600"
+      color: "from-gray-800 to-black"
     },
     {
       title: "Smart Comparison",
       description: "Side-by-side analysis with cost savings highlighted",
       icon: Calculator,
-      color: "from-pink-500 to-red-600"
+      color: "from-black to-gray-800"
     },
     {
       title: "Actionable Insights",
       description: "Get recommendations and export reports instantly",
       icon: Target,
-      color: "from-red-500 to-orange-600"
+      color: "from-gray-900 to-gray-700"
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50">
+      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2 animate-fade-in">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-gray-300 to-white bg-clip-text text-transparent">
                 AutoProcure
               </span>
             </div>
             
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Features</a>
-              <a href="#demo" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Demo</a>
+              <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
+              <a href="#demo" className="text-gray-300 hover:text-white transition-colors">Demo</a>
             </div>
             
-            <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 hover:scale-105 animate-fade-in">
+            <button className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-6 py-2 rounded-lg font-medium hover:from-gray-600 hover:to-gray-800 transition-all duration-200 hover:scale-105 border border-gray-600">
               Get Early Access
             </button>
           </div>
@@ -82,24 +82,24 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="animate-slide-up">
-              <h1 className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-white mb-6">
+              <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
                 Procurement,
-                <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-gray-300 via-white to-gray-400 bg-clip-text text-transparent">
                   Powered by AI
                 </span>
               </h1>
               
-              <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
                 AutoProcure cleans vendor quotes, compares them instantly, and helps you make faster, smarter purchasing decisions.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 flex items-center space-x-2 hover:scale-105">
+                <button className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-gray-600 hover:to-gray-800 transition-all duration-200 flex items-center space-x-2 hover:scale-105 border border-gray-600">
                   <span>Get Early Access</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
                 
-                <button className="border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 flex items-center space-x-2 hover:scale-105">
+                <button className="border-2 border-gray-600 text-gray-300 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-800 hover:text-white transition-all duration-200 flex items-center space-x-2 hover:scale-105">
                   <Play className="w-5 h-5" />
                   <span>See Demo</span>
                 </button>
@@ -110,13 +110,13 @@ export default function LandingPage() {
       </section>
 
       {/* Feature Highlights */}
-      <section id="features" className="py-20">
+      <section id="features" className="py-20 bg-gradient-to-r from-gray-800 to-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            <h2 className="text-4xl font-bold text-white mb-4">
               Everything You Need
             </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Powerful features designed for procurement professionals
             </p>
           </div>
@@ -127,39 +127,39 @@ export default function LandingPage() {
                 icon: FileText,
                 title: "Extract Messy Quotes",
                 description: "Handles PDFs, Excel, scanned docs, and more",
-                gradient: "from-blue-500 to-cyan-500"
+                gradient: "from-gray-700 to-gray-900"
               },
               {
                 icon: Calculator,
                 title: "Normalize & Compare",
                 description: "Standardizes data across different vendor formats",
-                gradient: "from-purple-500 to-pink-500"
+                gradient: "from-gray-800 to-black"
               },
               {
                 icon: Target,
                 title: "Spot Cost Leaks",
                 description: "Identifies hidden charges and pricing anomalies",
-                gradient: "from-pink-500 to-red-500"
+                gradient: "from-black to-gray-800"
               },
               {
                 icon: TrendingUp,
                 title: "Save Time & Money",
                 description: "Reduces analysis time from hours to minutes",
-                gradient: "from-green-500 to-emerald-500"
+                gradient: "from-gray-900 to-gray-700"
               }
             ].map((feature, index) => (
               <div
                 key={index}
-                className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-2 animate-fade-in"
+                className="group bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700 hover:border-gray-600 hover:shadow-2xl hover:shadow-gray-900/50 transition-all duration-300 hover:-translate-y-2 animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-gray-600`}>
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
+                <h3 className="text-xl font-semibold text-white mb-4">
                   {feature.title}
                 </h3>
-                <p className="text-slate-600 dark:text-slate-300">
+                <p className="text-gray-300">
                   {feature.description}
                 </p>
               </div>
@@ -169,26 +169,26 @@ export default function LandingPage() {
       </section>
 
       {/* Interactive Demo Teaser */}
-      <section id="demo" className="py-20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+      <section id="demo" className="py-20 bg-gradient-to-r from-gray-900 to-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            <h2 className="text-4xl font-bold text-white mb-4">
               See It In Action
             </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Watch how AutoProcure transforms your procurement workflow
             </p>
           </div>
           
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden animate-fade-in">
-              <div className="flex items-center space-x-2 p-4 border-b border-slate-200/50 dark:border-slate-700/50">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden animate-fade-in">
+              <div className="flex items-center space-x-2 p-4 border-b border-gray-700">
                 <div className="flex space-x-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
-                <div className="flex-1 text-center text-sm text-slate-500 dark:text-slate-400">
+                <div className="flex-1 text-center text-sm text-gray-400">
                   AutoProcure Demo
                 </div>
               </div>
@@ -196,18 +196,18 @@ export default function LandingPage() {
               <div className="p-8">
                 <div className="text-center">
                   <div className="mb-8 transition-all duration-500 ease-in-out">
-                    <div className={`w-20 h-20 bg-gradient-to-r ${demoSteps[currentDemoStep].color} rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500`}>
+                    <div className={`w-20 h-20 bg-gradient-to-r ${demoSteps[currentDemoStep].color} rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500 border border-gray-600`}>
                       {React.createElement(demoSteps[currentDemoStep].icon, { className: "w-10 h-10 text-white" })}
                     </div>
-                    <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">
+                    <h3 className="text-2xl font-semibold text-white mb-4">
                       {demoSteps[currentDemoStep].title}
                     </h3>
-                    <p className="text-slate-600 dark:text-slate-300 text-lg">
+                    <p className="text-gray-300 text-lg">
                       {demoSteps[currentDemoStep].description}
                     </p>
                   </div>
                   
-                  <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 flex items-center space-x-2 mx-auto hover:scale-105">
+                  <button className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-gray-600 hover:to-gray-800 transition-all duration-200 flex items-center space-x-2 mx-auto hover:scale-105 border border-gray-600">
                     <span>Request Access</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
@@ -219,13 +219,13 @@ export default function LandingPage() {
       </section>
 
       {/* Call-to-Action Footer */}
-      <section className="py-20 bg-slate-900 dark:bg-slate-800">
+      <section className="py-20 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-fade-in">
             <h2 className="text-4xl font-bold text-white mb-4">
               Be Among The First To Use AutoProcure
             </h2>
-            <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               Join the waitlist and get early access to the future of procurement
             </p>
             
@@ -234,15 +234,15 @@ export default function LandingPage() {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 rounded-l-lg border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="flex-1 px-4 py-3 rounded-l-lg border-0 bg-gray-800 text-white placeholder-gray-400 focus:ring-2 focus:ring-gray-600 focus:outline-none"
                 />
-                <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-r-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105">
+                <button className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-6 py-3 rounded-r-lg font-semibold hover:from-gray-600 hover:to-gray-800 transition-all duration-200 hover:scale-105 border border-gray-600">
                   Join Waitlist
                 </button>
               </div>
             </div>
             
-            <div className="flex justify-center space-x-8 text-slate-400">
+            <div className="flex justify-center space-x-8 text-gray-400">
               <a href="#" className="hover:text-white transition-colors">About</a>
               <a href="#" className="hover:text-white transition-colors">Contact</a>
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
