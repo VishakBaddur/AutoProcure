@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowRight, 
   Zap, 
@@ -12,7 +11,6 @@ import {
   Calculator,
   Target
 } from 'lucide-react';
-import React from 'react';
 
 export default function LandingPage() {
   const [currentDemoStep, setCurrentDemoStep] = useState(0);
@@ -58,31 +56,23 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2"
-            >
+            <div className="flex items-center space-x-2 animate-fade-in">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 AutoProcure
               </span>
-            </motion.div>
+            </div>
             
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Features</a>
               <a href="#demo" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Demo</a>
             </div>
             
-            <motion.button
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
-            >
+            <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 hover:scale-105 animate-fade-in">
               Get Early Access
-            </motion.button>
+            </button>
           </div>
         </div>
       </nav>
@@ -91,11 +81,7 @@ export default function LandingPage() {
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
+            <div className="animate-slide-up">
               <h1 className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-white mb-6">
                 Procurement,
                 <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -108,25 +94,17 @@ export default function LandingPage() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 flex items-center space-x-2"
-                >
+                <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 flex items-center space-x-2 hover:scale-105">
                   <span>Get Early Access</span>
                   <ArrowRight className="w-5 h-5" />
-                </motion.button>
+                </button>
                 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 flex items-center space-x-2"
-                >
+                <button className="border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 flex items-center space-x-2 hover:scale-105">
                   <Play className="w-5 h-5" />
                   <span>See Demo</span>
-                </motion.button>
+                </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -134,20 +112,14 @@ export default function LandingPage() {
       {/* Feature Highlights */}
       <section id="features" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
+          <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
               Everything You Need
             </h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
               Powerful features designed for procurement professionals
             </p>
-          </motion.div>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
@@ -176,14 +148,10 @@ export default function LandingPage() {
                 gradient: "from-green-500 to-emerald-500"
               }
             ].map((feature, index) => (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -10 }}
-                className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300"
+                className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-2 animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <feature.icon className="w-8 h-8 text-white" />
@@ -194,7 +162,7 @@ export default function LandingPage() {
                 <p className="text-slate-600 dark:text-slate-300">
                   {feature.description}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -203,23 +171,17 @@ export default function LandingPage() {
       {/* Interactive Demo Teaser */}
       <section id="demo" className="py-20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
+          <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
               See It In Action
             </h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
               Watch how AutoProcure transforms your procurement workflow
             </p>
-          </motion.div>
+          </div>
           
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden animate-fade-in">
               <div className="flex items-center space-x-2 p-4 border-b border-slate-200/50 dark:border-slate-700/50">
                 <div className="flex space-x-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -233,15 +195,8 @@ export default function LandingPage() {
               
               <div className="p-8">
                 <div className="text-center">
-                  <motion.div
-                    key={currentDemoStep}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.5 }}
-                    className="mb-8"
-                  >
-                    <div className={`w-20 h-20 bg-gradient-to-r ${demoSteps[currentDemoStep].color} rounded-2xl flex items-center justify-center mx-auto mb-6`}>
+                  <div className="mb-8 transition-all duration-500 ease-in-out">
+                    <div className={`w-20 h-20 bg-gradient-to-r ${demoSteps[currentDemoStep].color} rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500`}>
                       {React.createElement(demoSteps[currentDemoStep].icon, { className: "w-10 h-10 text-white" })}
                     </div>
                     <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">
@@ -250,16 +205,12 @@ export default function LandingPage() {
                     <p className="text-slate-600 dark:text-slate-300 text-lg">
                       {demoSteps[currentDemoStep].description}
                     </p>
-                  </motion.div>
+                  </div>
                   
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 flex items-center space-x-2 mx-auto"
-                  >
+                  <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 flex items-center space-x-2 mx-auto hover:scale-105">
                     <span>Request Access</span>
                     <ArrowRight className="w-5 h-5" />
-                  </motion.button>
+                  </button>
                 </div>
               </div>
             </div>
@@ -270,13 +221,7 @@ export default function LandingPage() {
       {/* Call-to-Action Footer */}
       <section className="py-20 bg-slate-900 dark:bg-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center"
-          >
+          <div className="text-center animate-fade-in">
             <h2 className="text-4xl font-bold text-white mb-4">
               Be Among The First To Use AutoProcure
             </h2>
@@ -291,13 +236,9 @@ export default function LandingPage() {
                   placeholder="Enter your email"
                   className="flex-1 px-4 py-3 rounded-l-lg border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-r-lg font-semibold hover:shadow-lg transition-all duration-200"
-                >
+                <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-r-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105">
                   Join Waitlist
-                </motion.button>
+                </button>
               </div>
             </div>
             
@@ -306,7 +247,7 @@ export default function LandingPage() {
               <a href="#" className="hover:text-white transition-colors">Contact</a>
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </div>
