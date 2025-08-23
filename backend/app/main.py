@@ -22,6 +22,11 @@ from .multi_vendor_analyzer import multi_vendor_analyzer
 from .database import db
 from .pdf_processor import enhanced_pdf_processor
 from .excel_processor import enhanced_excel_processor
+# Import new analysis modules
+from .obfuscation_detector import obfuscation_detector
+from .math_validator import math_validator
+from .justification_helper import justification_helper
+from .delay_tracker import delay_tracker
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
 
@@ -144,104 +149,84 @@ async def upload_file(
     file: UploadFile = File(...),
 ):
     """Upload and analyze vendor quote files with RAG context"""
-    # Validate file type
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
+    
     file_extension = file.filename.lower().split('.')[-1]
     if file_extension not in ['pdf', 'xlsx', 'xls']:
-        raise HTTPException(status_code=400, detail="Only PDF and Excel files are supported")
+        raise HTTPException(status_code=400, detail="Unsupported file type. Please upload PDF or Excel files.")
+    
     try:
         # Read file content
         file_content = await file.read()
-        # Extract text or structured data based on file type
+        
+        # Extract text based on file type
         if file_extension == 'pdf':
             text_content = extract_text_from_pdf(file_content)
-            quote = await ai_processor.analyze_quote(text_content)
+            parsed_quote = await ai_processor.analyze_quote(text_content)
         else:
-            # Try structured Excel parse first
+            # Try structured Excel first
             structured_quote = enhanced_excel_processor.parse(file_content, filename=file.filename)
             if structured_quote and structured_quote.items:
-                quote = structured_quote
+                parsed_quote = structured_quote
+                text_content = "\n".join([f"{it.quantity} x {it.description} @ {it.unitPrice}" for it in structured_quote.items])
             else:
-                # Fallback to text extraction + NLP
                 text_content = extract_text_from_excel(file_content)
-                quote = await ai_processor.analyze_quote(text_content)
-        # --- RAG: Retrieve relevant past quotes for context ---
-        user_id = None # Set user_id to None for public endpoints
-        # For RAG, we need SKUs. We'll extract them after AI analysis, so for the first run, just analyze as usual.
-        initial_quote = quote
-        skus = [item.sku for item in initial_quote.items]
+                parsed_quote = await ai_processor.analyze_quote(text_content)
+        
+        # Get RAG context if available
+        user_id = None  # Set user_id to None for public endpoints
         rag_context = ""
-        if user_id and skus:
-            past_quotes = await db.get_relevant_past_quotes(user_id, skus, limit=5)
-            if past_quotes:
-                rag_context = "\n".join([
-                    f"Date: {q['created_at']}, Vendor: {q['vendor_name']}, SKU: {q['sku']}, Desc: {q['description']}, Qty: {q['quantity']}, Unit: {q['unit_price']}, Total: {q['total']}" for q in past_quotes
-                ])
+        if user_id and parsed_quote.items:
+            skus = [item.sku for item in parsed_quote.items if item.sku]
+            if skus:
+                past_quotes = await db.get_relevant_past_quotes(user_id, skus, limit=5)
+                if past_quotes:
+                    rag_context = "\n".join([
+                        f"Date: {q['created_at']}, Vendor: {q['vendor_name']}, SKU: {q['sku']}, Desc: {q['description']}, Qty: {q['quantity']}, Unit: {q['unit_price']}, Total: {q['total']}" for q in past_quotes
+                    ])
+        
         # If initial analysis was text-based, re-run with RAG context where applicable
-        if not isinstance(quote, VendorQuote) or not quote.items:
-            quote = await ai_processor.analyze_quote(text_content, rag_context=rag_context)
+        if not isinstance(parsed_quote, VendorQuote) or not parsed_quote.items:
+            parsed_quote = await ai_processor.analyze_quote(text_content, rag_context=rag_context)
         
         # Debug output
         print(f"[DEBUG] Quote analysis result:")
-        print(f"  Vendor: {quote.vendorName}")
-        print(f"  Items count: {len(quote.items)}")
-        print(f"  First item: {quote.items[0].description if quote.items else 'No items'}")
+        print(f"  Vendor: {parsed_quote.vendorName}")
+        print(f"  Items count: {len(parsed_quote.items)}")
+        print(f"  First item: {parsed_quote.items[0].description if parsed_quote.items else 'No items'}")
         
         # Create comparison and recommendation
-        total_cost = sum(item.total for item in quote.items)
-        delivery_time = quote.items[0].deliveryTime if quote.items else "N/A"
+        total_cost = sum(item.total for item in parsed_quote.items)
+        delivery_time = parsed_quote.items[0].deliveryTime if parsed_quote.items else "N/A"
         comparison = {
             "totalCost": total_cost,
             "deliveryTime": delivery_time,
             "vendorCount": 1
         }
+        
         # Generate smart recommendation based on actual analysis
-        if quote.vendorName == "Analysis Failed - Manual Review Required" or quote.vendorName == "Analysis Failed":
-            recommendation = "AI analysis failed. Please manually review the uploaded document."
-        elif quote.vendorName.startswith("Document Type:"):
-            # Handle non-quote documents
-            doc_type = quote.vendorName.replace("Document Type: ", "")
-            recommendation = f"This appears to be a {doc_type.lower()}, not a vendor quote. Please upload a vendor quote with itemized pricing for analysis."
-        elif not quote.items or len(quote.items) == 0:
-            recommendation = "No items or pricing information could be extracted from the document. Please verify the document contains quote details."
-        elif quote.vendorName == "Unknown Vendor":
-            if total_cost > 0:
-                recommendation = f"Quote analyzed successfully with total value: ${total_cost:,.2f}. Vendor name could not be extracted from the document."
-            else:
-                recommendation = "Quote analyzed but no pricing information could be extracted. Please verify the document format."
+        if parsed_quote.items:
+            recommendation = f"✅ Quote analyzed successfully. Total cost: ${total_cost:,.2f} from {parsed_quote.vendorName}. {len(parsed_quote.items)} items identified."
         else:
-            # Only use actual vendor name and data from the analysis
-            recommendation = f"Vendor {quote.vendorName} quote analyzed successfully."
-            
-            # Add pricing information only if we have actual data
-            if total_cost > 0:
-                recommendation += f" Total quote value: ${total_cost:,.2f}."
-                
-                # Add delivery information only if we have it
-                if delivery_time and delivery_time != "TBD":
-                    recommendation += f" Delivery time: {delivery_time}."
-                
-                # Add value-based insights only if we have real data
-                if total_cost > 10000:
-                    recommendation += " This appears to be a high-value quote."
-                elif total_cost > 1000:
-                    recommendation += " This appears to be a medium-value quote."
-                else:
-                    recommendation += " This appears to be a low-value quote."
-            else:
-                recommendation += " No pricing information could be extracted from the document."
+            recommendation = "⚠️ Quote analysis completed but no items were found. Please verify the document format."
+        
+        # Run advanced analysis features
+        advanced_analysis = await run_advanced_analysis([parsed_quote], [text_content])
+        
         result = AnalysisResult(
-            quotes=[quote],
+            quotes=[parsed_quote],
             comparison=comparison,
-            recommendation=recommendation
+            recommendation=recommendation,
+            advanced_analysis=advanced_analysis
         )
-        # Save to database with user ID
+        
+        # Save to database
         user_email = None # Set user_email to None for public endpoints
         user_name = None # Set user_name to None for public endpoints
-        print(f"[UPLOAD] user_id={user_id}, email={user_email}, name={user_name}")
-        # Defensive: ensure user exists in users table
+        
         # await auth_manager._create_user_record(user_id, user_email, user_name) # Removed auth_manager call
+        
         quote_id = await db.save_quote_analysis(
             filename=file.filename,
             file_type=file_extension,
@@ -249,13 +234,18 @@ async def upload_file(
             analysis_result=result,
             user_id=user_id
         )
+        
         # Add quote ID to response
         result_dict = result.dict()
         result_dict["quote_id"] = quote_id
+        
         # Send Slack alert
         await send_slack_alert(result)
+        
         return result_dict
+        
     except Exception as e:
+        print(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
 
 @app.post("/analyze-multiple", response_model=AnalysisResult)
@@ -272,6 +262,7 @@ async def analyze_multiple_quotes(
     try:
         quotes = []
         file_contents = []
+        raw_texts = []
         
         # Process each file
         for file in files:
@@ -304,21 +295,20 @@ async def analyze_multiple_quotes(
                 "filename": file.filename,
                 "content": text_content
             })
+            raw_texts.append(text_content)
         
         if len(quotes) < 2:
-            raise HTTPException(status_code=400, detail="Could not analyze enough quotes for comparison")
+            raise HTTPException(status_code=400, detail="At least 2 valid quotes required for comparison")
         
-        # Get RAG context for multi-vendor analysis
-        user_id = None # Set user_id to None for public endpoints
+        # Get RAG context if available
+        user_id = None  # Set user_id to None for public endpoints
         rag_context = ""
-        if user_id:
-            # Get SKUs from all quotes
+        if user_id and quotes:
             all_skus = []
             for quote in quotes:
-                all_skus.extend([item.sku for item in quote.items])
-            
+                all_skus.extend([item.sku for item in quote.items if item.sku])
             if all_skus:
-                past_quotes = await db.get_relevant_past_quotes(user_id, all_skus, limit=10)
+                past_quotes = await db.get_relevant_past_quotes(user_id, all_skus, limit=5)
                 if past_quotes:
                     rag_context = "\n".join([
                         f"Date: {q['created_at']}, Vendor: {q['vendor_name']}, SKU: {q['sku']}, Desc: {q['description']}, Qty: {q['quantity']}, Unit: {q['unit_price']}, Total: {q['total']}" for q in past_quotes
@@ -376,11 +366,15 @@ async def analyze_multiple_quotes(
             "riskAssessment": multi_vendor_result.risk_assessment
         }
         
+        # Run advanced analysis features
+        advanced_analysis = await run_advanced_analysis(quotes, raw_texts)
+        
         result = AnalysisResult(
             quotes=quotes,
             comparison=comparison,
             recommendation=suggestion,  # Use the clean suggestion instead of AI's raw output
-            multi_vendor_analysis=multi_vendor_result
+            multi_vendor_analysis=multi_vendor_result,
+            advanced_analysis=advanced_analysis
         )
         
         # Save to database
@@ -413,6 +407,58 @@ async def analyze_multiple_quotes(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Multi-vendor analysis failed: {str(e)}")
+
+async def run_advanced_analysis(quotes: List[VendorQuote], raw_texts: List[str]) -> Dict[str, Any]:
+    """Run all advanced analysis features"""
+    advanced_analysis = {}
+    
+    try:
+        # 1. Obfuscation Detection
+        obfuscation_results = []
+        for i, quote in enumerate(quotes):
+            raw_text = raw_texts[i] if i < len(raw_texts) else ""
+            obfuscation_result = obfuscation_detector.analyze_quote(quote, raw_text)
+            obfuscation_results.append({
+                "vendor": quote.vendorName,
+                "analysis": obfuscation_result
+            })
+        advanced_analysis["obfuscation_detection"] = {
+            "results": obfuscation_results,
+            "summary": "Obfuscation analysis completed"
+        }
+        
+        # 2. Math Validation
+        validation_results = []
+        for quote in quotes:
+            validation_result = math_validator.validate_quote(quote)
+            validation_results.append({
+                "vendor": quote.vendorName,
+                "validation": validation_result
+            })
+        advanced_analysis["math_validation"] = {
+            "results": validation_results,
+            "summary": "Math validation completed"
+        }
+        
+        # 3. Justification Helper (for multi-vendor scenarios)
+        if len(quotes) > 1:
+            # Find the selected vendor (lowest cost for this example)
+            selected_vendor = min(quotes, key=lambda q: sum(item.total for item in q.items))
+            justification_result = justification_helper.generate_justification(selected_vendor, quotes)
+            advanced_analysis["justification_helper"] = {
+                "selected_vendor": selected_vendor.vendorName,
+                "justification": justification_result
+            }
+        
+        # 4. Delay Tracker
+        delay_result = delay_tracker.analyze_timeline_risks(quotes, raw_texts)
+        advanced_analysis["delay_tracker"] = delay_result
+        
+    except Exception as e:
+        print(f"Advanced analysis error: {str(e)}")
+        advanced_analysis["error"] = f"Advanced analysis failed: {str(e)}"
+    
+    return advanced_analysis
 
 @app.get("/quotes")
 async def get_quote_history(

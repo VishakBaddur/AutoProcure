@@ -43,3 +43,4 @@ class AnalysisResult(BaseModel):
     comparison: Dict[str, Any]
     recommendation: str
     multi_vendor_analysis: Optional[MultiVendorAnalysis] = None  # For multi-vendor scenarios 
+    advanced_analysis: Optional[Dict[str, Any]] = None  # New field for advanced analysis features 

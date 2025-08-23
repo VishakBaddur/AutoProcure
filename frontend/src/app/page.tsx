@@ -12,9 +12,14 @@ import {
   Download,
   TrendingUp,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Clock,
+  Building
 } from 'lucide-react';
 import Image from 'next/image';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 // API functions
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://autoprocure-backend.onrender.com';
@@ -237,6 +242,307 @@ export default function LandingPage() {
     }
   ];
 
+  const renderResults = () => {
+    if (!currentResult) return null;
+
+    return (
+      <div className="space-y-6">
+        {/* Main Results */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Analysis Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-500">Total Vendors</p>
+                <p className="text-2xl font-bold">{currentResult.comparison?.vendorCount || 1}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-500">Total Cost</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ${currentResult.comparison?.totalCost?.toLocaleString() || '0'}
+                </p>
+              </div>
+              {totalSavings > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-500">Potential Savings</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${totalSavings.toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">AI Recommendation</h3>
+              <p className="text-blue-800 whitespace-pre-line">{currentResult.recommendation}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Advanced Analysis Features */}
+        {currentResult.advanced_analysis && (
+          <div className="space-y-6">
+            {/* Obfuscation Detection */}
+            {currentResult.advanced_analysis.obfuscation_detection && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Search className="h-5 w-5" />
+                    🕵️ Obfuscation Detector
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {currentResult.advanced_analysis.obfuscation_detection.results.map((result: any, index: number) => (
+                    <div key={index} className="mb-4 p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">{result.vendor}</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            result.analysis.risk_level === 'high' ? 'bg-red-100 text-red-800' :
+                            result.analysis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            Risk: {result.analysis.risk_level.toUpperCase()}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            Score: {result.analysis.risk_score}/100
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700">{result.analysis.summary}</p>
+                        {result.analysis.issues.length > 0 && (
+                          <div className="mt-3">
+                            <h5 className="font-medium text-sm mb-2">Issues Found:</h5>
+                            <ul className="space-y-1">
+                              {result.analysis.issues.slice(0, 3).map((issue: any, i: number) => (
+                                <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                                  <span className={`w-2 h-2 rounded-full mt-1.5 ${
+                                    issue.severity === 'high' ? 'bg-red-500' :
+                                    issue.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                                  }`}></span>
+                                  {issue.description}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Math Validator */}
+            {currentResult.advanced_analysis.math_validation && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5" />
+                    ✅ Math Validator
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {currentResult.advanced_analysis.math_validation.results.map((result: any, index: number) => (
+                    <div key={index} className="mb-4 p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">{result.vendor}</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            result.validation.status === 'valid' ? 'bg-green-100 text-green-800' :
+                            result.validation.status === 'minor_issues' ? 'bg-yellow-100 text-yellow-800' :
+                            result.validation.status === 'moderate_issues' ? 'bg-orange-100 text-orange-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {result.validation.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            Score: {result.validation.validation_score}/100
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700">{result.validation.summary}</p>
+                        {result.validation.issues.length > 0 && (
+                          <div className="mt-3">
+                            <h5 className="font-medium text-sm mb-2">Issues Found:</h5>
+                            <ul className="space-y-1">
+                              {result.validation.issues.slice(0, 3).map((issue: any, i: number) => (
+                                <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                                  <span className={`w-2 h-2 rounded-full mt-1.5 ${
+                                    issue.severity === 'high' ? 'bg-red-500' :
+                                    issue.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                                  }`}></span>
+                                  {issue.description}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Justification Helper */}
+            {currentResult.advanced_analysis.justification_helper && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    📑 Justification Helper
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold mb-2">Selected Vendor: {currentResult.advanced_analysis.justification_helper.selected_vendor}</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <h5 className="font-medium text-sm mb-1">Primary Justification:</h5>
+                        <p className="text-sm text-gray-700">{currentResult.advanced_analysis.justification_helper.justification.primary_justification}</p>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-sm mb-1">Risk Mitigation:</h5>
+                        <p className="text-sm text-gray-700">{currentResult.advanced_analysis.justification_helper.justification.risk_mitigation}</p>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-sm mb-1">Audit Summary:</h5>
+                        <p className="text-sm text-gray-700">{currentResult.advanced_analysis.justification_helper.justification.audit_summary}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Delay Tracker */}
+            {currentResult.advanced_analysis.delay_tracker && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    📌 Delay Tracker
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        currentResult.advanced_analysis.delay_tracker.overall_risk_level === 'critical' ? 'bg-red-100 text-red-800' :
+                        currentResult.advanced_analysis.delay_tracker.overall_risk_level === 'high' ? 'bg-orange-100 text-orange-800' :
+                        currentResult.advanced_analysis.delay_tracker.overall_risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {currentResult.advanced_analysis.delay_tracker.overall_risk_level.toUpperCase()} RISK
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {currentResult.advanced_analysis.delay_tracker.total_delays} delays detected
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-gray-700">{currentResult.advanced_analysis.delay_tracker.estimated_impact}</p>
+                    
+                    {currentResult.advanced_analysis.delay_tracker.timeline_blockers.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-sm mb-2">Timeline Blockers:</h5>
+                        <ul className="space-y-2">
+                          {currentResult.advanced_analysis.delay_tracker.timeline_blockers.map((blocker: any, i: number) => (
+                            <li key={i} className="text-sm text-gray-600 p-2 bg-yellow-50 rounded border">
+                              <span className="font-medium">{blocker.blocker}</span> - {blocker.recommendation}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {currentResult.advanced_analysis.delay_tracker.recommendations.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-sm mb-2">Recommendations:</h5>
+                        <ul className="space-y-1">
+                          {currentResult.advanced_analysis.delay_tracker.recommendations.slice(0, 5).map((rec: string, i: number) => (
+                            <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full mt-1.5 bg-blue-500"></span>
+                              {rec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Vendor Quotes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Vendor Quotes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {currentResult.quotes?.map((quote: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">{quote.vendorName}</h3>
+                  <div className="space-y-2">
+                    {quote.items?.map((item: any, itemIndex: number) => (
+                      <div key={itemIndex} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                        <div className="flex-1">
+                          <p className="font-medium">{item.description}</p>
+                          <p className="text-sm text-gray-600">SKU: {item.sku} | Qty: {item.quantity}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${item.unitPrice.toFixed(2)}</p>
+                          <p className="text-sm text-gray-600">Total: ${item.total.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">Total:</span>
+                      <span className="font-bold text-lg">
+                        ${quote.items?.reduce((sum: number, item: any) => sum + item.total, 0).toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Export Options */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button onClick={() => downloadResults('json')} variant="outline">
+                Export JSON
+              </Button>
+              <Button onClick={() => downloadResults('csv')} variant="outline">
+                Export CSV
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       {/* Navigation */}
@@ -244,7 +550,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <Image 
+        <Image
                 src="/images/logo.svg" 
                 alt="AutoProcure"
                 width={150}
@@ -321,7 +627,7 @@ export default function LandingPage() {
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-gray-600 overflow-hidden`}>
-                  <Image 
+            <Image
                     src={feature.icon} 
                     alt={feature.title}
                     width={32}
@@ -459,103 +765,7 @@ export default function LandingPage() {
           {/* Results Section */}
           {showResults && currentResult && (
             <div className="max-w-6xl mx-auto mt-12">
-              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold text-white">Analysis Results</h3>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => downloadResults('json')}
-                      className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>JSON</span>
-                    </button>
-                    <button
-                      onClick={() => downloadResults('csv')}
-                      className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>CSV</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="bg-gray-700 rounded-xl p-6">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="w-8 h-8 text-green-400" />
-                      <div>
-                        <p className="text-gray-300 text-sm">Vendors Analyzed</p>
-                        <p className="text-white text-2xl font-bold">{currentResult.quotes?.length || 1}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-700 rounded-xl p-6">
-                    <div className="flex items-center space-x-3">
-                      <TrendingUp className="w-8 h-8 text-blue-400" />
-                      <div>
-                        <p className="text-gray-300 text-sm">Total Value</p>
-                        <p className="text-white text-2xl font-bold">
-                          ${currentResult.comparison?.totalCost?.toLocaleString() || 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-700 rounded-xl p-6">
-                    <div className="flex items-center space-x-3">
-                      <AlertCircle className="w-8 h-8 text-yellow-400" />
-                      <div>
-                        <p className="text-gray-300 text-sm">Potential Savings</p>
-                        <p className="text-white text-2xl font-bold">
-                          ${totalSavings.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recommendation */}
-                {currentResult.recommendation && (
-                  <div className="bg-gray-700 rounded-xl p-6 mb-8">
-                    <h4 className="text-lg font-semibold text-white mb-3">AI Recommendation</h4>
-                    <p className="text-gray-300">{currentResult.recommendation}</p>
-                  </div>
-                )}
-
-                {/* Quote Details */}
-                {currentResult.quotes && currentResult.quotes.map((quote: any, index: number) => (
-                  <div key={index} className="bg-gray-700 rounded-xl p-6 mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-xl font-semibold text-white">{quote.vendorName}</h4>
-                      <div className="flex items-center space-x-2">
-                        {index === 0 && (
-                          <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                            Winner
-                          </span>
-                        )}
-                        <span className="text-gray-300">
-                          Total: ${quote.items?.reduce((sum: number, item: any) => sum + item.total, 0).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {quote.items?.map((item: any, itemIndex: number) => (
-                        <div key={itemIndex} className="flex justify-between items-center bg-gray-600 rounded-lg p-3">
-                          <div>
-                            <p className="text-white font-medium">{item.description}</p>
-                            <p className="text-gray-300 text-sm">Qty: {item.quantity} × ${item.unitPrice}</p>
-                          </div>
-                          <p className="text-white font-semibold">${item.total.toLocaleString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {renderResults()}
             </div>
           )}
         </div>
