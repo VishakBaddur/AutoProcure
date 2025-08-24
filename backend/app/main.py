@@ -27,6 +27,7 @@ from .obfuscation_detector import obfuscation_detector
 from .math_validator import math_validator
 from .justification_helper import justification_helper
 from .delay_tracker import delay_tracker
+from .currency_handler import currency_handler
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
 
@@ -615,6 +616,80 @@ async def get_waitlist_count():
         return {"count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get waitlist count: {str(e)}")
+
+# Obfuscation Detection Feedback Model
+class ObfuscationFeedback(BaseModel):
+    quote_id: str
+    pattern_found: str
+    category: str  # "hidden_fees", "bundled_pricing", "conditional_pricing", "complex_structures"
+    is_correct: bool
+    user_notes: Optional[str] = None
+    suggested_pattern: Optional[str] = None
+
+@app.post("/obfuscation/feedback")
+async def submit_obfuscation_feedback(feedback: ObfuscationFeedback):
+    """Submit feedback on obfuscation detection to improve accuracy"""
+    try:
+        # Log the feedback
+        await db.log_obfuscation_feedback(
+            quote_id=feedback.quote_id,
+            pattern_found=feedback.pattern_found,
+            category=feedback.category,
+            is_correct=feedback.is_correct,
+            user_notes=feedback.user_notes,
+            suggested_pattern=feedback.suggested_pattern
+        )
+        
+        # If user suggests a new pattern and marks current detection as incorrect
+        if feedback.suggested_pattern and not feedback.is_correct:
+            # Learn the new pattern with high confidence
+            obfuscation_detector.learn_new_pattern(
+                category=feedback.category,
+                pattern=feedback.suggested_pattern,
+                confidence=0.9
+            )
+        
+        # If user confirms a detection is correct, increase confidence
+        elif feedback.is_correct:
+            # The pattern is already in our system, so we can increase its weight
+            print(f"Confirmed obfuscation pattern: {feedback.pattern_found} in category {feedback.category}")
+        
+        return {
+            "success": True,
+            "message": "Feedback submitted successfully. Thank you for helping improve our detection accuracy!",
+            "pattern_learned": bool(feedback.suggested_pattern and not feedback.is_correct)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")
+
+@app.get("/obfuscation/accuracy-stats")
+async def get_obfuscation_accuracy_stats():
+    """Get statistics on obfuscation detection accuracy"""
+    try:
+        # Get feedback statistics from database
+        stats = await db.get_obfuscation_accuracy_stats()
+        
+        return {
+            "success": True,
+            "accuracy_stats": {
+                "total_feedback": stats.get("total_feedback", 0),
+                "correct_detections": stats.get("correct_detections", 0),
+                "incorrect_detections": stats.get("incorrect_detections", 0),
+                "accuracy_percentage": stats.get("accuracy_percentage", 0),
+                "patterns_learned": stats.get("patterns_learned", 0),
+                "categories": {
+                    "hidden_fees": stats.get("hidden_fees_accuracy", 0),
+                    "bundled_pricing": stats.get("bundled_pricing_accuracy", 0),
+                    "conditional_pricing": stats.get("conditional_pricing_accuracy", 0),
+                    "complex_structures": stats.get("complex_structures_accuracy", 0)
+                }
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get accuracy stats: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn

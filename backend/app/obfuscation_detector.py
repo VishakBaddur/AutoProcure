@@ -1,12 +1,16 @@
 import re
 from typing import List, Dict, Any, Optional
+from difflib import SequenceMatcher
+import json
+import os
+from datetime import datetime
 from .models import VendorQuote, QuoteItem
 
 class ObfuscationDetector:
-    """Detect vendor pricing obfuscation and hidden cost structures"""
+    """Detect vendor pricing obfuscation and hidden cost structures with adaptive learning"""
     
     def __init__(self):
-        # Patterns that indicate potential obfuscation
+        # Core patterns that indicate potential obfuscation
         self.obfuscation_patterns = {
             "hidden_fees": [
                 r"handling\s+fee",
@@ -18,7 +22,12 @@ class ObfuscationDetector:
                 r"setup\s+fee",
                 r"activation\s+fee",
                 r"restocking\s+fee",
-                r"cancellation\s+fee"
+                r"cancellation\s+fee",
+                r"management\s+fee",
+                r"maintenance\s+fee",
+                r"support\s+fee",
+                r"licensing\s+fee",
+                r"subscription\s+fee"
             ],
             "bundled_pricing": [
                 r"package\s+deal",
@@ -26,14 +35,17 @@ class ObfuscationDetector:
                 r"all\s+inclusive",
                 r"comprehensive\s+pricing",
                 r"total\s+solution",
-                r"complete\s+package"
+                r"complete\s+package",
+                r"suite\s+pricing",
+                r"enterprise\s+package"
             ],
             "volume_discounts": [
                 r"tier\s+pricing",
                 r"volume\s+discount",
                 r"quantity\s+break",
                 r"bulk\s+pricing",
-                r"scale\s+pricing"
+                r"scale\s+pricing",
+                r"threshold\s+pricing"
             ],
             "conditional_pricing": [
                 r"subject\s+to",
@@ -42,7 +54,10 @@ class ObfuscationDetector:
                 r"estimated\s+price",
                 r"approximate\s+cost",
                 r"plus\s+applicable",
-                r"additional\s+charges\s+may\s+apply"
+                r"additional\s+charges\s+may\s+apply",
+                r"prices\s+subject\s+to\s+change",
+                r"market\s+conditions",
+                r"availability\s+may\s+affect\s+pricing"
             ],
             "complex_structures": [
                 r"base\s+price\s+plus",
@@ -50,7 +65,10 @@ class ObfuscationDetector:
                 r"minimum\s+order\s+value",
                 r"subscription\s+model",
                 r"recurring\s+charges",
-                r"monthly\s+fee"
+                r"monthly\s+fee",
+                r"annual\s+maintenance",
+                r"per\s+user\s+pricing",
+                r"usage\s+based\s+pricing"
             ]
         }
         
@@ -58,61 +76,202 @@ class ObfuscationDetector:
         self.suspicious_indicators = [
             "TBD", "TBA", "To be determined", "To be advised",
             "Call for pricing", "Contact sales", "Quote required",
-            "Market rate", "Current market", "Prevailing rate"
+            "Market rate", "Current market", "Prevailing rate",
+            "Negotiable", "Flexible pricing", "Custom quote"
         ]
+        
+        # Adaptive learning storage
+        self.learned_patterns_file = "learned_obfuscation_patterns.json"
+        self.learned_patterns = self._load_learned_patterns()
+        
+        # Confidence thresholds
+        self.confidence_thresholds = {
+            "exact_match": 1.0,
+            "high_confidence": 0.85,
+            "medium_confidence": 0.70,
+            "low_confidence": 0.50
+        }
+    
+    def _load_learned_patterns(self) -> Dict[str, List[str]]:
+        """Load previously learned patterns from file"""
+        try:
+            if os.path.exists(self.learned_patterns_file):
+                with open(self.learned_patterns_file, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"Error loading learned patterns: {e}")
+        return {"hidden_fees": [], "bundled_pricing": [], "conditional_pricing": [], "complex_structures": []}
+    
+    def _save_learned_patterns(self):
+        """Save learned patterns to file"""
+        try:
+            with open(self.learned_patterns_file, 'w') as f:
+                json.dump(self.learned_patterns, f, indent=2)
+        except Exception as e:
+            print(f"Error saving learned patterns: {e}")
+    
+    def learn_new_pattern(self, category: str, pattern: str, confidence: float = 0.8):
+        """Learn a new obfuscation pattern from user feedback"""
+        if category in self.learned_patterns and confidence >= self.confidence_thresholds["medium_confidence"]:
+            if pattern not in self.learned_patterns[category]:
+                self.learned_patterns[category].append(pattern)
+                self._save_learned_patterns()
+                print(f"Learned new {category} pattern: {pattern}")
+    
+    def _fuzzy_match_patterns(self, text: str, patterns: List[str], threshold: float = 0.8) -> List[str]:
+        """Use fuzzy matching to find similar patterns"""
+        matches = []
+        text_lower = text.lower()
+        
+        for pattern in patterns:
+            # Exact match first
+            if re.search(pattern, text_lower):
+                matches.append(pattern)
+                continue
+            
+            # Fuzzy match for similar terms
+            pattern_words = pattern.replace(r'\s+', ' ').split()
+            text_words = text_lower.split()
+            
+            for i in range(len(text_words) - len(pattern_words) + 1):
+                text_segment = ' '.join(text_words[i:i + len(pattern_words)])
+                similarity = SequenceMatcher(None, pattern, text_segment).ratio()
+                
+                if similarity >= threshold:
+                    matches.append(f"fuzzy_match:{pattern} (similarity: {similarity:.2f})")
+        
+        return matches
+    
+    def _detect_adaptive_patterns(self, text: str) -> Dict[str, List[str]]:
+        """Detect patterns using both core and learned patterns"""
+        results = {}
+        text_lower = text.lower()
+        
+        # Check core patterns
+        for category, patterns in self.obfuscation_patterns.items():
+            matches = []
+            for pattern in patterns:
+                if re.search(pattern, text_lower):
+                    matches.append(pattern)
+            results[category] = matches
+        
+        # Check learned patterns with fuzzy matching
+        for category, learned_patterns in self.learned_patterns.items():
+            if category not in results:
+                results[category] = []
+            
+            fuzzy_matches = self._fuzzy_match_patterns(text, learned_patterns)
+            results[category].extend(fuzzy_matches)
+        
+        return results
+    
+    def _detect_contextual_obfuscation(self, text: str) -> List[Dict[str, Any]]:
+        """Detect obfuscation based on context and patterns"""
+        contextual_issues = []
+        
+        # Look for price-related terms with uncertainty indicators
+        uncertainty_patterns = [
+            r"(\d+\.?\d*)\s*(?:USD|dollars?|€|euros?)\s*(?:approximately|about|around|roughly|estimated)",
+            r"(?:approximately|about|around|roughly|estimated)\s*(\d+\.?\d*)\s*(?:USD|dollars?|€|euros?)",
+            r"(?:price|cost|fee)\s+(?:may|might|could)\s+(?:vary|change|differ)",
+            r"(?:final|total)\s+(?:price|cost)\s+(?:to\s+be|will\s+be)\s+(?:determined|calculated)"
+        ]
+        
+        for pattern in uncertainty_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            if matches:
+                contextual_issues.append({
+                    "type": "contextual_uncertainty",
+                    "pattern": pattern,
+                    "matches": matches,
+                    "description": "Pricing uncertainty detected in context"
+                })
+        
+        # Look for hidden terms in fine print
+        fine_print_indicators = [
+            r"(?:terms|conditions|details|fine\s+print)\s+(?:apply|may\s+apply|subject\s+to)",
+            r"(?:see|refer\s+to)\s+(?:terms|conditions|schedule|appendix)",
+            r"(?:additional|extra|other)\s+(?:charges|fees|costs)\s+(?:may|will)\s+(?:apply|incur)"
+        ]
+        
+        for pattern in fine_print_indicators:
+            if re.search(pattern, text, re.IGNORECASE):
+                contextual_issues.append({
+                    "type": "fine_print_obfuscation",
+                    "pattern": pattern,
+                    "description": "Potential hidden terms in fine print"
+                })
+        
+        return contextual_issues
     
     def analyze_quote(self, quote: VendorQuote, raw_text: str = "") -> Dict[str, Any]:
-        """Analyze a quote for pricing obfuscation"""
+        """Analyze a quote for pricing obfuscation with adaptive learning"""
         issues = []
         risk_score = 0
         total_risk_factors = 0
         
-        # Check for hidden fees in text
-        hidden_fees = self._detect_hidden_fees(raw_text)
-        if hidden_fees:
+        # Use adaptive pattern detection
+        adaptive_results = self._detect_adaptive_patterns(raw_text)
+        
+        # Check for hidden fees
+        if adaptive_results.get("hidden_fees"):
             issues.append({
                 "type": "hidden_fees",
                 "severity": "high",
-                "description": f"Found {len(hidden_fees)} potential hidden fees",
-                "details": hidden_fees
+                "description": f"Found {len(adaptive_results['hidden_fees'])} potential hidden fees",
+                "details": adaptive_results["hidden_fees"],
+                "confidence": "high" if len(adaptive_results["hidden_fees"]) > 0 else "medium"
             })
             risk_score += 30
             total_risk_factors += 1
         
         # Check for bundled pricing
-        bundled_issues = self._detect_bundled_pricing(raw_text)
-        if bundled_issues:
+        if adaptive_results.get("bundled_pricing"):
             issues.append({
                 "type": "bundled_pricing",
                 "severity": "medium",
                 "description": "Bundled pricing detected - difficult to compare individual items",
-                "details": bundled_issues
+                "details": adaptive_results["bundled_pricing"],
+                "confidence": "high"
             })
             risk_score += 20
             total_risk_factors += 1
         
         # Check for conditional pricing
-        conditional_issues = self._detect_conditional_pricing(raw_text)
-        if conditional_issues:
+        if adaptive_results.get("conditional_pricing"):
             issues.append({
                 "type": "conditional_pricing",
                 "severity": "medium",
                 "description": "Conditional pricing terms found",
-                "details": conditional_issues
+                "details": adaptive_results["conditional_pricing"],
+                "confidence": "high"
             })
             risk_score += 25
             total_risk_factors += 1
         
         # Check for complex pricing structures
-        complex_issues = self._detect_complex_structures(raw_text)
-        if complex_issues:
+        if adaptive_results.get("complex_structures"):
             issues.append({
                 "type": "complex_pricing",
                 "severity": "high",
                 "description": "Complex pricing structure detected",
-                "details": complex_issues
+                "details": adaptive_results["complex_structures"],
+                "confidence": "high"
             })
             risk_score += 35
+            total_risk_factors += 1
+        
+        # Check for contextual obfuscation
+        contextual_issues = self._detect_contextual_obfuscation(raw_text)
+        if contextual_issues:
+            issues.append({
+                "type": "contextual_obfuscation",
+                "severity": "medium",
+                "description": f"Found {len(contextual_issues)} contextual obfuscation indicators",
+                "details": contextual_issues,
+                "confidence": "medium"
+            })
+            risk_score += 20
             total_risk_factors += 1
         
         # Check for suspicious pricing in items
@@ -122,7 +281,8 @@ class ObfuscationDetector:
                 "type": "suspicious_pricing",
                 "severity": "high",
                 "description": f"Found {len(suspicious_items)} items with suspicious pricing",
-                "details": suspicious_items
+                "details": suspicious_items,
+                "confidence": "high"
             })
             risk_score += 40
             total_risk_factors += 1
@@ -134,7 +294,8 @@ class ObfuscationDetector:
                 "type": "pricing_inconsistencies",
                 "severity": "medium",
                 "description": "Pricing inconsistencies detected",
-                "details": inconsistency_issues
+                "details": inconsistency_issues,
+                "confidence": "high"
             })
             risk_score += 15
             total_risk_factors += 1
@@ -156,7 +317,13 @@ class ObfuscationDetector:
             "total_risk_factors": total_risk_factors,
             "issues": issues,
             "summary": self._generate_summary(issues, final_risk_score),
-            "recommendations": self._generate_recommendations(issues)
+            "recommendations": self._generate_recommendations(issues),
+            "adaptability_info": {
+                "patterns_checked": len(self.obfuscation_patterns) + len(self.learned_patterns),
+                "learned_patterns_used": len([p for patterns in self.learned_patterns.values() for p in patterns if p]),
+                "fuzzy_matching_enabled": True,
+                "contextual_analysis": True
+            }
         }
     
     def _detect_hidden_fees(self, text: str) -> List[str]:
