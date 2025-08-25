@@ -15,15 +15,8 @@ class MultiVendorAnalyzer:
         for optimal vendor selection and cost optimization.
         """
         try:
-            # Create comprehensive analysis prompt
-            prompt = self._create_multi_vendor_prompt(quotes, rag_context)
-            
-            # Get AI analysis
-            response = await self.ai_processor._call_ollama(prompt)
-            analysis_data = self._parse_multi_vendor_response(response)
-            
             # Generate vendor recommendations
-            vendor_recommendations = self._generate_vendor_recommendations(quotes, analysis_data)
+            vendor_recommendations = self._generate_vendor_recommendations(quotes)
             
             # Calculate cost savings
             cost_savings = self._calculate_cost_savings(quotes, vendor_recommendations)
@@ -34,9 +27,12 @@ class MultiVendorAnalyzer:
             # Generate overall recommendation
             recommendation = self._generate_overall_recommendation(quotes, vendor_recommendations, cost_savings)
             
+            # Create comparison matrix
+            comparison = self._create_comparison_matrix(quotes, vendor_recommendations)
+            
             return MultiVendorAnalysis(
                 quotes=quotes,
-                comparison=analysis_data.get("comparison", {}),
+                comparison=comparison,
                 recommendation=recommendation,
                 vendor_recommendations=vendor_recommendations,
                 cost_savings=cost_savings,
@@ -155,23 +151,152 @@ JSON Response:"""
             print(f"Raw response: {response}")
             raise ValueError(f"Invalid JSON response: {str(e)}")
     
-    def _generate_vendor_recommendations(self, quotes: List[VendorQuote], analysis_data: Dict[str, Any]) -> List[VendorRecommendation]:
-        """Generate vendor recommendations based on AI analysis"""
+    def _generate_vendor_recommendations(self, quotes: List[VendorQuote]) -> List[VendorRecommendation]:
+        """Generate intelligent vendor recommendations with winner badges"""
         recommendations = []
         
-        vendor_recs = analysis_data.get("vendor_recommendations", [])
-        for rec in vendor_recs:
-            recommendation = VendorRecommendation(
-                vendor_name=rec.get("vendor_name", "Unknown"),
-                items_to_purchase=rec.get("items_to_purchase", []),
-                total_cost=rec.get("total_cost", 0.0),
-                delivery_time=rec.get("delivery_time", "TBD"),
-                reasoning=rec.get("reasoning", "No reasoning provided"),
-                reliability_score=rec.get("reliability_score", 0.7)
-            )
-            recommendations.append(recommendation)
+        # Calculate total costs for each vendor
+        vendor_costs = {}
+        for quote in quotes:
+            total_cost = sum(item.total for item in quote.items)
+            vendor_costs[quote.vendorName] = total_cost
+        
+        # Find the cheapest vendor
+        cheapest_vendor = min(vendor_costs, key=vendor_costs.get)
+        cheapest_cost = vendor_costs[cheapest_vendor]
+        
+        # Generate recommendations for each vendor
+        for quote in quotes:
+            total_cost = vendor_costs[quote.vendorName]
+            cost_difference = total_cost - cheapest_cost
+            cost_percentage = (cost_difference / cheapest_cost * 100) if cheapest_cost > 0 else 0
+            
+            # Determine recommendation type
+            if quote.vendorName == cheapest_vendor:
+                recommendation_type = "WINNER"
+                recommendation_reason = "Lowest total cost"
+                badge_color = "green"
+            elif cost_percentage <= 10:
+                recommendation_type = "GOOD"
+                recommendation_reason = f"Only {cost_percentage:.1f}% more than cheapest"
+                badge_color = "blue"
+            elif cost_percentage <= 25:
+                recommendation_type = "ACCEPTABLE"
+                recommendation_reason = f"{cost_percentage:.1f}% higher than cheapest"
+                badge_color = "yellow"
+            else:
+                recommendation_type = "EXPENSIVE"
+                recommendation_reason = f"{cost_percentage:.1f}% higher than cheapest"
+                badge_color = "red"
+            
+            # Generate detailed analysis
+            analysis = self._analyze_vendor_strengths(quote, cheapest_cost)
+            
+            recommendations.append(VendorRecommendation(
+                vendor_name=quote.vendorName,
+                recommendation_type=recommendation_type,
+                recommendation_reason=recommendation_reason,
+                total_cost=total_cost,
+                cost_difference=cost_difference,
+                cost_percentage=cost_percentage,
+                badge_color=badge_color,
+                analysis=analysis,
+                is_winner=(quote.vendorName == cheapest_vendor)
+            ))
         
         return recommendations
+    
+    def _analyze_vendor_strengths(self, quote: VendorQuote, cheapest_cost: float) -> Dict[str, Any]:
+        """Analyze vendor strengths and weaknesses"""
+        total_cost = sum(item.total for item in quote.items)
+        
+        strengths = []
+        weaknesses = []
+        
+        # Analyze pricing
+        if total_cost == cheapest_cost:
+            strengths.append("Lowest total cost")
+        elif total_cost <= cheapest_cost * 1.1:
+            strengths.append("Competitive pricing")
+        else:
+            weaknesses.append("Higher than average pricing")
+        
+        # Analyze delivery times
+        delivery_times = [item.deliveryTime for item in quote.items if item.deliveryTime]
+        if delivery_times:
+            avg_delivery = self._parse_delivery_time(delivery_times[0])
+            if avg_delivery <= 7:
+                strengths.append("Fast delivery")
+            elif avg_delivery > 21:
+                weaknesses.append("Slow delivery")
+        
+        # Analyze item variety
+        if len(quote.items) > 1:
+            strengths.append("Wide product selection")
+        
+        # Analyze terms
+        if quote.terms.payment and "net 30" in quote.terms.payment.lower():
+            strengths.append("Good payment terms")
+        
+        if quote.terms.warranty and "warranty" in quote.terms.warranty.lower():
+            strengths.append("Warranty included")
+        
+        return {
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "total_items": len(quote.items),
+            "avg_unit_price": total_cost / sum(item.quantity for item in quote.items) if quote.items else 0
+        }
+    
+    def _parse_delivery_time(self, delivery_time: str) -> int:
+        """Parse delivery time string to days"""
+        try:
+            if "day" in delivery_time.lower():
+                numbers = [int(s) for s in delivery_time.split() if s.isdigit()]
+                if numbers:
+                    return numbers[0]
+            return 14  # Default to 2 weeks
+        except:
+            return 14
+    
+    def _create_comparison_matrix(self, quotes: List[VendorQuote], recommendations: List[VendorRecommendation]) -> Dict[str, Any]:
+        """Create a detailed comparison matrix"""
+        matrix = {
+            "vendors": [],
+            "summary": {
+                "total_vendors": len(quotes),
+                "total_cost": sum(rec.total_cost for rec in recommendations),
+                "potential_savings": sum(rec.cost_difference for rec in recommendations if rec.cost_difference > 0),
+                "winner": next((rec for rec in recommendations if rec.is_winner), None)
+            }
+        }
+        
+        for quote, rec in zip(quotes, recommendations):
+            vendor_data = {
+                "name": quote.vendorName,
+                "total_cost": rec.total_cost,
+                "recommendation": rec.recommendation_type,
+                "badge_color": rec.badge_color,
+                "is_winner": rec.is_winner,
+                "items": [
+                    {
+                        "sku": item.sku,
+                        "description": item.description,
+                        "quantity": item.quantity,
+                        "unit_price": item.unitPrice,
+                        "total": item.total,
+                        "delivery_time": item.deliveryTime
+                    } for item in quote.items
+                ],
+                "terms": {
+                    "payment": quote.terms.payment,
+                    "warranty": quote.terms.warranty
+                },
+                "analysis": rec.analysis
+            }
+            matrix["vendors"].append(vendor_data)
+        
+        return matrix
     
     def _calculate_cost_savings(self, quotes: List[VendorQuote], recommendations: List[VendorRecommendation]) -> float:
         """Calculate potential cost savings from optimal vendor selection"""

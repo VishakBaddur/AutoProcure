@@ -179,6 +179,9 @@ JSON Response:"""
     def _analyze_quote_with_nlp(self, quote_text: str) -> str:
         """Analyze quote using NLP patterns and return JSON string"""
         try:
+            # Clean the text first
+            quote_text = self._clean_quote_text(quote_text)
+            
             # First, detect document type to avoid misclassification
             document_type = self._detect_document_type(quote_text)
             if document_type != "quote":
@@ -190,80 +193,10 @@ JSON Response:"""
                 })
             
             # Extract vendor name with improved patterns
-            vendor_patterns = [
-                r'vendor[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
-                r'quote from\s*([A-Za-z0-9\s&.,\-]+)',
-                r'supplier[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
-                r'company[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
-                r'([A-Za-z0-9\s&.,\-]+)\s+(?:inc|corp|llc|ltd|company)',
-            ]
+            vendor_name = self._extract_vendor_name(quote_text)
             
-            vendor_name = "Unknown Vendor"
-            for pattern in vendor_patterns:
-                match = re.search(pattern, quote_text, re.IGNORECASE)
-                if match:
-                    vendor_name = match.group(1).strip()
-                    break
-            
-            # If no vendor found, try to extract from filename or first line
-            if vendor_name == "Unknown Vendor":
-                lines = quote_text.split('\n')
-                for line in lines[:5]:  # Check first 5 lines
-                    if any(word in line.lower() for word in ['vendor', 'supplier', 'company', 'inc', 'corp', 'llc']):
-                        vendor_name = line.strip()
-                        break
-            
-            print(f"Extracted vendor: {vendor_name}")
-            
-            # Define item_patterns for robust PDF line extraction
-            item_patterns = [
-                r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s]+)\s+(\d+)\s+\$?([\d\.]+)',  # SKU, Description, Quantity, Price
-                r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*\$?([\d,]+\.?\d*)',          # fallback: Description, Quantity, Price
-            ]
-
-            matched_lines = set()
-            items = []
-            lines = quote_text.split('\n')
-            for line in lines:
-                line_clean = line.strip()
-                if not line_clean or line_clean in matched_lines:
-                    continue
-                for pattern in item_patterns:
-                    match = re.match(pattern, line_clean)
-                    if match:
-                        try:
-                            if len(match.groups()) == 4:
-                                sku = match.group(1).strip()
-                                description = match.group(2).strip()
-                                quantity = int(match.group(3))
-                                unit_price = float(match.group(4))
-                            elif len(match.groups()) == 3:
-                                sku = f"ITEM-{len(items)+1:03d}"
-                                description = match.group(1).strip()
-                                quantity = int(match.group(2))
-                                unit_price = float(match.group(3))
-                            else:
-                                continue
-                            
-                            # Enhanced validation for reasonable values
-                            if not self._validate_item_values(quantity, unit_price, description):
-                                continue
-                                
-                            total = quantity * unit_price
-                            items.append({
-                                "sku": sku,
-                                "description": description,
-                                "quantity": quantity,
-                                "unitPrice": unit_price,
-                                "deliveryTime": "7-10 days",
-                                "total": total
-                            })
-                            matched_lines.add(line_clean)
-                            print(f"Extracted item: {quantity}x {description} @ ${unit_price}")
-                            break  # Only match one pattern per line
-                        except (ValueError, IndexError) as e:
-                            print(f"Error parsing item: {e}")
-                            continue
+            # Extract items with better patterns
+            items = self._extract_items(quote_text)
             
             # If no items found, don't create fake data
             if not items:
@@ -275,78 +208,196 @@ JSON Response:"""
                     "analysis_note": "No pricing information could be extracted. Please ensure this is a vendor quote with itemized pricing."
                 })
             
-            # Validate total quote value
-            total_quote_value = sum(item["total"] for item in items)
-            if not self._validate_quote_total(total_quote_value):
-                return json.dumps({
-                    "vendorName": vendor_name,
-                    "items": [],
-                    "terms": {"payment": "N/A", "warranty": "N/A"},
-                    "analysis_note": f"Extracted total value (${total_quote_value:,.2f}) appears to be outside reasonable range for a vendor quote. Please verify the document."
-                })
-            
-            # Deduplicate/group items by description and unit price
-            def deduplicate_items(items):
-                from collections import defaultdict
-                grouped = defaultdict(lambda: {"sku": "", "description": "", "quantity": 0, "unitPrice": 0.0, "deliveryTime": "", "total": 0.0})
-                for item in items:
-                    key = (item["description"].strip().lower(), round(item["unitPrice"], 2))
-                    grouped[key]["sku"] = item["sku"]
-                    grouped[key]["description"] = item["description"]
-                    grouped[key]["unitPrice"] = item["unitPrice"]
-                    grouped[key]["deliveryTime"] = item["deliveryTime"]
-                    grouped[key]["quantity"] += item["quantity"]
-                    grouped[key]["total"] += item["total"]
-                return list(grouped.values())
-
-            items = deduplicate_items(items)
-            
             # Extract terms
-            payment_terms = "Net 30"
-            warranty = "Standard warranty"
+            terms = self._extract_terms(quote_text)
             
-            # Look for payment terms
-            payment_patterns = [
-                r'payment[:\-]\s*([A-Za-z0-9\s]+)',
-                r'terms[:\-]\s*([A-Za-z0-9\s]+)',
-                r'net\s+(\d+)',
-            ]
-            for pattern in payment_patterns:
-                match = re.search(pattern, quote_text, re.IGNORECASE)
-                if match:
-                    payment_terms = match.group(1).strip()
-                    break
-            
-            # Look for warranty
-            warranty_patterns = [
-                r'warranty[:\-]\s*([A-Za-z0-9\s]+)',
-                r'guarantee[:\-]\s*([A-Za-z0-9\s]+)',
-            ]
-            for pattern in warranty_patterns:
-                match = re.search(pattern, quote_text, re.IGNORECASE)
-                if match:
-                    warranty = match.group(1).strip()
-                    break
-            
+            # Create the final result
             result = {
                 "vendorName": vendor_name,
                 "items": items,
-                "terms": {
-                    "payment": payment_terms,
-                    "warranty": warranty
-                }
+                "terms": terms
             }
             
-            return json.dumps(result)
+            return json.dumps(result, indent=2)
             
         except Exception as e:
             print(f"NLP analysis failed: {str(e)}")
             return json.dumps({
-                "vendorName": "Analysis Failed",
+                "vendorName": "Unknown Vendor",
                 "items": [],
                 "terms": {"payment": "N/A", "warranty": "N/A"},
                 "analysis_note": f"Analysis failed: {str(e)}"
             })
+    
+    def _clean_quote_text(self, text: str) -> str:
+        """Clean and normalize quote text"""
+        # Remove common instruction text that might be mixed in
+        instruction_patterns = [
+            r'unitPrice\s+\d+\.\s*Extract vendor name.*?',
+            r'Look for payment terms.*?',
+            r'If multiple items exist.*?',
+            r'Choose.*?recommendation.*?',
+            r'Extract.*?from the document.*?',
+        ]
+        
+        for pattern in instruction_patterns:
+            text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Remove extra whitespace and normalize
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        return text
+    
+    def _extract_vendor_name(self, text: str) -> str:
+        """Extract vendor name with improved patterns"""
+        vendor_patterns = [
+            r'vendor[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
+            r'quote from\s*([A-Za-z0-9\s&.,\-]+)',
+            r'supplier[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
+            r'company[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
+            r'([A-Za-z0-9\s&.,\-]+)\s+(?:inc|corp|llc|ltd|company|pvt)',
+            r'([A-Za-z0-9\s&.,\-]+)\s+supplies',
+            r'([A-Za-z0-9\s&.,\-]+)\s+date',
+        ]
+        
+        vendor_name = "Unknown Vendor"
+        for pattern in vendor_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                vendor_name = match.group(1).strip()
+                # Clean up the vendor name
+                vendor_name = re.sub(r'\s+date$', '', vendor_name, flags=re.IGNORECASE)
+                vendor_name = re.sub(r'\s+', ' ', vendor_name)
+                break
+        
+        # If no vendor found, try to extract from filename or first line
+        if vendor_name == "Unknown Vendor":
+            lines = text.split('\n')
+            for line in lines[:5]:  # Check first 5 lines
+                if any(word in line.lower() for word in ['vendor', 'supplier', 'company', 'inc', 'corp', 'llc', 'pvt']):
+                    vendor_name = line.strip()
+                    vendor_name = re.sub(r'\s+date$', '', vendor_name, flags=re.IGNORECASE)
+                    break
+        
+        # Final cleanup
+        vendor_name = vendor_name.strip()
+        if len(vendor_name) > 50:  # If too long, truncate
+            vendor_name = vendor_name[:50] + "..."
+        
+        print(f"Extracted vendor: {vendor_name}")
+        return vendor_name
+    
+    def _extract_items(self, text: str) -> list:
+        """Extract items with improved patterns"""
+        # Define item_patterns for robust PDF line extraction
+        item_patterns = [
+            r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s]+)\s+(\d+)\s+\$?([\d\.]+)',  # SKU, Description, Quantity, Price
+            r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*\$?([\d,]+\.?\d*)',          # fallback: Description, Quantity, Price
+            r'([A-Za-z0-9\s\-]+?)\s+(\d+)\s+([\d,]+\.?\d*)\s+USD',       # Description, Quantity, Price USD
+        ]
+
+        matched_lines = set()
+        items = []
+        lines = text.split('\n')
+        
+        for line in lines:
+            line_clean = line.strip()
+            if not line_clean or line_clean in matched_lines:
+                continue
+                
+            # Skip lines that look like instructions or metadata
+            if any(skip_word in line_clean.lower() for skip_word in ['extract', 'look for', 'choose', 'recommendation', 'unitprice']):
+                continue
+                
+            for pattern in item_patterns:
+                match = re.match(pattern, line_clean)
+                if match:
+                    try:
+                        if len(match.groups()) == 4:
+                            sku = match.group(1).strip()
+                            description = match.group(2).strip()
+                            quantity = int(match.group(3))
+                            unit_price = float(match.group(4).replace(',', ''))
+                        elif len(match.groups()) == 3:
+                            sku = f"ITEM-{len(items)+1:03d}"
+                            description = match.group(1).strip()
+                            quantity = int(match.group(2))
+                            unit_price = float(match.group(3).replace(',', ''))
+                        else:
+                            continue
+                        
+                        # Enhanced validation for reasonable values
+                        if not self._validate_item_values(quantity, unit_price, description):
+                            continue
+                            
+                        total = quantity * unit_price
+                        items.append({
+                            "sku": sku,
+                            "description": description,
+                            "quantity": quantity,
+                            "unitPrice": unit_price,
+                            "deliveryTime": "7-10 days",
+                            "total": total
+                        })
+                        matched_lines.add(line_clean)
+                        print(f"Extracted item: {quantity}x {description} @ ${unit_price}")
+                        break  # Only match one pattern per line
+                    except (ValueError, IndexError) as e:
+                        print(f"Error parsing item: {e}")
+                        continue
+        
+        # Deduplicate/group items by description and unit price
+        items = self._deduplicate_items(items)
+        
+        return items
+    
+    def _extract_terms(self, text: str) -> dict:
+        """Extract payment and warranty terms"""
+        terms = {"payment": "Net 30", "warranty": "Standard warranty"}
+        
+        # Extract payment terms
+        payment_patterns = [
+            r'payment[:\-]\s*([A-Za-z0-9\s]+)',
+            r'net\s+(\d+)',
+            r'(\d+)\s+days',
+        ]
+        
+        for pattern in payment_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                terms["payment"] = match.group(1).strip()
+                break
+        
+        # Extract warranty terms
+        warranty_patterns = [
+            r'warranty[:\-]\s*([A-Za-z0-9\s]+)',
+            r'(\d+)\s+year[s]?\s+warranty',
+        ]
+        
+        for pattern in warranty_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                terms["warranty"] = match.group(1).strip()
+                break
+        
+        return terms
+    
+    def _deduplicate_items(self, items: list) -> list:
+        """Deduplicate items by description and unit price"""
+        from collections import defaultdict
+        grouped = defaultdict(lambda: {"sku": "", "description": "", "quantity": 0, "unitPrice": 0.0, "deliveryTime": "", "total": 0.0})
+        
+        for item in items:
+            key = (item["description"].strip().lower(), round(item["unitPrice"], 2))
+            grouped[key]["sku"] = item["sku"]
+            grouped[key]["description"] = item["description"]
+            grouped[key]["unitPrice"] = item["unitPrice"]
+            grouped[key]["deliveryTime"] = item["deliveryTime"]
+            grouped[key]["quantity"] += item["quantity"]
+            grouped[key]["total"] += item["total"]
+        
+        return list(grouped.values())
 
     def _detect_document_type(self, text: str) -> str:
         """Detect if document is a quote, receipt, invoice, or other type"""

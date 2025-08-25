@@ -24,11 +24,18 @@ class VendorQuote(BaseModel):
 
 class VendorRecommendation(BaseModel):
     vendor_name: str
-    items_to_purchase: List[str]  # SKUs to buy from this vendor
+    recommendation_type: str  # WINNER, GOOD, ACCEPTABLE, EXPENSIVE
+    recommendation_reason: str
     total_cost: float
-    delivery_time: str
-    reasoning: str
-    reliability_score: float
+    cost_difference: float
+    cost_percentage: float
+    badge_color: str  # green, blue, yellow, red
+    analysis: Dict[str, Any]  # strengths, weaknesses, etc.
+    is_winner: bool
+    items_to_purchase: Optional[List[str]] = None  # SKUs to buy from this vendor
+    delivery_time: Optional[str] = None
+    reasoning: Optional[str] = None
+    reliability_score: Optional[float] = None
 
 class MultiVendorAnalysis(BaseModel):
     quotes: List[VendorQuote]
