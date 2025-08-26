@@ -1,0 +1,11 @@
+INFO:     Started server process [54755]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+🤖 AI Processor initialized: huggingface with model nlp-pattern-matching
+🔗 Ollama URL: http://localhost:11434
+OCR not available - using basic text extraction
+❌ Database connection failed: Tenant or user not found
+⚠️  Falling back to in-memory storage
+✅ Database connected successfully
+INFO:     127.0.0.1:65231 - "GET /health HTTP/1.1" 200 OK

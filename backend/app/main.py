@@ -67,24 +67,21 @@ class WaitlistResponse(BaseModel):
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF using enhanced processor with OCR fallback"""
     try:
+        # Save file content to temporary file
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            tmp_file.write(file_content)
+            tmp_file_path = tmp_file.name
+        
         # Use enhanced PDF processor
-        result = enhanced_pdf_processor.extract_text_enhanced(file_content)
+        result = enhanced_pdf_processor.extract_text_enhanced(tmp_file_path)
+        
+        # Clean up temporary file
+        import os
+        os.unlink(tmp_file_path)
         
         # Log extraction method used
-        print(f"[PDF EXTRACTION] Method: {result['extraction_method']}, OCR used: {result['ocr_used']}")
-        print(f"[PDF EXTRACTION] Tables found: {len(result['tables'])}")
-        
-        # If tables were found, add them to the text for better analysis
-        if result['tables']:
-            table_text = "\n\n=== EXTRACTED TABLES ===\n"
-            for i, table in enumerate(result['tables']):
-                table_text += f"\nTable {i+1} (Method: {table['method']}, Accuracy: {table['accuracy']}%):\n"
-                if table['headers']:
-                    table_text += " | ".join(str(h) for h in table['headers']) + "\n"
-                    table_text += "-" * 50 + "\n"
-                for row in table['data'][:5]:  # Limit to first 5 rows
-                    table_text += " | ".join(str(v) for v in row.values()) + "\n"
-            result['text'] += table_text
+        print(f"[PDF EXTRACTION] Method: {result['extraction_method']}, Success: {result['success']}")
         
         return result['text']
     except Exception as e:
@@ -100,7 +97,8 @@ def extract_text_from_pdf(file_content: bytes) -> str:
                     text += page_text
                 return text
         except Exception as fallback_error:
-            raise HTTPException(status_code=400, detail=f"PDF parsing error: {str(fallback_error)}")
+            print(f"[PDF FALLBACK ERROR] {str(fallback_error)}")
+            return f"PDF extraction failed: {str(e)}"
 
 def extract_text_from_excel(file_content: bytes) -> str:
     """Extract text from Excel using openpyxl"""
