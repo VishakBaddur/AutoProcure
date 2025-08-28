@@ -33,23 +33,50 @@ import {
 } from 'lucide-react';
 
 // 3D Component for Hero Section
-function FloatingElements() {
+function FloatingElements({ mousePosition }: { mousePosition: { x: number; y: number } }) {
   return (
     <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <Float 
+        speed={2} 
+        rotationIntensity={0.5} 
+        floatIntensity={0.5}
+        position={mousePosition.x > 0 ? [
+          (mousePosition.x / window.innerWidth - 0.5) * 2,
+          -(mousePosition.y / window.innerHeight - 0.5) * 2,
+          0
+        ] : [0, 0, 0]}
+      >
         <Sphere args={[0.5, 32, 32]}>
           <meshStandardMaterial color="#6b7280" wireframe />
         </Sphere>
       </Float>
-      <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.3}>
-        <Sphere args={[0.3, 16, 16]} position={[2, 1, 0]}>
+      <Float 
+        speed={1.5} 
+        rotationIntensity={0.3} 
+        floatIntensity={0.3}
+        position={mousePosition.x > 0 ? [
+          2 + (mousePosition.x / window.innerWidth - 0.5) * 1.5,
+          1 - (mousePosition.y / window.innerHeight - 0.5) * 1.5,
+          0
+        ] : [2, 1, 0]}
+      >
+        <Sphere args={[0.3, 16, 16]}>
           <meshStandardMaterial color="#9ca3af" wireframe />
         </Sphere>
       </Float>
-      <Float speed={2.5} rotationIntensity={0.7} floatIntensity={0.7}>
-        <Sphere args={[0.4, 24, 24]} position={[-2, -1, 1]}>
+      <Float 
+        speed={2.5} 
+        rotationIntensity={0.7} 
+        floatIntensity={0.7}
+        position={mousePosition.x > 0 ? [
+          -2 + (mousePosition.x / window.innerWidth - 0.5) * 1.5,
+          -1 - (mousePosition.y / window.innerHeight - 0.5) * 1.5,
+          1
+        ] : [-2, -1, 1]}
+      >
+        <Sphere args={[0.4, 24, 24]}>
           <meshStandardMaterial color="#d1d5db" wireframe />
         </Sphere>
       </Float>
@@ -57,8 +84,8 @@ function FloatingElements() {
   );
 }
 
-// Particle Background Component
-function ParticleBackground() {
+// Interactive Particle Background Component
+function ParticleBackground({ mousePosition }: { mousePosition: { x: number; y: number } }) {
   const particles = Array.from({ length: 50 }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
@@ -80,8 +107,18 @@ function ParticleBackground() {
             height: `${particle.size}px`,
           }}
           animate={{
-            y: [0, -100, 0],
+            x: mousePosition.x > 0 ? [
+              particle.x,
+              particle.x + (mousePosition.x / window.innerWidth) * 20 - 10,
+              particle.x
+            ] : particle.x,
+            y: mousePosition.y > 0 ? [
+              particle.y,
+              particle.y + (mousePosition.y / window.innerHeight) * 20 - 10,
+              particle.y
+            ] : [0, -100, 0],
             opacity: [0.2, 0.6, 0.2],
+            scale: mousePosition.x > 0 ? [1, 1.2, 1] : [1, 1, 1],
           }}
           transition={{
             duration: particle.speed * 10,
@@ -101,8 +138,10 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
       className={`backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 shadow-2xl ${className}`}
       whileHover={{ 
         scale: 1.02,
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        borderColor: "rgba(156, 163, 175, 0.4)"
       }}
+      whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 300 }}
     >
       {children}
@@ -355,6 +394,18 @@ export default function LandingPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Scroll functions
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToUpload = () => {
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) {
+      uploadSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const stats = [
     { label: "Quotes Analyzed", value: 15420, icon: BarChart3 },
     { label: "Savings Generated", value: 2840000, prefix: "$", suffix: "+", icon: DollarSign },
@@ -564,23 +615,52 @@ export default function LandingPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-hidden">
-      <ParticleBackground />
+      <ParticleBackground mousePosition={mousePosition} />
       
-      {/* Animated Background Gradient */}
+      {/* Interactive Animated Background Gradient */}
       <motion.div
         className="absolute inset-0 opacity-20"
-        style={{
-          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(107, 114, 128, 0.2) 0%, transparent 50%)`,
+        animate={{
+          background: [
+            `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(107, 114, 128, 0.2) 0%, transparent 50%)`,
+            `radial-gradient(circle at ${mousePosition.x + 50}px ${mousePosition.y + 50}px, rgba(156, 163, 175, 0.15) 0%, transparent 50%)`,
+            `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(107, 114, 128, 0.2) 0%, transparent 50%)`,
+          ]
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+
+      {/* Additional Interactive Background Elements */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        animate={{
+          background: mousePosition.x > 0 ? [
+            `conic-gradient(from ${mousePosition.x / 10}deg at ${mousePosition.x}px ${mousePosition.y}px, rgba(75, 85, 99, 0.1) 0deg, transparent 60deg, transparent 360deg)`,
+            `conic-gradient(from ${mousePosition.x / 10 + 180}deg at ${mousePosition.x}px ${mousePosition.y}px, rgba(75, 85, 99, 0.1) 0deg, transparent 60deg, transparent 360deg)`,
+            `conic-gradient(from ${mousePosition.x / 10}deg at ${mousePosition.x}px ${mousePosition.y}px, rgba(75, 85, 99, 0.1) 0deg, transparent 60deg, transparent 360deg)`,
+          ] : "none"
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "linear"
         }}
       />
 
       {/* Navigation */}
       <nav className="relative z-50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <motion.div
+          <motion.button
+            onClick={scrollToTop}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 hover:scale-105 transition-transform cursor-pointer"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
@@ -588,7 +668,7 @@ export default function LandingPage() {
             <span className="text-2xl font-bold bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
               AutoProcure
             </span>
-          </motion.div>
+          </motion.button>
 
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -645,6 +725,7 @@ export default function LandingPage() {
 
                          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
                <motion.button
+                 onClick={scrollToUpload}
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
                  className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center group border border-gray-600"
@@ -664,15 +745,15 @@ export default function LandingPage() {
              </div>
           </motion.div>
 
-          {/* 3D Elements */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="w-64 h-64 mx-auto mb-12"
-          >
-            <FloatingElements />
-          </motion.div>
+                     {/* 3D Elements */}
+           <motion.div
+             initial={{ opacity: 0, scale: 0.8 }}
+             animate={{ opacity: 1, scale: 1 }}
+             transition={{ duration: 1, delay: 0.5 }}
+             className="w-64 h-64 mx-auto mb-12"
+           >
+             <FloatingElements mousePosition={mousePosition} />
+           </motion.div>
 
                      {/* Stats */}
            <motion.div
@@ -736,7 +817,7 @@ export default function LandingPage() {
       </section>
 
              {/* File Upload Section */}
-       <section className="relative z-20 px-6 py-20">
+       <section id="upload-section" className="relative z-20 px-6 py-20">
          <div className="max-w-7xl mx-auto">
            <motion.div
              initial={{ opacity: 0, y: 30 }}
@@ -879,6 +960,7 @@ export default function LandingPage() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                  <motion.button
+                   onClick={scrollToUpload}
                    whileHover={{ scale: 1.05 }}
                    whileTap={{ scale: 0.95 }}
                    className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-4 rounded-xl font-semibold text-lg border border-gray-600"
