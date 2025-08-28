@@ -19,11 +19,11 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent;
   }
   
   .gradient-border {
-    background: linear-gradient(45deg, #8b5cf6, #06b6d4, #8b5cf6);
+    background: linear-gradient(45deg, #6b7280, #9ca3af, #6b7280);
     background-size: 200% 200%;
     animation: gradient-shift 3s ease infinite;
   }
@@ -64,10 +64,10 @@
 
 @keyframes glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 20px rgba(107, 114, 128, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(139, 92, 246, 0.8);
+    box-shadow: 0 0 40px rgba(107, 114, 128, 0.5);
   }
 }
 
@@ -81,18 +81,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gradient-to-b from-purple-500 to-cyan-500 rounded-full;
+  @apply bg-gradient-to-b from-gray-600 to-gray-800 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gradient-to-b from-purple-600 to-cyan-600;
+  @apply bg-gradient-to-b from-gray-700 to-gray-900;
 }
 
 /* Selection styles */
 ::selection {
-  @apply bg-purple-500/30 text-white;
+  @apply bg-gray-600/30 text-white;
 }
 
 ::-moz-selection {
-  @apply bg-purple-500/30 text-white;
+  @apply bg-gray-600/30 text-white;
 }

@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
-import { useSpring as useSpringReact, animated } from '@react-spring/web';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Float, Text3D, Sphere } from '@react-three/drei';
+import { Float, Sphere } from '@react-three/drei';
 import { 
   ArrowRight, 
   Zap, 
@@ -22,7 +21,15 @@ import {
   Target,
   Users,
   Globe,
-  Award
+  Award,
+  Upload,
+  FileText,
+  Calculator,
+  Building,
+  Trophy,
+  AlertCircle,
+  Search,
+  Download
 } from 'lucide-react';
 
 // 3D Component for Hero Section
@@ -33,17 +40,17 @@ function FloatingElements() {
       <pointLight position={[10, 10, 10]} />
       <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
         <Sphere args={[0.5, 32, 32]}>
-          <meshStandardMaterial color="#6366f1" wireframe />
+          <meshStandardMaterial color="#6b7280" wireframe />
         </Sphere>
       </Float>
       <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.3}>
         <Sphere args={[0.3, 16, 16]} position={[2, 1, 0]}>
-          <meshStandardMaterial color="#8b5cf6" wireframe />
+          <meshStandardMaterial color="#9ca3af" wireframe />
         </Sphere>
       </Float>
       <Float speed={2.5} rotationIntensity={0.7} floatIntensity={0.7}>
         <Sphere args={[0.4, 24, 24]} position={[-2, -1, 1]}>
-          <meshStandardMaterial color="#06b6d4" wireframe />
+          <meshStandardMaterial color="#d1d5db" wireframe />
         </Sphere>
       </Float>
     </Canvas>
@@ -65,7 +72,7 @@ function ParticleBackground() {
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
-          className="absolute w-1 h-1 bg-gradient-to-r from-purple-400 to-cyan-400 rounded-full opacity-30"
+          className="absolute w-1 h-1 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full opacity-20"
           style={{
             left: `${particle.x}%`,
             top: `${particle.y}%`,
@@ -74,7 +81,7 @@ function ParticleBackground() {
           }}
           animate={{
             y: [0, -100, 0],
-            opacity: [0.3, 0.8, 0.3],
+            opacity: [0.2, 0.6, 0.2],
           }}
           transition={{
             duration: particle.speed * 10,
@@ -212,11 +219,45 @@ function InteractiveDemo() {
   );
 }
 
+// API functions
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://autoprocure-backend.onrender.com';
+
+const uploadFile = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  return response.json();
+};
+
+const uploadMultipleFiles = async (files: File[]) => {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('files', file);
+  });
+
+  const response = await fetch(`${API_BASE_URL}/analyze-multiple`, {
+    method: 'POST',
+    body: formData,
+  });
+  return response.json();
+};
+
 // Main Landing Page Component
 export default function LandingPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
+  
+  // File upload states
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentResult, setCurrentResult] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [totalSavings, setTotalSavings] = useState(0);
   
   const y = useTransform(scrollYProgress, [0, 1], [0, -50]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -236,6 +277,84 @@ export default function LandingPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  const handleFileUpload = async (files: File[]) => {
+    setIsUploading(true);
+    setCurrentResult(null);
+    setShowResults(false);
+
+    try {
+      let result: any;
+      if (files.length === 1) {
+        result = await uploadFile(files[0]);
+        setCurrentResult(result);
+      } else {
+        result = await uploadMultipleFiles(files);
+        setCurrentResult(result);
+      }
+      
+      setShowResults(true);
+      
+      // Calculate total savings for multi-vendor analysis
+      if (result.comparison && result.comparison.costSavings) {
+        setTotalSavings(result.comparison.costSavings);
+      } else if (result.quotes && result.quotes.length > 1) {
+        // Calculate savings manually
+        const totals = result.quotes.map((quote: any) => 
+          quote.items.reduce((sum: number, item: any) => sum + item.total, 0)
+        );
+        const minTotal = Math.min(...totals);
+        const maxTotal = Math.max(...totals);
+        setTotalSavings(maxTotal - minTotal);
+      }
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Upload failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(files);
+  };
+
+  const handleUpload = () => {
+    if (selectedFiles.length > 0) {
+      handleFileUpload(selectedFiles);
+    }
+  };
+
+  const downloadResults = (format: 'json' | 'csv' | 'pdf') => {
+    if (!currentResult) return;
+    
+    let content = '';
+    let filename = 'autoprocure-analysis';
+    
+    if (format === 'json') {
+      content = JSON.stringify(currentResult, null, 2);
+      filename += '.json';
+    } else if (format === 'csv') {
+      // Create CSV content
+      content = 'Vendor,Item,Quantity,Unit Price,Total\n';
+      currentResult.quotes?.forEach((quote: any) => {
+        quote.items?.forEach((item: any) => {
+          content += `${quote.vendorName},${item.description},${item.quantity},${item.unitPrice},${item.total}\n`;
+        });
+      });
+      filename += '.csv';
+    }
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const stats = [
     { label: "Quotes Analyzed", value: 15420, icon: BarChart3 },
     { label: "Savings Generated", value: 2840000, prefix: "$", suffix: "+", icon: DollarSign },
@@ -248,27 +367,176 @@ export default function LandingPage() {
       icon: Brain,
       title: "AI-Powered Analysis",
       description: "Advanced machine learning algorithms analyze every quote for hidden opportunities and risks.",
-      gradient: "from-purple-500 to-pink-500"
+      gradient: "from-gray-600 to-gray-800"
     },
     {
       icon: Zap,
       title: "Lightning Fast",
       description: "Process complex quotes in seconds, not hours. Get insights instantly when you need them most.",
-      gradient: "from-yellow-500 to-orange-500"
+      gradient: "from-gray-700 to-gray-900"
     },
     {
       icon: Shield,
       title: "Enterprise Security",
       description: "Bank-level encryption and compliance. Your data is protected with the highest security standards.",
-      gradient: "from-green-500 to-emerald-500"
+      gradient: "from-gray-800 to-gray-950"
     },
     {
       icon: TrendingUp,
       title: "Smart Insights",
       description: "Predictive analytics help you make better procurement decisions and maximize your savings.",
-      gradient: "from-blue-500 to-cyan-500"
+      gradient: "from-gray-600 to-gray-800"
     }
   ];
+
+  const renderResults = () => {
+    if (!currentResult) return null;
+
+    return (
+      <div className="space-y-6">
+        {/* Main Results */}
+        <GlassCard>
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="h-5 w-5 text-gray-300" />
+            <h3 className="text-xl font-semibold text-white">Analysis Results</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-400">Total Vendors</p>
+              <p className="text-2xl font-bold text-white">{currentResult.comparison?.summary?.total_vendors || currentResult.comparison?.vendorCount || 1}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-400">Total Cost</p>
+              <p className="text-2xl font-bold text-green-400">
+                ${(currentResult.comparison?.summary?.total_cost || currentResult.comparison?.totalCost || 0).toLocaleString()}
+              </p>
+            </div>
+            {totalSavings > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-400">Potential Savings</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  ${totalSavings.toLocaleString()}
+                </p>
+              </div>
+            )}
+          </div>
+          
+          {/* Winner Badge */}
+          {currentResult.comparison?.summary?.winner && (
+            <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <Trophy className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-white">🏆 Recommended Winner</h3>
+                  <p className="text-gray-300">{currentResult.comparison.summary.winner.vendor_name}</p>
+                  <p className="text-sm text-gray-400">Total Cost: ${currentResult.comparison.summary.winner.total_cost.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
+            <h3 className="font-semibold text-white mb-2">AI Recommendation</h3>
+            <p className="text-gray-300 whitespace-pre-line">{currentResult.recommendation}</p>
+          </div>
+        </GlassCard>
+
+        {/* Vendor Quotes */}
+        <GlassCard>
+          <div className="flex items-center gap-2 mb-4">
+            <Building className="h-5 w-5 text-gray-300" />
+            <h3 className="text-xl font-semibold text-white">Vendor Quotes</h3>
+          </div>
+          <div className="space-y-4">
+            {currentResult.quotes?.map((quote: any, index: number) => {
+              const totalCost = quote.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+              const isWinner = currentResult.comparison?.summary?.winner?.vendor_name === quote.vendorName;
+              
+              return (
+                <div key={index} className={`border rounded-lg p-4 ${
+                  isWinner ? 'bg-gray-800/50 border-green-500/30' : 'bg-gray-800/30 border-gray-700'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg text-white">{quote.vendorName}</h3>
+                    {isWinner && (
+                      <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full">
+                        🏆 WINNER
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {quote.items?.map((item: any, itemIndex: number) => (
+                      <div key={itemIndex} className="flex justify-between items-center py-2 border-b border-gray-700 last:border-b-0">
+                        <div className="flex-1">
+                          <p className="font-medium text-white">{item.description}</p>
+                          <p className="text-sm text-gray-400">
+                            SKU: {item.sku} | Qty: {item.quantity.toLocaleString()}
+                            {item.deliveryTime && ` | Delivery: ${item.deliveryTime}`}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-white">${item.unitPrice.toFixed(2)}</p>
+                          <p className="text-sm text-gray-400">Total: ${item.total.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-white">Total:</span>
+                      <span className="font-bold text-lg text-white">
+                        ${totalCost.toFixed(2)}
+                      </span>
+                    </div>
+                    
+                    {/* Terms */}
+                    {quote.terms && (
+                      <div className="mt-2 text-sm text-gray-400">
+                        <p>Payment: {quote.terms.payment}</p>
+                        <p>Warranty: {quote.terms.warranty}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+
+        {/* Export Options */}
+        <GlassCard>
+          <div className="flex items-center gap-2 mb-4">
+            <Download className="h-5 w-5 text-gray-300" />
+            <h3 className="text-xl font-semibold text-white">Export Results</h3>
+          </div>
+          <div className="flex gap-2">
+            <motion.button 
+              onClick={() => downloadResults('json')} 
+              className="border border-gray-600 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Export JSON
+            </motion.button>
+            <motion.button 
+              onClick={() => downloadResults('csv')} 
+              className="border border-gray-600 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Export CSV
+            </motion.button>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  };
 
   const testimonials = [
     {
@@ -295,14 +563,14 @@ export default function LandingPage() {
   ];
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 relative overflow-hidden">
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-hidden">
       <ParticleBackground />
       
       {/* Animated Background Gradient */}
       <motion.div
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-20"
         style={{
-          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(139, 92, 246, 0.3) 0%, transparent 50%)`,
+          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(107, 114, 128, 0.2) 0%, transparent 50%)`,
         }}
       />
 
@@ -314,10 +582,10 @@ export default function LandingPage() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center space-x-2"
           >
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="text-2xl font-bold bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
               AutoProcure
             </span>
           </motion.div>
@@ -330,13 +598,13 @@ export default function LandingPage() {
             <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
             <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
             <a href="#about" className="text-gray-300 hover:text-white transition-colors">About</a>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-6 py-2 rounded-xl font-semibold"
-            >
-              Get Started
-            </motion.button>
+                         <motion.button
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-6 py-2 rounded-xl font-semibold border border-gray-600"
+             >
+               Get Started
+             </motion.button>
           </motion.div>
         </div>
       </nav>
@@ -350,50 +618,50 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="mb-8"
           >
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              className="inline-block mb-4"
-            >
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-            </motion.div>
-            
-            <h1 className="text-6xl md:text-8xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                The Future of
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Procurement
-              </span>
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Transform supplier quotes into actionable intelligence with AI-powered analysis. 
-              <span className="text-cyan-400 font-semibold"> Save millions. Make better decisions.</span>
-            </p>
+                         <motion.div
+               animate={{ rotate: [0, 360] }}
+               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+               className="inline-block mb-4"
+             >
+               <div className="w-16 h-16 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full flex items-center justify-center">
+                 <Sparkles className="w-8 h-8 text-white" />
+               </div>
+             </motion.div>
+             
+             <h1 className="text-6xl md:text-8xl font-bold mb-6">
+               <span className="bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                 The Future of
+               </span>
+               <br />
+               <span className="bg-gradient-to-r from-gray-100 via-gray-300 to-gray-100 bg-clip-text text-transparent">
+                 Procurement
+               </span>
+             </h1>
+             
+             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+               Transform supplier quotes into actionable intelligence with AI-powered analysis. 
+               <span className="text-gray-200 font-semibold"> Save millions. Make better decisions.</span>
+             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center group"
-              >
-                Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="border border-white/20 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-white/10 transition-all"
-              >
-                <Play className="w-5 h-5 inline mr-2" />
-                Watch Demo
-              </motion.button>
-            </div>
+                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+               <motion.button
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
+                 className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center group border border-gray-600"
+               >
+                 Start Free Trial
+                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+               </motion.button>
+               
+               <motion.button
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
+                 className="border border-gray-600 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-gray-800/50 transition-all"
+               >
+                 <Play className="w-5 h-5 inline mr-2" />
+                 Watch Demo
+               </motion.button>
+             </div>
           </motion.div>
 
           {/* 3D Elements */}
@@ -406,23 +674,23 @@ export default function LandingPage() {
             <FloatingElements />
           </motion.div>
 
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
-          >
-            {stats.map((stat, index) => (
-              <GlassCard key={index} className="text-center">
-                <stat.icon className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white mb-1">
-                  {stat.prefix}<AnimatedCounter end={stat.value} />{stat.suffix}
-                </div>
-                <div className="text-sm text-gray-400">{stat.label}</div>
-              </GlassCard>
-            ))}
-          </motion.div>
+                     {/* Stats */}
+           <motion.div
+             initial={{ opacity: 0, y: 30 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.8, delay: 0.8 }}
+             className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
+           >
+             {stats.map((stat, index) => (
+               <GlassCard key={index} className="text-center">
+                 <stat.icon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                 <div className="text-2xl font-bold text-white mb-1">
+                   {stat.prefix}<AnimatedCounter end={stat.value} />{stat.suffix}
+                 </div>
+                 <div className="text-sm text-gray-400">{stat.label}</div>
+               </GlassCard>
+             ))}
+           </motion.div>
         </div>
       </section>
 
@@ -435,11 +703,11 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Why AutoProcure?
-              </span>
-            </h2>
+                         <h2 className="text-4xl md:text-5xl font-bold mb-6">
+               <span className="bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
+                 Why AutoProcure?
+               </span>
+             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
               Built by procurement professionals, for procurement professionals. 
               Experience the power of AI-driven insights.
@@ -467,29 +735,86 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Interactive Demo Section */}
-      <section className="relative z-20 px-6 py-20">
-        <div className="max-w-7xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="mb-12"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                See It In Action
-              </span>
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Experience the power of AutoProcure with our interactive demo. 
-              Watch as AI transforms your procurement process in real-time.
-            </p>
-          </motion.div>
+             {/* File Upload Section */}
+       <section className="relative z-20 px-6 py-20">
+         <div className="max-w-7xl mx-auto">
+           <motion.div
+             initial={{ opacity: 0, y: 30 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.8 }}
+             className="text-center mb-16"
+           >
+             <h2 className="text-4xl md:text-5xl font-bold mb-6">
+               <span className="bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
+                 Try AutoProcure Now
+               </span>
+             </h2>
+             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+               Upload your vendor quotes and see the magic happen. 
+               Get instant insights and recommendations.
+             </p>
+           </motion.div>
 
-          <InteractiveDemo />
-        </div>
-      </section>
+           {/* File Upload Interface */}
+           <div className="max-w-4xl mx-auto">
+             <GlassCard className="p-8">
+               <div className="mb-6">
+                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                   Upload Vendor Quotes (PDF or Excel)
+                 </label>
+                 <input
+                   type="file"
+                   multiple
+                   accept=".pdf,.xlsx,.xls"
+                   onChange={handleFileChange}
+                   className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
+                 />
+               </div>
+
+               {selectedFiles.length > 0 && (
+                 <div className="mb-6">
+                   <h3 className="text-lg font-semibold text-white mb-3">Selected Files:</h3>
+                   <div className="space-y-2">
+                     {selectedFiles.map((file, index) => (
+                       <div key={index} className="flex items-center justify-between bg-gray-800/50 rounded-lg p-3">
+                         <span className="text-gray-300">{file.name}</span>
+                         <span className="text-sm text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               )}
+
+               <motion.button
+                 onClick={handleUpload}
+                 disabled={selectedFiles.length === 0 || isUploading}
+                 className="w-full bg-gradient-to-r from-gray-700 to-gray-800 text-white py-3 px-6 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 border border-gray-600"
+                 whileHover={{ scale: selectedFiles.length > 0 && !isUploading ? 1.02 : 1 }}
+                 whileTap={{ scale: selectedFiles.length > 0 && !isUploading ? 0.98 : 1 }}
+               >
+                 {isUploading ? (
+                   <>
+                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                     <span>Analyzing...</span>
+                   </>
+                 ) : (
+                   <>
+                     <Upload className="w-5 h-5" />
+                     <span>Analyze Quotes</span>
+                   </>
+                 )}
+               </motion.button>
+             </GlassCard>
+           </div>
+
+           {/* Results Section */}
+           {showResults && currentResult && (
+             <div className="max-w-6xl mx-auto mt-12">
+               {renderResults()}
+             </div>
+           )}
+         </div>
+       </section>
 
       {/* Testimonials Section */}
       <section className="relative z-10 px-6 py-20">
@@ -500,11 +825,11 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Trusted by Industry Leaders
-              </span>
-            </h2>
+                         <h2 className="text-4xl md:text-5xl font-bold mb-6">
+               <span className="bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
+                 Trusted by Industry Leaders
+               </span>
+             </h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -542,31 +867,31 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
           >
             <GlassCard>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                  Ready to Transform Your Procurement?
-                </span>
-              </h2>
+                             <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                 <span className="bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
+                   Ready to Transform Your Procurement?
+                 </span>
+               </h2>
               <p className="text-xl text-gray-300 mb-8">
                 Join hundreds of companies already saving millions with AutoProcure. 
                 Start your free trial today.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg"
-                >
-                  Start Free Trial
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="border border-white/20 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-white/10 transition-all"
-                >
-                  Schedule Demo
-                </motion.button>
+                                 <motion.button
+                   whileHover={{ scale: 1.05 }}
+                   whileTap={{ scale: 0.95 }}
+                   className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-4 rounded-xl font-semibold text-lg border border-gray-600"
+                 >
+                   Start Free Trial
+                 </motion.button>
+                 <motion.button
+                   whileHover={{ scale: 1.05 }}
+                   whileTap={{ scale: 0.95 }}
+                   className="border border-gray-600 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-gray-800/50 transition-all"
+                 >
+                   Schedule Demo
+                 </motion.button>
               </div>
             </GlassCard>
           </motion.div>
@@ -576,14 +901,14 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="relative z-0 px-6 py-12 border-t border-white/10">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-              AutoProcure
-            </span>
-          </div>
+                     <div className="flex items-center justify-center space-x-2 mb-4">
+             <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
+               <Sparkles className="w-5 h-5 text-white" />
+             </div>
+             <span className="text-xl font-bold bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
+               AutoProcure
+             </span>
+           </div>
           <p className="text-gray-400">
             © 2025 AutoProcure. The future of procurement intelligence.
           </p>
