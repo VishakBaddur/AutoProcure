@@ -325,9 +325,11 @@ export default function LandingPage() {
       let result: any;
       if (files.length === 1) {
         result = await uploadFile(files[0]);
+        console.log('Single file result:', result);
         setCurrentResult(result);
       } else {
         result = await uploadMultipleFiles(files);
+        console.log('Multi-file result:', result);
         setCurrentResult(result);
       }
       
@@ -450,6 +452,18 @@ export default function LandingPage() {
 
     return (
       <div className="space-y-6">
+        {/* Debug Info - Remove after testing */}
+        {process.env.NODE_ENV === 'development' && currentResult && (
+          <GlassCard>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-white mb-2">Debug Info</h3>
+              <pre className="text-xs text-gray-400 text-left overflow-auto max-h-40">
+                {JSON.stringify(currentResult, null, 2)}
+              </pre>
+            </div>
+          </GlassCard>
+        )}
+
         {/* Time Saved Counter - DEMO FEATURE */}
         <GlassCard>
           <div className="text-center">
@@ -481,29 +495,33 @@ export default function LandingPage() {
             <Target className="h-5 w-5 text-gray-300" />
             <h3 className="text-xl font-semibold text-white">Analysis Results</h3>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-400">Total Vendors</p>
-              <p className="text-2xl font-bold text-white">{currentResult.comparison?.summary?.total_vendors || currentResult.comparison?.vendorCount || 1}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-400">Total Cost</p>
-              <p className="text-2xl font-bold text-green-400">
-                ${(currentResult.comparison?.summary?.total_cost || currentResult.comparison?.totalCost || 0).toLocaleString()}
-              </p>
-            </div>
-            {totalSavings > 0 && (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-400">Potential Savings</p>
-                <p className="text-2xl font-bold text-blue-400">
-                  ${totalSavings.toLocaleString()}
+                <p className="text-sm font-medium text-gray-400">Total Vendors</p>
+                <p className="text-2xl font-bold text-white">
+                  {currentResult.quotes?.length || currentResult.comparison?.vendorCount || 1}
                 </p>
               </div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-400">Total Cost</p>
+                <p className="text-2xl font-bold text-green-400">
+                  ${(currentResult.quotes?.reduce((sum: number, quote: any) => 
+                    sum + quote.items?.reduce((itemSum: number, item: any) => itemSum + item.total, 0) || 0
+                  , 0) || currentResult.comparison?.totalCost || 0).toLocaleString()}
+                </p>
+              </div>
+              {totalSavings > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-400">Potential Savings</p>
+                  <p className="text-2xl font-bold text-blue-400">
+                    ${totalSavings.toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
           
           {/* Winner Badge */}
-          {currentResult.comparison?.summary?.winner && (
+          {currentResult.quotes && currentResult.quotes.length > 1 && (
             <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
@@ -513,8 +531,20 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-white">🏆 Recommended Winner</h3>
-                  <p className="text-gray-300">{currentResult.comparison.summary.winner.vendor_name}</p>
-                  <p className="text-sm text-gray-400">Total Cost: ${currentResult.comparison.summary.winner.total_cost.toLocaleString()}</p>
+                  {(() => {
+                    const winner = currentResult.quotes.reduce((best: any, current: any) => {
+                      const currentTotal = current.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+                      const bestTotal = best.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+                      return currentTotal < bestTotal ? current : best;
+                    });
+                    const winnerTotal = winner.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+                    return (
+                      <>
+                        <p className="text-gray-300">{winner.vendorName}</p>
+                        <p className="text-sm text-gray-400">Total Cost: ${winnerTotal.toLocaleString()}</p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -870,6 +900,7 @@ export default function LandingPage() {
             <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
             <a href="#about" className="text-gray-300 hover:text-white transition-colors">About</a>
                          <motion.button
+               onClick={scrollToUpload}
                whileHover={{ scale: 1.05 }}
                whileTap={{ scale: 0.95 }}
                className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-6 py-2 rounded-xl font-semibold border border-gray-600"
@@ -1032,12 +1063,12 @@ export default function LandingPage() {
              <GlassCard className="p-8">
                <div className="mb-6">
                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                   Upload Vendor Quotes (PDF or Excel)
+                   Upload Vendor Quotes (PDF, Excel, or CSV)
                  </label>
                  <input
                    type="file"
                    multiple
-                   accept=".pdf,.xlsx,.xls"
+                   accept=".pdf,.xlsx,.xls,.csv"
                    onChange={handleFileChange}
                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
                  />

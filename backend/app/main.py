@@ -113,6 +113,19 @@ def extract_text_from_excel(file_content: bytes) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Excel parsing error: {str(e)}")
 
+def extract_text_from_csv(file_content: bytes) -> str:
+    """Extract text from CSV files"""
+    try:
+        import csv
+        text = ""
+        csv_content = file_content.decode('utf-8')
+        csv_reader = csv.reader(io.StringIO(csv_content))
+        for row in csv_reader:
+            text += " ".join(str(cell) for cell in row if cell) + "\n"
+        return text
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"CSV parsing error: {str(e)}")
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database connection on startup"""
@@ -152,8 +165,8 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="No file provided")
     
     file_extension = file.filename.lower().split('.')[-1]
-    if file_extension not in ['pdf', 'xlsx', 'xls']:
-        raise HTTPException(status_code=400, detail="Unsupported file type. Please upload PDF or Excel files.")
+    if file_extension not in ['pdf', 'xlsx', 'xls', 'csv']:
+        raise HTTPException(status_code=400, detail="Unsupported file type. Please upload PDF, Excel, or CSV files.")
     
     try:
         # Read file content
@@ -162,6 +175,10 @@ async def upload_file(
         # Extract text based on file type
         if file_extension == 'pdf':
             text_content = extract_text_from_pdf(file_content)
+            parsed_quote = await ai_processor.analyze_quote(text_content)
+        elif file_extension == 'csv':
+            # Handle CSV files
+            text_content = extract_text_from_csv(file_content)
             parsed_quote = await ai_processor.analyze_quote(text_content)
         else:
             # Try structured Excel first
@@ -269,13 +286,16 @@ async def analyze_multiple_quotes(
                 continue
                 
             file_extension = file.filename.lower().split('.')[-1]
-            if file_extension not in ['pdf', 'xlsx', 'xls']:
+            if file_extension not in ['pdf', 'xlsx', 'xls', 'csv']:
                 continue
             
             # Read and extract text
             file_content = await file.read()
             if file_extension == 'pdf':
                 text_content = extract_text_from_pdf(file_content)
+                parsed_quote = await ai_processor.analyze_quote(text_content)
+            elif file_extension == 'csv':
+                text_content = extract_text_from_csv(file_content)
                 parsed_quote = await ai_processor.analyze_quote(text_content)
             else:
                 # Structured Excel first
