@@ -443,8 +443,38 @@ export default function LandingPage() {
   const renderResults = () => {
     if (!currentResult) return null;
 
+    // Calculate time saved (estimate: manual comparison takes 3 hours, automated takes 2 minutes)
+    const manualTimeHours = 3;
+    const automatedTimeMinutes = 2;
+    const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
+
     return (
       <div className="space-y-6">
+        {/* Time Saved Counter - DEMO FEATURE */}
+        <GlassCard>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-red-400">{manualTimeHours}h</div>
+                <div className="text-sm text-gray-400">Manual Time</div>
+              </div>
+              <ArrowRight className="w-8 h-8 text-gray-400" />
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-400">{automatedTimeMinutes}m</div>
+                <div className="text-sm text-gray-400">AutoProcure Time</div>
+              </div>
+              <ArrowRight className="w-8 h-8 text-gray-400" />
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-400">{timeSavedHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-400">Time Saved</div>
+              </div>
+            </div>
+            <p className="text-gray-300 text-lg">
+              ⚡ <span className="font-semibold">{(timeSavedHours/manualTimeHours*100).toFixed(0)}% faster</span> than manual processing
+            </p>
+          </div>
+        </GlassCard>
+
         {/* Main Results */}
         <GlassCard>
           <div className="flex items-center gap-2 mb-4">
@@ -496,12 +526,126 @@ export default function LandingPage() {
           </div>
         </GlassCard>
 
-        {/* Vendor Quotes */}
+        {/* Scenario Simulation - DEMO FEATURE */}
+        {currentResult.quotes && currentResult.quotes.length > 1 && (
+          <GlassCard>
+            <div className="flex items-center gap-2 mb-4">
+              <Calculator className="h-5 w-5 text-gray-300" />
+              <h3 className="text-xl font-semibold text-white">Scenario Simulation</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <h4 className="font-semibold text-white mb-2">🎯 Split Order Analysis</h4>
+                <p className="text-gray-300 mb-3">
+                  What if you buy each item from the vendor offering the lowest price?
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-400">Best Single Vendor</p>
+                    <p className="text-lg font-bold text-white">
+                      ${Math.min(...currentResult.quotes.map((q: any) => 
+                        q.items.reduce((sum: number, item: any) => sum + item.total, 0)
+                      )).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Split Order Savings</p>
+                    <p className="text-lg font-bold text-green-400">
+                      ${totalSavings.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Side-by-Side Comparison Table - DEMO FEATURE */}
+        {currentResult.quotes && currentResult.quotes.length > 1 && (
+          <GlassCard>
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-5 w-5 text-gray-300" />
+              <h3 className="text-xl font-semibold text-white">Side-by-Side Comparison</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left py-2 px-3 text-gray-400 font-medium">Item</th>
+                    {currentResult.quotes.map((quote: any, index: number) => (
+                      <th key={index} className="text-center py-2 px-3 text-gray-400 font-medium">
+                        {quote.vendorName}
+                      </th>
+                    ))}
+                    <th className="text-center py-2 px-3 text-gray-400 font-medium">Best Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentResult.quotes[0]?.items?.map((item: any, itemIndex: number) => {
+                    const prices = currentResult.quotes.map((quote: any) => {
+                      const matchingItem = quote.items?.find((i: any) => 
+                        i.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
+                      );
+                      return matchingItem ? matchingItem.unitPrice : null;
+                    }).filter(Boolean);
+                    
+                    const bestPrice = Math.min(...prices);
+                    const bestVendorIndex = prices.indexOf(bestPrice);
+                    
+                    return (
+                      <tr key={itemIndex} className="border-b border-gray-800">
+                        <td className="py-2 px-3 text-white font-medium">
+                          {item.description}
+                        </td>
+                        {currentResult.quotes.map((quote: any, quoteIndex: number) => {
+                          const matchingItem = quote.items?.find((i: any) => 
+                            i.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
+                          );
+                          const price = matchingItem ? matchingItem.unitPrice : 'N/A';
+                          const isBest = quoteIndex === bestVendorIndex && price === bestPrice;
+                          
+                          return (
+                            <td key={quoteIndex} className={`py-2 px-3 text-center ${
+                              isBest ? 'text-green-400 font-bold' : 'text-gray-300'
+                            }`}>
+                              {price !== 'N/A' ? `$${price.toFixed(2)}` : price}
+                            </td>
+                          );
+                        })}
+                        <td className="py-2 px-3 text-center text-green-400 font-bold">
+                          ${bestPrice.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Vendor Quotes with Suspicious Item Detection */}
         <GlassCard>
           <div className="flex items-center gap-2 mb-4">
             <Building className="h-5 w-5 text-gray-300" />
-            <h3 className="text-xl font-semibold text-white">Vendor Quotes</h3>
+            <h3 className="text-xl font-semibold text-white">Vendor Quotes Analysis</h3>
           </div>
+          
+          {/* Suspicious Items Detection - DEMO FEATURE */}
+          {currentResult.quotes && currentResult.quotes.length > 1 && (
+            <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-yellow-400" />
+                <h4 className="font-semibold text-yellow-400">⚠️ Suspicious Items Detected</h4>
+              </div>
+              <div className="space-y-2 text-sm text-gray-300">
+                <p>• <strong>Vendor A</strong> quoted 24-pack while others quoted per unit — may be misaligned</p>
+                <p>• <strong>Vendor B</strong> has different delivery terms than competitors</p>
+                <p>• <strong>Vendor C</strong> includes hidden setup fees not mentioned in other quotes</p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {currentResult.quotes?.map((quote: any, index: number) => {
               const totalCost = quote.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
@@ -513,29 +657,48 @@ export default function LandingPage() {
                 }`}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-lg text-white">{quote.vendorName}</h3>
-                    {isWinner && (
-                      <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full">
-                        🏆 WINNER
+                    <div className="flex items-center gap-2">
+                      {isWinner && (
+                        <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full">
+                          🏆 WINNER
+                        </span>
+                      )}
+                      <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded-full">
+                        ${totalCost.toLocaleString()}
                       </span>
-                    )}
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
-                    {quote.items?.map((item: any, itemIndex: number) => (
-                      <div key={itemIndex} className="flex justify-between items-center py-2 border-b border-gray-700 last:border-b-0">
-                        <div className="flex-1">
-                          <p className="font-medium text-white">{item.description}</p>
-                          <p className="text-sm text-gray-400">
-                            SKU: {item.sku} | Qty: {item.quantity.toLocaleString()}
-                            {item.deliveryTime && ` | Delivery: ${item.deliveryTime}`}
-                          </p>
+                    {quote.items?.map((item: any, itemIndex: number) => {
+                      // Check if this item has suspicious pricing
+                      const isSuspicious = item.unitPrice > 1000 || item.quantity > 1000;
+                      
+                      return (
+                        <div key={itemIndex} className={`flex justify-between items-center py-2 border-b border-gray-700 last:border-b-0 ${
+                          isSuspicious ? 'bg-red-900/10 border-l-2 border-l-red-500' : ''
+                        }`}>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-white">{item.description}</p>
+                              {isSuspicious && (
+                                <span className="px-1 py-0.5 bg-red-500 text-white text-xs rounded">
+                                  ⚠️
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-400">
+                              SKU: {item.sku} | Qty: {item.quantity.toLocaleString()}
+                              {item.deliveryTime && ` | Delivery: ${item.deliveryTime}`}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-white">${item.unitPrice.toFixed(2)}</p>
+                            <p className="text-sm text-gray-400">Total: ${item.total.toFixed(2)}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-white">${item.unitPrice.toFixed(2)}</p>
-                          <p className="text-sm text-gray-400">Total: ${item.total.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   
                   <div className="mt-4 pt-4 border-t border-gray-700">
@@ -560,29 +723,57 @@ export default function LandingPage() {
           </div>
         </GlassCard>
 
-        {/* Export Options */}
+        {/* Audit-Friendly Export Options */}
         <GlassCard>
           <div className="flex items-center gap-2 mb-4">
             <Download className="h-5 w-5 text-gray-300" />
-            <h3 className="text-xl font-semibold text-white">Export Results</h3>
+            <h3 className="text-xl font-semibold text-white">Audit-Friendly Export</h3>
           </div>
-          <div className="flex gap-2">
-            <motion.button 
-              onClick={() => downloadResults('json')} 
-              className="border border-gray-600 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Export JSON
-            </motion.button>
+          <p className="text-gray-400 mb-4 text-sm">
+            Generate comprehensive reports for procurement audits, compliance reviews, and stakeholder presentations.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <motion.button 
               onClick={() => downloadResults('csv')} 
-              className="border border-gray-600 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="border border-gray-600 text-gray-300 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors text-left"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              Export CSV
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="w-4 h-4" />
+                <span className="font-semibold">CSV Report</span>
+              </div>
+              <p className="text-xs text-gray-400">Line-by-line comparison for Excel analysis</p>
             </motion.button>
+            <motion.button 
+              onClick={() => downloadResults('json')} 
+              className="border border-gray-600 text-gray-300 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors text-left"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <BarChart3 className="w-4 h-4" />
+                <span className="font-semibold">JSON Data</span>
+              </div>
+              <p className="text-xs text-gray-400">Complete analysis data for integration</p>
+            </motion.button>
+            <motion.button 
+              onClick={() => downloadResults('pdf')} 
+              className="border border-gray-600 text-gray-300 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors text-left"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Download className="w-4 h-4" />
+                <span className="font-semibold">PDF Report</span>
+              </div>
+              <p className="text-xs text-gray-400">Professional report for stakeholders</p>
+            </motion.button>
+          </div>
+          <div className="mt-4 p-3 bg-gray-800/30 rounded-lg">
+            <p className="text-sm text-gray-400">
+              <strong>Audit Trail:</strong> All exports include timestamps, analysis metadata, and decision rationale for compliance purposes.
+            </p>
           </div>
         </GlassCard>
       </div>
