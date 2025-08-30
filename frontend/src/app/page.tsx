@@ -131,21 +131,62 @@ function ParticleBackground({ mousePosition }: { mousePosition: { x: number; y: 
   );
 }
 
-// Glassmorphism Card Component
-function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+// Enterprise-Grade Card Component
+function EnterpriseCard({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div
-      className={`backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 shadow-2xl ${className}`}
+      className={`enterprise-card p-8 ${className}`}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ 
+        duration: 0.8, 
+        delay: delay * 0.1,
+        ease: "easeOut"
+      }}
       whileHover={{ 
         scale: 1.02,
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-        borderColor: "rgba(156, 163, 175, 0.4)"
+        boxShadow: "0 35px 60px -12px rgba(0, 0, 0, 0.35)",
+        borderColor: "rgba(156, 163, 175, 0.3)"
       }}
       whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 300 }}
     >
       {children}
     </motion.div>
+  );
+}
+
+// Enterprise Button Component
+function EnterpriseButton({ 
+  children, 
+  onClick, 
+  className = "", 
+  variant = "primary" 
+}: { 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+  className?: string;
+  variant?: "primary" | "secondary" | "ghost";
+}) {
+  const baseClasses = "enterprise-button transition-all duration-300 font-semibold";
+  const variantClasses = {
+    primary: "bg-gradient-to-r from-gray-700 to-gray-800 border-gray-600 hover:from-gray-600 hover:to-gray-700",
+    secondary: "bg-transparent border-gray-600 text-gray-300 hover:bg-gray-800/50 hover:text-white",
+    ghost: "bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-gray-800/30"
+  };
+
+  return (
+    <motion.button
+      onClick={onClick}
+      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      whileHover={{ 
+        scale: 1.05,
+        y: -2
+      }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+    >
+      {children}
+    </motion.button>
   );
 }
 
@@ -212,7 +253,7 @@ function InteractiveDemo() {
   };
 
   return (
-    <GlassCard className="max-w-md mx-auto">
+    <EnterpriseCard className="max-w-md mx-auto">
       <div className="text-center">
         <motion.div
           className="w-16 h-16 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full mx-auto mb-4 flex items-center justify-center"
@@ -254,7 +295,7 @@ function InteractiveDemo() {
           </div>
         )}
       </div>
-    </GlassCard>
+    </EnterpriseCard>
   );
 }
 
@@ -454,43 +495,49 @@ export default function LandingPage() {
       <div className="space-y-6">
         {/* Debug Info - Remove after testing */}
         {process.env.NODE_ENV === 'development' && currentResult && (
-          <GlassCard>
+          <EnterpriseCard>
             <div className="text-center">
               <h3 className="text-lg font-semibold text-white mb-2">Debug Info</h3>
               <pre className="text-xs text-gray-400 text-left overflow-auto max-h-40">
                 {JSON.stringify(currentResult, null, 2)}
               </pre>
             </div>
-          </GlassCard>
+          </EnterpriseCard>
         )}
 
         {/* Time Saved Counter - DEMO FEATURE */}
-        <GlassCard>
+        <EnterpriseCard delay={1}>
           <div className="text-center">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-red-400">{manualTimeHours}h</div>
-                <div className="text-sm text-gray-400">Manual Time</div>
-              </div>
-              <ArrowRight className="w-8 h-8 text-gray-400" />
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-400">{automatedTimeMinutes}m</div>
-                <div className="text-sm text-gray-400">AutoProcure Time</div>
-              </div>
-              <ArrowRight className="w-8 h-8 text-gray-400" />
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-400">{timeSavedHours.toFixed(1)}h</div>
-                <div className="text-sm text-gray-400">Time Saved</div>
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mb-4">
+                <Zap className="w-8 h-8 text-white" />
               </div>
             </div>
-            <p className="text-gray-300 text-lg">
-              ⚡ <span className="font-semibold">{(timeSavedHours/manualTimeHours*100).toFixed(0)}% faster</span> than manual processing
-            </p>
+            <h3 className="text-2xl font-bold text-white mb-6">Performance Impact</h3>
+            <div className="grid grid-cols-3 gap-8 mb-6">
+              <div className="text-center">
+                <div className="text-4xl font-bold text-red-400 mb-2">{manualTimeHours}h</div>
+                <div className="text-sm text-gray-400 font-medium">Manual Processing</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-green-400 mb-2">{automatedTimeMinutes}m</div>
+                <div className="text-sm text-gray-400 font-medium">AI Processing</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-blue-400 mb-2">{timeSavedHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-400 font-medium">Time Saved</div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl p-4">
+              <p className="text-gray-300 text-lg font-semibold">
+                ⚡ <span className="text-green-400">{(timeSavedHours/manualTimeHours*100).toFixed(0)}% faster</span> than traditional methods
+              </p>
+            </div>
           </div>
-        </GlassCard>
+        </EnterpriseCard>
 
         {/* Main Results */}
-        <GlassCard>
+        <EnterpriseCard>
           <div className="flex items-center gap-2 mb-4">
             <Target className="h-5 w-5 text-gray-300" />
             <h3 className="text-xl font-semibold text-white">Analysis Results</h3>
@@ -554,11 +601,11 @@ export default function LandingPage() {
             <h3 className="font-semibold text-white mb-2">AI Recommendation</h3>
             <p className="text-gray-300 whitespace-pre-line">{currentResult.recommendation}</p>
           </div>
-        </GlassCard>
+        </EnterpriseCard>
 
         {/* Scenario Simulation - DEMO FEATURE */}
         {currentResult.quotes && currentResult.quotes.length > 1 && (
-          <GlassCard>
+          <EnterpriseCard>
             <div className="flex items-center gap-2 mb-4">
               <Calculator className="h-5 w-5 text-gray-300" />
               <h3 className="text-xl font-semibold text-white">Scenario Simulation</h3>
@@ -587,12 +634,12 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          </GlassCard>
+          </EnterpriseCard>
         )}
 
         {/* Side-by-Side Comparison Table - DEMO FEATURE */}
         {currentResult.quotes && currentResult.quotes.length > 1 && (
-          <GlassCard>
+          <EnterpriseCard>
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="h-5 w-5 text-gray-300" />
               <h3 className="text-xl font-semibold text-white">Side-by-Side Comparison</h3>
@@ -651,11 +698,11 @@ export default function LandingPage() {
                 </tbody>
               </table>
             </div>
-          </GlassCard>
+          </EnterpriseCard>
         )}
 
         {/* Vendor Quotes with Suspicious Item Detection */}
-        <GlassCard>
+        <EnterpriseCard>
           <div className="flex items-center gap-2 mb-4">
             <Building className="h-5 w-5 text-gray-300" />
             <h3 className="text-xl font-semibold text-white">Vendor Quotes Analysis</h3>
@@ -751,10 +798,10 @@ export default function LandingPage() {
               );
             })}
           </div>
-        </GlassCard>
+        </EnterpriseCard>
 
         {/* Audit-Friendly Export Options */}
-        <GlassCard>
+        <EnterpriseCard>
           <div className="flex items-center gap-2 mb-4">
             <Download className="h-5 w-5 text-gray-300" />
             <h3 className="text-xl font-semibold text-white">Audit-Friendly Export</h3>
@@ -805,7 +852,7 @@ export default function LandingPage() {
               <strong>Audit Trail:</strong> All exports include timestamps, analysis metadata, and decision rationale for compliance purposes.
             </p>
           </div>
-        </GlassCard>
+        </EnterpriseCard>
       </div>
     );
   };
@@ -930,15 +977,15 @@ export default function LandingPage() {
                </div>
              </motion.div>
              
-             <h1 className="text-6xl md:text-8xl font-bold mb-6">
-               <span className="bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent">
-                 The Future of
-               </span>
-               <br />
-               <span className="bg-gradient-to-r from-gray-100 via-gray-300 to-gray-100 bg-clip-text text-transparent">
-                 Procurement
-               </span>
-             </h1>
+                         <h1 className="text-6xl md:text-8xl font-bold mb-6 text-shadow">
+              <span className="bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent text-glow">
+                The Future of
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-gray-100 via-gray-300 to-gray-100 bg-clip-text text-transparent text-glow">
+                Procurement
+              </span>
+            </h1>
              
              <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
                Transform supplier quotes into actionable intelligence with AI-powered analysis. 
@@ -978,22 +1025,22 @@ export default function LandingPage() {
            </motion.div>
 
                      {/* Stats */}
-           <motion.div
-             initial={{ opacity: 0, y: 30 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.8, delay: 0.8 }}
-             className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
-           >
-             {stats.map((stat, index) => (
-               <GlassCard key={index} className="text-center">
-                 <stat.icon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                 <div className="text-2xl font-bold text-white mb-1">
-                   {stat.prefix}<AnimatedCounter end={stat.value} />{stat.suffix}
-                 </div>
-                 <div className="text-sm text-gray-400">{stat.label}</div>
-               </GlassCard>
-             ))}
-           </motion.div>
+                     <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
+          >
+            {stats.map((stat, index) => (
+              <EnterpriseCard key={index} className="text-center" delay={index}>
+                <stat.icon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-white mb-1">
+                  {stat.prefix}<AnimatedCounter end={stat.value} />{stat.suffix}
+                </div>
+                <div className="text-sm text-gray-400">{stat.label}</div>
+              </EnterpriseCard>
+            ))}
+          </motion.div>
         </div>
       </section>
 
@@ -1025,13 +1072,13 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <GlassCard className="h-full">
+                <EnterpriseCard className="h-full">
                   <div className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center mb-4`}>
                     <feature.icon className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
                   <p className="text-gray-300">{feature.description}</p>
-                </GlassCard>
+                </EnterpriseCard>
               </motion.div>
             ))}
           </div>
@@ -1058,56 +1105,80 @@ export default function LandingPage() {
              </p>
            </motion.div>
 
-           {/* File Upload Interface */}
-           <div className="max-w-4xl mx-auto">
-             <GlassCard className="p-8">
-               <div className="mb-6">
-                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                   Upload Vendor Quotes (PDF, Excel, or CSV)
-                 </label>
-                 <input
-                   type="file"
-                   multiple
-                   accept=".pdf,.xlsx,.xls,.csv"
-                   onChange={handleFileChange}
-                   className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
-                 />
-               </div>
+                       {/* File Upload Interface */}
+            <div className="max-w-4xl mx-auto">
+              <EnterpriseCard className="p-8" delay={0}>
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Upload Vendor Quotes</h3>
+                  <p className="text-gray-400">Drag and drop or select files to begin analysis</p>
+                </div>
+                
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Supported Formats: PDF, Excel, CSV
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.xlsx,.xls,.csv"
+                      onChange={handleFileChange}
+                      className="enterprise-input w-full file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-gray-700 file:to-gray-800 file:text-white hover:file:from-gray-600 hover:file:to-gray-700 file:transition-all file:duration-300"
+                    />
+                  </div>
+                </div>
 
-               {selectedFiles.length > 0 && (
-                 <div className="mb-6">
-                   <h3 className="text-lg font-semibold text-white mb-3">Selected Files:</h3>
-                   <div className="space-y-2">
-                     {selectedFiles.map((file, index) => (
-                       <div key={index} className="flex items-center justify-between bg-gray-800/50 rounded-lg p-3">
-                         <span className="text-gray-300">{file.name}</span>
-                         <span className="text-sm text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                       </div>
-                     ))}
-                   </div>
-                 </div>
-               )}
+                               {selectedFiles.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Selected Files ({selectedFiles.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedFiles.map((file, index) => (
+                        <motion.div 
+                          key={index} 
+                          className="flex items-center justify-between bg-gray-800/30 border border-gray-700 rounded-lg p-4 hover:bg-gray-800/50 transition-colors"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-white" />
+                            </div>
+                            <span className="text-gray-300 font-medium">{file.name}</span>
+                          </div>
+                          <span className="text-sm text-gray-400 bg-gray-800/50 px-2 py-1 rounded">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-               <motion.button
-                 onClick={handleUpload}
-                 disabled={selectedFiles.length === 0 || isUploading}
-                 className="w-full bg-gradient-to-r from-gray-700 to-gray-800 text-white py-3 px-6 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 border border-gray-600"
-                 whileHover={{ scale: selectedFiles.length > 0 && !isUploading ? 1.02 : 1 }}
-                 whileTap={{ scale: selectedFiles.length > 0 && !isUploading ? 0.98 : 1 }}
-               >
-                 {isUploading ? (
-                   <>
-                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                     <span>Analyzing...</span>
-                   </>
-                 ) : (
-                   <>
-                     <Upload className="w-5 h-5" />
-                     <span>Analyze Quotes</span>
-                   </>
-                 )}
-               </motion.button>
-             </GlassCard>
+                               <EnterpriseButton
+                  onClick={handleUpload}
+                  className="w-full py-4 text-lg"
+                  variant={selectedFiles.length > 0 && !isUploading ? "primary" : "ghost"}
+                >
+                  {isUploading ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      <span>AI Analysis in Progress...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-3">
+                      <Brain className="w-6 h-6" />
+                      <span>Analyze with AI</span>
+                    </div>
+                  )}
+                </EnterpriseButton>
+             </EnterpriseCard>
            </div>
 
            {/* Results Section */}
@@ -1143,7 +1214,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <GlassCard className="h-full">
+                <EnterpriseCard className="h-full">
                   <div className="flex items-center mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
                       <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
@@ -1154,7 +1225,7 @@ export default function LandingPage() {
                     <div className="font-semibold text-white">{testimonial.name}</div>
                     <div className="text-sm text-gray-400">{testimonial.role} at {testimonial.company}</div>
                   </div>
-                </GlassCard>
+                </EnterpriseCard>
               </motion.div>
             ))}
           </div>
@@ -1169,7 +1240,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <GlassCard>
+            <EnterpriseCard>
                              <h2 className="text-4xl md:text-5xl font-bold mb-6">
                  <span className="bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
                    Ready to Transform Your Procurement?
@@ -1197,7 +1268,7 @@ export default function LandingPage() {
                    Schedule Demo
                  </motion.button>
               </div>
-            </GlassCard>
+            </EnterpriseCard>
           </motion.div>
         </div>
       </section>
