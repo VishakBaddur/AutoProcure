@@ -340,7 +340,7 @@ export default function LandingPage() {
       setShowResults(true);
       
       // Calculate total savings for multi-vendor analysis
-      const quotes = result.quotes || result.multi_vendor_analysis?.quotes || [];
+      const quotes = result.multi_vendor_analysis?.quotes || result.quotes || [];
       if (result.comparison && result.comparison.costSavings) {
         setTotalSavings(result.comparison.costSavings);
       } else if (quotes.length > 1) {
@@ -382,7 +382,7 @@ export default function LandingPage() {
     if (!currentResult) return;
     
     // Get the correct quotes array
-    const quotes = currentResult.quotes || currentResult.multi_vendor_analysis?.quotes || [];
+    const quotes = currentResult.multi_vendor_analysis?.quotes || currentResult.quotes || [];
     
     let content = '';
     let filename = 'autoprocure-analysis';
@@ -465,7 +465,7 @@ export default function LandingPage() {
     const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
 
     // Handle both single and multi-vendor analysis results
-    const quotes = currentResult.quotes || currentResult.multi_vendor_analysis?.quotes || [];
+    const quotes = currentResult.multi_vendor_analysis?.quotes || currentResult.quotes || [];
     const comparison = currentResult.comparison || currentResult.multi_vendor_analysis?.comparison || {};
     const recommendation = currentResult.recommendation || currentResult.multi_vendor_analysis?.recommendation || "";
     const vendorRecommendations = currentResult.multi_vendor_analysis?.vendor_recommendations || [];
@@ -534,9 +534,7 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Cost</p>
                 <p className="text-2xl font-bold text-green-400">
-                  ${(comparison.totalCost || quotes.reduce((sum: number, quote: any) => 
-                    sum + quote.items?.reduce((itemSum: number, item: any) => itemSum + item.total, 0) || 0
-                  , 0) || 0).toLocaleString()}
+                  ${(comparison.totalCost || 0).toLocaleString()}
                 </p>
               </div>
               {totalSavings > 0 && (
