@@ -40,6 +40,9 @@ class AIProcessor:
         Optionally augment with RAG context.
         """
         try:
+            print(f"[AI ANALYSIS] Starting analysis of text (length: {len(text_content)})")
+            print(f"[AI ANALYSIS] Text preview: {text_content[:200]}...")
+            
             # Create the prompt for quote analysis
             prompt = self._create_analysis_prompt(text_content, rag_context)
             
@@ -57,8 +60,12 @@ class AIProcessor:
             else:
                 raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
             
+            print(f"[AI ANALYSIS] Raw AI response: {response[:500]}...")
+            
             # Parse and validate the response
             quote_data = self._parse_ai_response(response)
+            
+            print(f"[AI ANALYSIS] Parsed quote data: {json.dumps(quote_data, indent=2)}")
             
             # Convert to VendorQuote model
             return self._create_vendor_quote(quote_data)
@@ -67,8 +74,10 @@ class AIProcessor:
             print(f"AI analysis failed: {str(e)}")
             # Fallback to NLP analysis
             try:
+                print(f"[AI ANALYSIS] Falling back to NLP analysis")
                 nlp_result = self._analyze_quote_with_nlp(text_content)
                 quote_data = json.loads(nlp_result)
+                print(f"[AI ANALYSIS] NLP result: {json.dumps(quote_data, indent=2)}")
                 return self._create_vendor_quote(quote_data)
             except Exception as nlp_error:
                 print(f"NLP fallback also failed: {str(nlp_error)}")

@@ -389,8 +389,13 @@ async def analyze_multiple_quotes(
                 text_content = result['text']
                 print(f"[FILE PROCESSING] File: {file.filename}, Method: {result['method']}, Text length: {len(text_content)}")
                 
-                # Use AI processor to analyze the extracted text
-                parsed_quote = await ai_processor.analyze_quote(text_content)
+                # For CSV files, use the structured data directly
+                if file_extension == 'csv':
+                    print(f"[CSV PROCESSING] Using structured CSV data for {file.filename}")
+                    parsed_quote = parse_csv_to_quote(file_content, file.filename)
+                else:
+                    # Use AI processor to analyze the extracted text
+                    parsed_quote = await ai_processor.analyze_quote(text_content)
                 
             else:
                 print(f"[FILE ERROR] Failed to process {file.filename}: {result['error']}")
