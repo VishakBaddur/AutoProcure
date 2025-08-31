@@ -471,6 +471,11 @@ export default function LandingPage() {
     const vendorRecommendations = currentResult.multi_vendor_analysis?.vendor_recommendations || [];
     const advancedAnalysis = currentResult.advanced_analysis || {};
 
+    // Debug: Log the actual structure
+    console.log('Current Result:', currentResult);
+    console.log('Quotes:', quotes);
+    console.log('Vendor Recommendations:', vendorRecommendations);
+
 
 
     return (
@@ -565,8 +570,8 @@ export default function LandingPage() {
                       if (winner) {
                         return (
                           <>
-                            <p className="text-gray-300">{winner.vendor_name}</p>
-                            <p className="text-sm text-gray-400">Total Cost: ${winner.total_cost.toLocaleString()}</p>
+                            <p className="text-gray-300">{winner.vendor_name || winner.vendorName}</p>
+                            <p className="text-sm text-gray-400">Total Cost: ${(winner.total_cost || winner.totalCost || 0).toLocaleString()}</p>
                           </>
                         );
                       }
@@ -581,7 +586,7 @@ export default function LandingPage() {
                     const winnerTotal = winner.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                     return (
                       <>
-                        <p className="text-gray-300">{winner.vendorName}</p>
+                        <p className="text-gray-300">{winner.vendorName || 'Unknown Vendor'}</p>
                         <p className="text-sm text-gray-400">Total Cost: ${winnerTotal.toLocaleString()}</p>
                       </>
                     );
@@ -594,7 +599,7 @@ export default function LandingPage() {
           <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
             <h3 className="font-semibold text-white mb-2">AI Recommendation</h3>
             <p className="text-gray-300 whitespace-pre-line">
-              {recommendation || currentResult.recommendation || "Analysis complete. Review the comparison below for detailed insights."}
+              {recommendation || currentResult.recommendation || currentResult.multi_vendor_analysis?.recommendation || "Analysis complete. Review the comparison below for detailed insights."}
             </p>
           </div>
         </EnterpriseCard>
@@ -774,7 +779,7 @@ export default function LandingPage() {
                   isWinner ? 'bg-gray-800/50 border-green-500/30' : 'bg-gray-800/30 border-gray-700'
                 }`}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-lg text-white">{quote.vendorName}</h3>
+                    <h3 className="font-semibold text-lg text-white">{quote.vendorName || 'Unknown Vendor'}</h3>
                     <div className="flex items-center gap-2">
                       {isWinner && (
                         <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full">
