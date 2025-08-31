@@ -534,9 +534,9 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Cost</p>
                 <p className="text-2xl font-bold text-green-400">
-                  ${(quotes.reduce((sum: number, quote: any) => 
+                  ${(comparison.totalCost || quotes.reduce((sum: number, quote: any) => 
                     sum + quote.items?.reduce((itemSum: number, item: any) => itemSum + item.total, 0) || 0
-                  , 0) || comparison.totalCost || 0).toLocaleString()}
+                  , 0) || 0).toLocaleString()}
                 </p>
               </div>
               {totalSavings > 0 && (
@@ -561,6 +561,20 @@ export default function LandingPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-white">🏆 Recommended Winner</h3>
                   {(() => {
+                    // Use vendor recommendations if available, otherwise calculate manually
+                    if (vendorRecommendations.length > 0) {
+                      const winner = vendorRecommendations.find((rec: any) => rec.is_winner);
+                      if (winner) {
+                        return (
+                          <>
+                            <p className="text-gray-300">{winner.vendor_name}</p>
+                            <p className="text-sm text-gray-400">Total Cost: ${winner.total_cost.toLocaleString()}</p>
+                          </>
+                        );
+                      }
+                    }
+                    
+                    // Fallback to manual calculation
                     const winner = quotes.reduce((best: any, current: any) => {
                       const currentTotal = current.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                       const bestTotal = best.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
@@ -581,7 +595,9 @@ export default function LandingPage() {
           
           <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
             <h3 className="font-semibold text-white mb-2">AI Recommendation</h3>
-            <p className="text-gray-300 whitespace-pre-line">{recommendation}</p>
+            <p className="text-gray-300 whitespace-pre-line">
+              {recommendation || currentResult.recommendation || "Analysis complete. Review the comparison below for detailed insights."}
+            </p>
           </div>
         </EnterpriseCard>
 
@@ -602,9 +618,9 @@ export default function LandingPage() {
                   <div>
                     <p className="text-sm text-gray-400">Best Single Vendor</p>
                     <p className="text-lg font-bold text-white">
-                      ${Math.min(...quotes.map((q: any) => 
+                      ${quotes.length > 0 ? Math.min(...quotes.map((q: any) => 
                         q.items.reduce((sum: number, item: any) => sum + item.total, 0)
-                      )).toLocaleString()}
+                      )).toLocaleString() : '0'}
                     </p>
                   </div>
                   <div>
@@ -691,16 +707,18 @@ export default function LandingPage() {
           </div>
           
           {/* Suspicious Items Detection - DEMO FEATURE */}
-          {currentResult.quotes && currentResult.quotes.length > 1 && (
+          {quotes.length > 1 && advancedAnalysis.obfuscation_detection && (
             <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5 text-yellow-400" />
                 <h4 className="font-semibold text-yellow-400">⚠️ Suspicious Items Detected</h4>
               </div>
               <div className="space-y-2 text-sm text-gray-300">
-                <p>• <strong>Vendor A</strong> quoted 24-pack while others quoted per unit — may be misaligned</p>
-                <p>• <strong>Vendor B</strong> has different delivery terms than competitors</p>
-                <p>• <strong>Vendor C</strong> includes hidden setup fees not mentioned in other quotes</p>
+                {advancedAnalysis.obfuscation_detection.results.map((result: any, index: number) => (
+                  result.analysis.issues.map((issue: any, issueIndex: number) => (
+                    <p key={`${index}-${issueIndex}`}>• <strong>{result.vendor}</strong>: {issue.description}</p>
+                  ))
+                ))}
               </div>
             </div>
           )}
