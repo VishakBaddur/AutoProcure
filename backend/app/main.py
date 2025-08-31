@@ -416,7 +416,7 @@ async def analyze_multiple_quotes(
                 continue
                 
             file_extension = file.filename.lower().split('.')[-1]
-            if file_extension not in ['pdf', 'xlsx', 'xls', 'csv']:
+            if file_extension not in ['pdf', 'xlsx', 'xls', 'csv', 'txt']:
                 continue
             
             # Read and extract text using enhanced processor
