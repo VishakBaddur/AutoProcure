@@ -334,10 +334,18 @@ export default function LandingPage() {
       } else {
         result = await uploadMultipleFiles(files);
         console.log('Multi-file result:', result);
+        console.log('Multi-vendor analysis:', result.multi_vendor_analysis);
+        console.log('Quotes:', result.multi_vendor_analysis?.quotes);
         setCurrentResult(result);
       }
       
       setShowResults(true);
+      
+      // Debug: Check if data is set correctly
+      setTimeout(() => {
+        console.log('Current result after setState:', result);
+        console.log('Multi-vendor quotes after setState:', result.multi_vendor_analysis?.quotes);
+      }, 100);
       
       // Calculate total savings for multi-vendor analysis
       const quotes = result.multi_vendor_analysis?.quotes || result.quotes || [];
