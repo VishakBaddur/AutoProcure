@@ -776,24 +776,24 @@ export default function LandingPage() {
                     <div>
                       <p className="text-sm text-gray-400">60% from Cheapest</p>
                       <p className="text-lg font-bold text-blue-400">
-                        ${quotes.length > 0 ? (Math.min(...quotes.map((q: any) => 
+                        {quotes.length > 0 ? formatPrice(Math.min(...quotes.map((q: any) => 
                           q.items.reduce((sum: number, item: any) => sum + item.total, 0)
-                        )) * 0.6).toLocaleString() : '0'}
+                        )) * 0.6) : formatPrice(0)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">40% from Second</p>
                       <p className="text-lg font-bold text-blue-400">
-                        ${quotes.length > 1 ? (quotes.sort((a: any, b: any) => 
+                        {quotes.length > 1 ? formatPrice(quotes.sort((a: any, b: any) => 
                           a.items.reduce((sum: number, item: any) => sum + item.total, 0) - 
                           b.items.reduce((sum: number, item: any) => sum + item.total, 0)
-                        )[1].items.reduce((sum: number, item: any) => sum + item.total, 0) * 0.4).toLocaleString() : '0'}
+                        )[1].items.reduce((sum: number, item: any) => sum + item.total, 0) * 0.4) : formatPrice(0)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">Total Scenario</p>
                       <p className="text-lg font-bold text-green-400">
-                        ${quotes.length > 1 ? (
+                        {quotes.length > 1 ? formatPrice(
                           Math.min(...quotes.map((q: any) => 
                             q.items.reduce((sum: number, item: any) => sum + item.total, 0)
                           )) * 0.6 + 
@@ -801,7 +801,7 @@ export default function LandingPage() {
                             a.items.reduce((sum: number, item: any) => sum + item.total, 0) - 
                             b.items.reduce((sum: number, item: any) => sum + item.total, 0)
                           )[1].items.reduce((sum: number, item: any) => sum + item.total, 0) * 0.4
-                        ).toLocaleString() : '0'}
+                        ) : formatPrice(0)}
                       </p>
                     </div>
                   </div>
@@ -859,12 +859,12 @@ export default function LandingPage() {
                             <td key={quoteIndex} className={`py-2 px-3 text-center ${
                               isBest ? 'text-green-400 font-bold' : 'text-gray-300'
                             }`}>
-                              {price !== 'N/A' ? `$${price.toFixed(2)}` : price}
+                              {price !== 'N/A' ? formatPrice(price) : price}
                             </td>
                           );
                         })}
                         <td className="py-2 px-3 text-center text-green-400 font-bold">
-                          ${bestPrice.toFixed(2)}
+                          {formatPrice(bestPrice)}
                         </td>
                       </tr>
                     );
@@ -917,7 +917,7 @@ export default function LandingPage() {
                         </span>
                       )}
                       <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded-full">
-                        ${totalCost.toLocaleString()}
+                        {formatPrice(totalCost)}
                       </span>
                     </div>
                   </div>
@@ -946,8 +946,8 @@ export default function LandingPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium text-white">${item.unitPrice.toFixed(2)}</p>
-                            <p className="text-sm text-gray-400">Total: ${item.total.toFixed(2)}</p>
+                            <p className="font-medium text-white">{formatPrice(item.unitPrice)}</p>
+                            <p className="text-sm text-gray-400">Total: {formatPrice(item.total)}</p>
                           </div>
                         </div>
                       );
@@ -958,7 +958,7 @@ export default function LandingPage() {
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-white">Total:</span>
                       <span className="font-bold text-lg text-white">
-                        ${totalCost.toFixed(2)}
+                        {formatPrice(totalCost)}
                       </span>
                     </div>
                     
