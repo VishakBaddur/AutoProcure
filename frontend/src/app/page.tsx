@@ -304,7 +304,6 @@ export default function LandingPage() {
   const [currentResult, setCurrentResult] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [totalSavings, setTotalSavings] = useState(0);
-  const [forceTestData, setForceTestData] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -337,6 +336,20 @@ export default function LandingPage() {
         console.log('Multi-file result:', result);
         console.log('Multi-vendor analysis:', result.multi_vendor_analysis);
         console.log('Quotes:', result.multi_vendor_analysis?.quotes);
+        
+        // Verify the data structure
+        if (!result.multi_vendor_analysis) {
+          console.error('No multi_vendor_analysis in response');
+          alert('Error: Invalid response format from server');
+          return;
+        }
+        
+        if (!result.multi_vendor_analysis.quotes || result.multi_vendor_analysis.quotes.length === 0) {
+          console.error('No quotes in multi_vendor_analysis');
+          alert('Error: No vendor quotes found in response');
+          return;
+        }
+        
         setCurrentResult(result);
       }
       
@@ -467,39 +480,6 @@ export default function LandingPage() {
 
   const renderResults = () => {
     if (!currentResult) return null;
-    
-    // FORCE TEST DATA - Remove this after fixing
-    const testData = {
-      multi_vendor_analysis: {
-        quotes: [
-          {
-            vendorName: "ABC Supplies",
-            items: [
-              { sku: "CHAIR-001", description: "Office Chair - Ergonomic", quantity: 50, unitPrice: 125.0, total: 6250.0 },
-              { sku: "LAMP-002", description: "Desk Lamp - LED", quantity: 100, unitPrice: 45.0, total: 4500.0 }
-            ]
-          },
-          {
-            vendorName: "XYZ Office Solutions", 
-            items: [
-              { sku: "CHAIR-001", description: "Office Chair - Ergonomic", quantity: 50, unitPrice: 115.0, total: 5750.0 },
-              { sku: "LAMP-002", description: "Desk Lamp - LED", quantity: 100, unitPrice: 42.0, total: 4200.0 }
-            ]
-          }
-        ],
-        vendor_recommendations: [
-          {
-            vendor_name: "XYZ Office Solutions",
-            is_winner: true,
-            total_cost: 13400.0
-          }
-        ],
-        recommendation: "Recommend XYZ Office Solutions for lowest total cost: $13,400.00"
-      }
-    };
-    
-    // Use test data if currentResult is empty or forceTestData is true
-    const dataToUse = (currentResult.multi_vendor_analysis && !forceTestData) ? currentResult : testData;
 
     // Calculate time saved (estimate: manual comparison takes 3 hours, automated takes 2 minutes)
     const manualTimeHours = 3;
@@ -507,11 +487,11 @@ export default function LandingPage() {
     const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
 
     // Extract data from the correct structure
-    const multiVendorAnalysis = dataToUse.multi_vendor_analysis;
+    const multiVendorAnalysis = currentResult.multi_vendor_analysis;
     const quotes = multiVendorAnalysis?.quotes || [];
     const vendorRecommendations = multiVendorAnalysis?.vendor_recommendations || [];
-    const recommendation = multiVendorAnalysis?.recommendation || dataToUse.recommendation || "";
-    const advancedAnalysis = dataToUse.advanced_analysis || {};
+    const recommendation = multiVendorAnalysis?.recommendation || currentResult.recommendation || "";
+    const advancedAnalysis = currentResult.advanced_analysis || {};
     
     // Calculate total cost from quotes
     const totalCost = quotes.reduce((sum: number, quote: any) => {
@@ -541,10 +521,29 @@ export default function LandingPage() {
             <div className="text-center">
               <h3 className="text-lg font-semibold text-white mb-2">Debug Info</h3>
               <button 
-                onClick={() => setForceTestData(!forceTestData)}
+                onClick={async () => {
+                  try {
+                    const response = await fetch('http://localhost:8000/analyze-multiple', {
+                      method: 'POST',
+                      body: (() => {
+                        const formData = new FormData();
+                        formData.append('files', new File(['vendor_a_quote.csv'], 'vendor_a_quote.csv'));
+                        formData.append('files', new File(['vendor_b_quote.csv'], 'vendor_b_quote.csv'));
+                        return formData;
+                      })()
+                    });
+                    const result = await response.json();
+                    console.log('Test API response:', result);
+                    setCurrentResult(result);
+                    setShowResults(true);
+                  } catch (error) {
+                    console.error('Test API error:', error);
+                    alert('API test failed: ' + error);
+                  }
+                }}
                 className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
               >
-                {forceTestData ? 'Use Real Data' : 'Force Test Data'}
+                Test API with Demo Files
               </button>
               {currentResult && (
                 <pre className="text-xs text-gray-400 text-left overflow-auto max-h-40">
