@@ -285,11 +285,16 @@ const uploadMultipleFiles = async (files: File[]) => {
     formData.append('files', file);
   });
 
+  console.log('Sending request to:', `${API_BASE_URL}/analyze-multiple`);
   const response = await fetch(`${API_BASE_URL}/analyze-multiple`, {
     method: 'POST',
     body: formData,
   });
-  return response.json();
+  
+  console.log('Response status:', response.status);
+  const result = await response.json();
+  console.log('Response data:', result);
+  return result;
 };
 
 // Main Landing Page Component
@@ -332,17 +337,20 @@ export default function LandingPage() {
       } else {
         result = await uploadMultipleFiles(files);
         console.log('Multi-file result:', result);
+        console.log('Result quotes:', result.quotes);
+        console.log('Result multi_vendor_analysis:', result.multi_vendor_analysis);
         setCurrentResult(result);
       }
       
       setShowResults(true);
       
       // Calculate total savings for multi-vendor analysis
+      const quotes = result.quotes || result.multi_vendor_analysis?.quotes || [];
       if (result.comparison && result.comparison.costSavings) {
         setTotalSavings(result.comparison.costSavings);
-      } else if (result.quotes && result.quotes.length > 1) {
+      } else if (quotes.length > 1) {
         // Calculate savings manually
-        const totals = result.quotes.map((quote: any) => 
+        const totals = quotes.map((quote: any) => 
           quote.items.reduce((sum: number, item: any) => sum + item.total, 0)
         );
         const minTotal = Math.min(...totals);
@@ -467,6 +475,14 @@ export default function LandingPage() {
     const recommendation = currentResult.recommendation || currentResult.multi_vendor_analysis?.recommendation || "";
     const vendorRecommendations = currentResult.multi_vendor_analysis?.vendor_recommendations || [];
     const advancedAnalysis = currentResult.advanced_analysis || {};
+
+    // Debug logging
+    console.log('=== DEBUG: Data Structure ===');
+    console.log('currentResult:', currentResult);
+    console.log('quotes:', quotes);
+    console.log('comparison:', comparison);
+    console.log('recommendation:', recommendation);
+    console.log('vendorRecommendations:', vendorRecommendations);
 
     return (
       <div className="space-y-6">
