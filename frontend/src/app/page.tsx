@@ -304,6 +304,7 @@ export default function LandingPage() {
   const [currentResult, setCurrentResult] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [totalSavings, setTotalSavings] = useState(0);
+  const [forceTestData, setForceTestData] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -466,6 +467,39 @@ export default function LandingPage() {
 
   const renderResults = () => {
     if (!currentResult) return null;
+    
+    // FORCE TEST DATA - Remove this after fixing
+    const testData = {
+      multi_vendor_analysis: {
+        quotes: [
+          {
+            vendorName: "ABC Supplies",
+            items: [
+              { sku: "CHAIR-001", description: "Office Chair - Ergonomic", quantity: 50, unitPrice: 125.0, total: 6250.0 },
+              { sku: "LAMP-002", description: "Desk Lamp - LED", quantity: 100, unitPrice: 45.0, total: 4500.0 }
+            ]
+          },
+          {
+            vendorName: "XYZ Office Solutions", 
+            items: [
+              { sku: "CHAIR-001", description: "Office Chair - Ergonomic", quantity: 50, unitPrice: 115.0, total: 5750.0 },
+              { sku: "LAMP-002", description: "Desk Lamp - LED", quantity: 100, unitPrice: 42.0, total: 4200.0 }
+            ]
+          }
+        ],
+        vendor_recommendations: [
+          {
+            vendor_name: "XYZ Office Solutions",
+            is_winner: true,
+            total_cost: 13400.0
+          }
+        ],
+        recommendation: "Recommend XYZ Office Solutions for lowest total cost: $13,400.00"
+      }
+    };
+    
+    // Use test data if currentResult is empty or forceTestData is true
+    const dataToUse = (currentResult.multi_vendor_analysis && !forceTestData) ? currentResult : testData;
 
     // Calculate time saved (estimate: manual comparison takes 3 hours, automated takes 2 minutes)
     const manualTimeHours = 3;
@@ -473,11 +507,11 @@ export default function LandingPage() {
     const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
 
     // Extract data from the correct structure
-    const multiVendorAnalysis = currentResult.multi_vendor_analysis;
+    const multiVendorAnalysis = dataToUse.multi_vendor_analysis;
     const quotes = multiVendorAnalysis?.quotes || [];
     const vendorRecommendations = multiVendorAnalysis?.vendor_recommendations || [];
-    const recommendation = multiVendorAnalysis?.recommendation || currentResult.recommendation || "";
-    const advancedAnalysis = currentResult.advanced_analysis || {};
+    const recommendation = multiVendorAnalysis?.recommendation || dataToUse.recommendation || "";
+    const advancedAnalysis = dataToUse.advanced_analysis || {};
     
     // Calculate total cost from quotes
     const totalCost = quotes.reduce((sum: number, quote: any) => {
@@ -502,13 +536,21 @@ export default function LandingPage() {
     return (
       <div className="space-y-6">
         {/* Debug Info - Remove after testing */}
-        {process.env.NODE_ENV === 'development' && currentResult && (
+        {process.env.NODE_ENV === 'development' && (
           <EnterpriseCard>
             <div className="text-center">
               <h3 className="text-lg font-semibold text-white mb-2">Debug Info</h3>
-              <pre className="text-xs text-gray-400 text-left overflow-auto max-h-40">
-                {JSON.stringify(currentResult, null, 2)}
-              </pre>
+              <button 
+                onClick={() => setForceTestData(!forceTestData)}
+                className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
+              >
+                {forceTestData ? 'Use Real Data' : 'Force Test Data'}
+              </button>
+              {currentResult && (
+                <pre className="text-xs text-gray-400 text-left overflow-auto max-h-40">
+                  {JSON.stringify(currentResult, null, 2)}
+                </pre>
+              )}
             </div>
           </EnterpriseCard>
         )}
