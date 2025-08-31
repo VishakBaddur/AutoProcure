@@ -370,8 +370,8 @@ JSON Response:"""
             )
         
         # Simple fallback: recommend cheapest vendor
-        cheapest_quote = min(quotes, key=lambda q: sum(item.total for item in q.items))
-        total_cost = sum(item.total for item in cheapest_quote.items)
+        cheapest_quote = min(quotes, key=lambda q: sum(item.total for item in q.items) if q.items else float('inf'))
+        total_cost = sum(item.total for item in cheapest_quote.items) if cheapest_quote.items else 0.0
         
         recommendation = VendorRecommendation(
             vendor_name=cheapest_quote.vendorName,

@@ -394,16 +394,16 @@ JSON Response:"""
         
         # If no items found with patterns, try to extract from any line with numbers and currency
         if not items:
-            print("No items found with patterns, trying fallback extraction...")
-            items = self._fallback_item_extraction(text)
+            print("No items found with patterns, trying intelligent extraction...")
+            items = self._intelligent_item_extraction(text)
         
         # Deduplicate/group items by description and unit price
         items = self._deduplicate_items(items)
         
         return items
     
-    def _fallback_item_extraction(self, text: str) -> list:
-        """Fallback method to extract items from any line with numbers and currency"""
+    def _intelligent_item_extraction(self, text: str) -> list:
+        """Intelligent extraction that can handle ANY format without specific patterns"""
         items = []
         lines = text.split('\n')
         
@@ -412,51 +412,47 @@ JSON Response:"""
             if not line_clean or len(line_clean) < 5:
                 continue
                 
-            # Look for lines with currency symbols and numbers
+            # Skip obvious non-item lines
+            skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'date', 'payment', 'delivery', 'terms']
+            if any(word in line_clean.lower() for word in skip_words):
+                continue
+                
+            # Look for any line with currency symbols and numbers
             if '$' in line_clean and any(char.isdigit() for char in line_clean):
                 try:
-                    # Extract all prices from the line
-                    price_matches = re.findall(r'\$?([\d,]+\.?\d*)', line_clean)
-                    if price_matches:
-                        # If multiple prices, assume first is unit price, last is total
-                        unit_price = float(price_matches[0].replace(',', ''))
-                        total_price = float(price_matches[-1].replace(',', '')) if len(price_matches) > 1 else unit_price
+                    # Extract ALL numbers from the line
+                    all_numbers = re.findall(r'[\d,]+\.?\d*', line_clean)
+                    if not all_numbers:
+                        continue
                         
-                        # Extract description (everything before the first price)
-                        first_price_pos = line_clean.find('$')
-                        if first_price_pos > 0:
-                            description = line_clean[:first_price_pos].strip()
+                    # Extract ALL currency amounts
+                    currency_amounts = re.findall(r'\$?([\d,]+\.?\d*)', line_clean)
+                    if not currency_amounts:
+                        continue
+                    
+                    # Intelligent parsing based on number of values found
+                    if len(currency_amounts) >= 2:
+                        # Multiple prices: assume unit price and total
+                        unit_price = float(currency_amounts[0].replace(',', ''))
+                        total_price = float(currency_amounts[-1].replace(',', ''))
+                        
+                        # Calculate quantity if reasonable
+                        quantity = 1
+                        if unit_price > 0:
+                            calculated_qty = total_price / unit_price
+                            if 0.1 <= calculated_qty <= 10000:  # Reasonable range
+                                quantity = calculated_qty
+                        
+                        # Extract description (everything before first $)
+                        first_dollar = line_clean.find('$')
+                        if first_dollar > 0:
+                            description = line_clean[:first_dollar].strip()
                             
-                            # Skip if description is too short or contains skip words
-                            skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'extract', 'look', 'date', 'payment', 'delivery']
-                            if len(description) < 3 or any(word in description.lower() for word in skip_words):
-                                continue
-                                
-                            # Try to extract quantity from various patterns
-                            quantity = 1
-                            qty_patterns = [
-                                r'(\d+)\s*[xX×]\s*\$',
-                                r'x\s*(\d+)',
-                                r'qty[:\s]*(\d+)',
-                                r'quantity[:\s]*(\d+)',
-                                r'(\d+)\s*units?',
-                                r'(\d+)\s*pieces?'
-                            ]
+                            # Clean up description
+                            description = re.sub(r'^[A-Za-z]+:\s*', '', description)  # Remove "Item:" prefix
+                            description = description.strip()
                             
-                            for pattern in qty_patterns:
-                                qty_match = re.search(pattern, line_clean, re.IGNORECASE)
-                                if qty_match:
-                                    quantity = int(qty_match.group(1))
-                                    break
-                            
-                            # If we have both unit price and total, calculate quantity
-                            if len(price_matches) > 1 and unit_price > 0:
-                                calculated_qty = total_price / unit_price
-                                if calculated_qty > 0 and calculated_qty <= 10000:  # Reasonable range
-                                    quantity = calculated_qty
-                            
-                            # Validate the item
-                            if self._validate_item_values(quantity, unit_price, description):
+                            if len(description) >= 3:
                                 items.append({
                                     "sku": f"ITEM-{len(items)+1:03d}",
                                     "description": description,
@@ -465,9 +461,33 @@ JSON Response:"""
                                     "deliveryTime": "7-10 days",
                                     "total": total_price
                                 })
-                                print(f"Fallback extracted: {quantity}x {description} @ ${unit_price} = ${total_price}")
+                                print(f"Intelligent extraction: {quantity}x {description} @ ${unit_price} = ${total_price}")
+                    
+                    elif len(currency_amounts) == 1:
+                        # Single price: assume it's unit price, quantity = 1
+                        unit_price = float(currency_amounts[0].replace(',', ''))
+                        total_price = unit_price
+                        
+                        # Extract description
+                        first_dollar = line_clean.find('$')
+                        if first_dollar > 0:
+                            description = line_clean[:first_dollar].strip()
+                            description = re.sub(r'^[A-Za-z]+:\s*', '', description)
+                            description = description.strip()
+                            
+                            if len(description) >= 3:
+                                items.append({
+                                    "sku": f"ITEM-{len(items)+1:03d}",
+                                    "description": description,
+                                    "quantity": 1,
+                                    "unitPrice": unit_price,
+                                    "deliveryTime": "7-10 days",
+                                    "total": total_price
+                                })
+                                print(f"Intelligent extraction: 1x {description} @ ${unit_price}")
+                                
                 except Exception as e:
-                    print(f"Fallback extraction error: {e}")
+                    print(f"Intelligent extraction error: {e}")
                     continue
         
         return items
