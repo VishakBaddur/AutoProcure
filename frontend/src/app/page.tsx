@@ -464,17 +464,30 @@ export default function LandingPage() {
     const automatedTimeMinutes = 2;
     const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
 
-    // Handle both single and multi-vendor analysis results
-    const quotes = currentResult.multi_vendor_analysis?.quotes || currentResult.quotes || [];
-    const comparison = currentResult.comparison || currentResult.multi_vendor_analysis?.comparison || {};
-    const recommendation = currentResult.recommendation || currentResult.multi_vendor_analysis?.recommendation || "";
-    const vendorRecommendations = currentResult.multi_vendor_analysis?.vendor_recommendations || [];
+    // Extract data from the correct structure
+    const multiVendorAnalysis = currentResult.multi_vendor_analysis;
+    const quotes = multiVendorAnalysis?.quotes || [];
+    const vendorRecommendations = multiVendorAnalysis?.vendor_recommendations || [];
+    const recommendation = multiVendorAnalysis?.recommendation || currentResult.recommendation || "";
     const advancedAnalysis = currentResult.advanced_analysis || {};
+    
+    // Calculate total cost from quotes
+    const totalCost = quotes.reduce((sum: number, quote: any) => {
+      return sum + (quote.items?.reduce((itemSum: number, item: any) => itemSum + item.total, 0) || 0);
+    }, 0);
+
+    // Get winner information
+    const winner = vendorRecommendations.find((rec: any) => rec.is_winner);
+    const winnerName = winner?.vendor_name || winner?.vendorName || "Unknown";
+    const winnerCost = winner?.total_cost || winner?.totalCost || 0;
 
     // Debug: Log the actual structure
     console.log('Current Result:', currentResult);
+    console.log('Multi Vendor Analysis:', multiVendorAnalysis);
     console.log('Quotes:', quotes);
     console.log('Vendor Recommendations:', vendorRecommendations);
+    console.log('Winner:', winner);
+    console.log('Total Cost:', totalCost);
 
 
 
@@ -533,13 +546,13 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Vendors</p>
                 <p className="text-2xl font-bold text-white">
-                  {quotes.length || comparison.vendorCount || 1}
+                  {quotes.length || 1}
                 </p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Cost</p>
                 <p className="text-2xl font-bold text-green-400">
-                  ${(comparison.totalCost || 0).toLocaleString()}
+                  ${totalCost.toLocaleString()}
                 </p>
               </div>
               {totalSavings > 0 && (
@@ -564,30 +577,27 @@ export default function LandingPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-white">🏆 Recommended Winner</h3>
                   {(() => {
-                    // Use vendor recommendations if available, otherwise calculate manually
-                    if (vendorRecommendations.length > 0) {
-                      const winner = vendorRecommendations.find((rec: any) => rec.is_winner);
-                      if (winner) {
-                        return (
-                          <>
-                            <p className="text-gray-300">{winner.vendor_name || winner.vendorName}</p>
-                            <p className="text-sm text-gray-400">Total Cost: ${(winner.total_cost || winner.totalCost || 0).toLocaleString()}</p>
-                          </>
-                        );
-                      }
+                    // Use the pre-calculated winner information
+                    if (winnerName && winnerName !== "Unknown") {
+                      return (
+                        <>
+                          <p className="text-gray-300">{winnerName}</p>
+                          <p className="text-sm text-gray-400">Total Cost: ${winnerCost.toLocaleString()}</p>
+                        </>
+                      );
                     }
                     
                     // Fallback to manual calculation
-                    const winner = quotes.reduce((best: any, current: any) => {
+                    const manualWinner = quotes.reduce((best: any, current: any) => {
                       const currentTotal = current.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                       const bestTotal = best.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                       return currentTotal < bestTotal ? current : best;
                     });
-                    const winnerTotal = winner.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+                    const manualWinnerTotal = manualWinner.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                     return (
                       <>
-                        <p className="text-gray-300">{winner.vendorName || 'Unknown Vendor'}</p>
-                        <p className="text-sm text-gray-400">Total Cost: ${winnerTotal.toLocaleString()}</p>
+                        <p className="text-gray-300">{manualWinner.vendorName || 'Unknown Vendor'}</p>
+                        <p className="text-sm text-gray-400">Total Cost: ${manualWinnerTotal.toLocaleString()}</p>
                       </>
                     );
                   })()}
@@ -772,7 +782,7 @@ export default function LandingPage() {
           <div className="space-y-4">
             {quotes.map((quote: any, index: number) => {
               const totalCost = quote.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
-              const isWinner = vendorRecommendations.find((rec: any) => rec.is_winner)?.vendor_name === quote.vendorName;
+              const isWinner = winnerName === quote.vendorName;
               
               return (
                 <div key={index} className={`border rounded-lg p-4 ${
