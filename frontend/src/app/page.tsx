@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import { Canvas } from '@react-three/fiber';
-import { Float, Sphere } from '@react-three/drei';
+import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
   Zap, 
@@ -32,55 +30,23 @@ import {
   Download
 } from 'lucide-react';
 
-// 3D Component for Hero Section
+// Cool CSS-based 3D floating elements
 function FloatingElements({ mousePosition }: { mousePosition: { x: number; y: number } }) {
   return (
-    <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} />
-      <Float 
-        speed={2} 
-        rotationIntensity={0.5} 
-        floatIntensity={0.5}
-        position={mousePosition.x > 0 ? [
-          (mousePosition.x / window.innerWidth - 0.5) * 2,
-          -(mousePosition.y / window.innerHeight - 0.5) * 2,
-          0
-        ] : [0, 0, 0]}
+    <div className="w-64 h-64 mx-auto mb-12 relative perspective-1000">
+      <div 
+        className="absolute inset-0 transform-style-preserve-3d animate-spin-slow"
+        style={{
+          transform: mousePosition.x > 0 ? 
+            `rotateY(${(mousePosition.x / window.innerWidth - 0.5) * 20}deg) rotateX(${-(mousePosition.y / window.innerHeight - 0.5) * 20}deg)` : 
+            'rotateY(0deg) rotateX(0deg)'
+        }}
       >
-        <Sphere args={[0.5, 32, 32]}>
-          <meshStandardMaterial color="#6b7280" wireframe />
-        </Sphere>
-      </Float>
-      <Float 
-        speed={1.5} 
-        rotationIntensity={0.3} 
-        floatIntensity={0.3}
-        position={mousePosition.x > 0 ? [
-          2 + (mousePosition.x / window.innerWidth - 0.5) * 1.5,
-          1 - (mousePosition.y / window.innerHeight - 0.5) * 1.5,
-          0
-        ] : [2, 1, 0]}
-      >
-        <Sphere args={[0.3, 16, 16]}>
-          <meshStandardMaterial color="#9ca3af" wireframe />
-        </Sphere>
-      </Float>
-      <Float 
-        speed={2.5} 
-        rotationIntensity={0.7} 
-        floatIntensity={0.7}
-        position={mousePosition.x > 0 ? [
-          -2 + (mousePosition.x / window.innerWidth - 0.5) * 1.5,
-          -1 - (mousePosition.y / window.innerHeight - 0.5) * 1.5,
-          1
-        ] : [-2, -1, 1]}
-      >
-        <Sphere args={[0.4, 24, 24]}>
-          <meshStandardMaterial color="#d1d5db" wireframe />
-        </Sphere>
-      </Float>
-    </Canvas>
+        <div className="absolute w-32 h-32 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full opacity-80 animate-float" style={{transform: 'translateZ(50px)'}}></div>
+        <div className="absolute w-24 h-24 bg-gradient-to-r from-gray-500 to-gray-700 rounded-full opacity-60 animate-float-delayed" style={{transform: 'translateZ(25px) translateX(40px)'}}></div>
+        <div className="absolute w-16 h-16 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full opacity-40 animate-float-fast" style={{transform: 'translateZ(75px) translateX(-30px)'}}></div>
+      </div>
+    </div>
   );
 }
 
@@ -330,17 +296,12 @@ const uploadMultipleFiles = async (files: File[]) => {
 export default function LandingPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll();
-  
   // File upload states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentResult, setCurrentResult] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [totalSavings, setTotalSavings] = useState(0);
-  
-  const y = useTransform(scrollYProgress, [0, 1], [0, -50]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
