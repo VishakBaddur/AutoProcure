@@ -479,7 +479,7 @@ async def analyze_multiple_quotes(
         advanced_analysis = await run_advanced_analysis(quotes, raw_texts)
         
         result = AnalysisResult(
-            quotes=quotes,
+            quotes=[],  # Don't duplicate quotes here since they're in multi_vendor_analysis
             comparison=comparison,
             recommendation=suggestion,  # Use the clean suggestion instead of AI's raw output
             multi_vendor_analysis=multi_vendor_result,
