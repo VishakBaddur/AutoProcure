@@ -304,6 +304,50 @@ export default function LandingPage() {
   const [currentResult, setCurrentResult] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [totalSavings, setTotalSavings] = useState(0);
+  // Currency conversion state
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+
+  // Currency conversion rates (in real implementation, these would be fetched from an API)
+  const exchangeRates = {
+    USD: 1.0,
+    EUR: 0.85,
+    GBP: 0.73,
+    CAD: 1.25,
+    AUD: 1.35,
+    JPY: 110.0,
+    INR: 75.0,
+    CNY: 6.5
+  };
+
+  // Currency symbols
+  const currencySymbols = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    CAD: 'C$',
+    AUD: 'A$',
+    JPY: '¥',
+    INR: '₹',
+    CNY: '¥'
+  };
+
+  // Convert price from USD to selected currency
+  const convertPrice = (usdPrice: number): number => {
+    const rate = exchangeRates[selectedCurrency as keyof typeof exchangeRates] || 1.0;
+    return usdPrice * rate;
+  };
+
+  // Format price with currency symbol
+  const formatPrice = (usdPrice: number): string => {
+    const convertedPrice = convertPrice(usdPrice);
+    const symbol = currencySymbols[selectedCurrency as keyof typeof currencySymbols] || '$';
+    
+    if (selectedCurrency === 'JPY') {
+      return `${symbol}${Math.round(convertedPrice).toLocaleString()}`;
+    }
+    
+    return `${symbol}${convertedPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -628,14 +672,14 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Cost</p>
                 <p className="text-2xl font-bold text-green-400">
-                  ${totalCost.toLocaleString()}
+                  {formatPrice(totalCost)}
                 </p>
               </div>
               {totalSavings > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-400">Potential Savings</p>
                   <p className="text-2xl font-bold text-blue-400">
-                    ${totalSavings.toLocaleString()}
+                    {formatPrice(totalSavings)}
                   </p>
                 </div>
               )}
@@ -658,7 +702,7 @@ export default function LandingPage() {
                       return (
                         <>
                           <p className="text-gray-300">{winnerName}</p>
-                          <p className="text-sm text-gray-400">Total Cost: ${winnerCost.toLocaleString()}</p>
+                          <p className="text-sm text-gray-400">Total Cost: {formatPrice(winnerCost)}</p>
                         </>
                       );
                     }
@@ -673,7 +717,7 @@ export default function LandingPage() {
                     return (
                       <>
                         <p className="text-gray-300">{manualWinner.vendorName || 'Unknown Vendor'}</p>
-                        <p className="text-sm text-gray-400">Total Cost: ${manualWinnerTotal.toLocaleString()}</p>
+                        <p className="text-sm text-gray-400">Total Cost: {formatPrice(manualWinnerTotal)}</p>
                       </>
                     );
                   })()}
@@ -707,15 +751,15 @@ export default function LandingPage() {
                   <div>
                     <p className="text-sm text-gray-400">Best Single Vendor</p>
                     <p className="text-lg font-bold text-white">
-                      ${quotes.length > 0 ? Math.min(...quotes.map((q: any) => 
+                      {quotes.length > 0 ? formatPrice(Math.min(...quotes.map((q: any) => 
                         q.items.reduce((sum: number, item: any) => sum + item.total, 0)
-                      )).toLocaleString() : '0'}
+                      ))) : formatPrice(0)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Split Order Savings</p>
                     <p className="text-lg font-bold text-green-400">
-                      ${totalSavings.toLocaleString()}
+                      {formatPrice(totalSavings)}
                     </p>
                   </div>
                 </div>
@@ -1089,6 +1133,39 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </nav>
+
+      {/* Currency Selector */}
+      {showResults && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-40 px-6 py-4 bg-gray-900/50 backdrop-blur-sm border-b border-gray-800"
+        >
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-300 font-medium">View prices in:</span>
+              <select
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value)}
+                className="bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-200 hover:border-gray-500"
+              >
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="CAD">CAD (C$)</option>
+                <option value="AUD">AUD (A$)</option>
+                <option value="JPY">JPY (¥)</option>
+                <option value="INR">INR (₹)</option>
+                <option value="CNY">CNY (¥)</option>
+              </select>
+            </div>
+            <div className="text-sm text-gray-400">
+              <span className="mr-2">💱</span>
+              Real-time conversion
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Hero Section */}
       <section className="relative z-40 px-6 py-20">

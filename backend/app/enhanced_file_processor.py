@@ -35,6 +35,23 @@ class EnhancedFileProcessor:
         try:
             file_extension = filename.lower().split('.')[-1]
             
+            # Special handling for text files with .pdf extension
+            if file_extension == 'pdf':
+                # Try to decode as text first (for text files with .pdf extension)
+                try:
+                    text_content = file_content.decode('utf-8')
+                    # If it's readable text, treat it as a text file
+                    if text_content.isprintable() and len(text_content) > 10:
+                        return {
+                            'success': True,
+                            'text': text_content,
+                            'method': 'text_as_pdf',
+                            'structured_data': self._parse_text_to_structured(text_content)
+                        }
+                except UnicodeDecodeError:
+                    # If it's not readable text, process as actual PDF
+                    pass
+            
             if file_extension not in self.supported_formats:
                 return {
                     'success': False,

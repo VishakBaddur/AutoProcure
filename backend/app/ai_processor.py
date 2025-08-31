@@ -246,8 +246,9 @@ JSON Response:"""
         return text
     
     def _extract_vendor_name(self, text: str) -> str:
-        """Extract vendor name with improved patterns"""
+        """Extract vendor name with improved patterns for real PDFs"""
         vendor_patterns = [
+            # Real-world patterns
             r'vendor[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
             r'quote from\s*([A-Za-z0-9\s&.,\-]+)',
             r'supplier[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
@@ -255,6 +256,11 @@ JSON Response:"""
             r'([A-Za-z0-9\s&.,\-]+)\s+(?:inc|corp|llc|ltd|company|pvt)',
             r'([A-Za-z0-9\s&.,\-]+)\s+supplies',
             r'([A-Za-z0-9\s&.,\-]+)\s+date',
+            # Additional patterns for messy PDFs
+            r'([A-Za-z0-9\s&.,\-]+)\s+quote',
+            r'quote\s+([A-Za-z0-9\s&.,\-]+)',
+            r'([A-Za-z0-9\s&.,\-]+)\s+office',
+            r'([A-Za-z0-9\s&.,\-]+)\s+supply',
         ]
         
         vendor_name = "Unknown Vendor"
@@ -289,22 +295,22 @@ JSON Response:"""
         items = []
         lines = text.split('\n')
         
-        # More flexible patterns that can handle various formats
+        # More flexible patterns that can handle real-world messy PDFs
         item_patterns = [
-            # Item: Description - Price x Qty = Total
-            r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)',
-            # Item: Description - Qty x Price = Total
-            r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)\s*=\s*\$?([\d,]+\.?\d*)',
-            # Standard format: SKU Description Qty Price
+            # Real-world patterns from actual PDFs
+            r'([A-Za-z0-9\s\-]+?)\s*-\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)',
+            r'([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)\s*=\s*\$?([\d,]+\.?\d*)',
+            r'([A-Za-z0-9\s\-]+?)\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*\$?([\d,]+\.?\d*)',
+            r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)\s*\$?([\d,]+\.?\d*)',
+            # Standard patterns
             r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s\-]+?)\s+(\d+)\s+\$?([\d,]+\.?\d*)',
-            # Description Qty Price
             r'([A-Za-z0-9\s\-]+?)\s+(\d+)\s+\$?([\d,]+\.?\d*)',
-            # Description - Qty x Price
             r'([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)',
-            # Description: Qty @ Price
             r'([A-Za-z0-9\s\-]+?)\s*:\s*(\d+)\s*@\s*\$?([\d,]+\.?\d*)',
-            # Simple: Description Price (assume qty=1)
+            # Simple patterns for messy data
             r'([A-Za-z0-9\s\-]+?)\s+\$?([\d,]+\.?\d*)\s*$',
+            # Very loose patterns for extremely messy data
+            r'([A-Za-z0-9\s\-]{3,}?)\s*\$?([\d,]+\.?\d*)',
         ]
         
         matched_lines = set()
@@ -402,38 +408,57 @@ JSON Response:"""
             # Look for lines with currency symbols and numbers
             if '$' in line_clean and any(char.isdigit() for char in line_clean):
                 try:
-                    # Extract price from the line
-                    price_match = re.search(r'\$?([\d,]+\.?\d*)', line_clean)
-                    if price_match:
-                        price = float(price_match.group(1).replace(',', ''))
+                    # Extract all prices from the line
+                    price_matches = re.findall(r'\$?([\d,]+\.?\d*)', line_clean)
+                    if price_matches:
+                        # If multiple prices, assume first is unit price, last is total
+                        unit_price = float(price_matches[0].replace(',', ''))
+                        total_price = float(price_matches[-1].replace(',', '')) if len(price_matches) > 1 else unit_price
                         
-                        # Extract description (everything before the price)
-                        price_pos = line_clean.find('$')
-                        if price_pos > 0:
-                            description = line_clean[:price_pos].strip()
+                        # Extract description (everything before the first price)
+                        first_price_pos = line_clean.find('$')
+                        if first_price_pos > 0:
+                            description = line_clean[:first_price_pos].strip()
                             
                             # Skip if description is too short or contains skip words
-                            skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'extract', 'look']
+                            skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'extract', 'look', 'date', 'payment', 'delivery']
                             if len(description) < 3 or any(word in description.lower() for word in skip_words):
                                 continue
                                 
-                            # Try to extract quantity
+                            # Try to extract quantity from various patterns
                             quantity = 1
-                            qty_match = re.search(r'(\d+)\s*[xX×]\s*\$', line_clean)
-                            if qty_match:
-                                quantity = int(qty_match.group(1))
+                            qty_patterns = [
+                                r'(\d+)\s*[xX×]\s*\$',
+                                r'x\s*(\d+)',
+                                r'qty[:\s]*(\d+)',
+                                r'quantity[:\s]*(\d+)',
+                                r'(\d+)\s*units?',
+                                r'(\d+)\s*pieces?'
+                            ]
+                            
+                            for pattern in qty_patterns:
+                                qty_match = re.search(pattern, line_clean, re.IGNORECASE)
+                                if qty_match:
+                                    quantity = int(qty_match.group(1))
+                                    break
+                            
+                            # If we have both unit price and total, calculate quantity
+                            if len(price_matches) > 1 and unit_price > 0:
+                                calculated_qty = total_price / unit_price
+                                if calculated_qty > 0 and calculated_qty <= 10000:  # Reasonable range
+                                    quantity = calculated_qty
                             
                             # Validate the item
-                            if self._validate_item_values(quantity, price, description):
+                            if self._validate_item_values(quantity, unit_price, description):
                                 items.append({
                                     "sku": f"ITEM-{len(items)+1:03d}",
                                     "description": description,
                                     "quantity": quantity,
-                                    "unitPrice": price,
+                                    "unitPrice": unit_price,
                                     "deliveryTime": "7-10 days",
-                                    "total": quantity * price
+                                    "total": total_price
                                 })
-                                print(f"Fallback extracted: {quantity}x {description} @ ${price}")
+                                print(f"Fallback extracted: {quantity}x {description} @ ${unit_price} = ${total_price}")
                 except Exception as e:
                     print(f"Fallback extraction error: {e}")
                     continue
