@@ -493,15 +493,42 @@ export default function LandingPage() {
     const recommendation = multiVendorAnalysis?.recommendation || currentResult.recommendation || "";
     const advancedAnalysis = currentResult.advanced_analysis || {};
     
+    // Debug: Log the actual data structure
+    console.log('DEBUG: Quotes structure:', JSON.stringify(quotes, null, 2));
+    
     // Calculate total cost from quotes
     const totalCost = quotes.reduce((sum: number, quote: any) => {
-      return sum + (quote.items?.reduce((itemSum: number, item: any) => itemSum + item.total, 0) || 0);
+      console.log('DEBUG: Processing quote:', quote.vendorName || quote.vendor);
+      console.log('DEBUG: Quote items:', quote.items);
+      
+      const quoteTotal = quote.items?.reduce((itemSum: number, item: any) => {
+        // Handle different possible field names for total
+        const itemTotal = item.total || item.total_cost || (item.quantity * item.unitPrice) || 0;
+        console.log('DEBUG: Item total calculation:', {
+          item: item.description || item.name,
+          total: item.total,
+          total_cost: item.total_cost,
+          calculated: item.quantity * item.unitPrice,
+          final: itemTotal
+        });
+        return itemSum + itemTotal;
+      }, 0) || 0;
+      
+      console.log('DEBUG: Quote total:', quoteTotal);
+      return sum + quoteTotal;
     }, 0);
 
     // Get winner information
     const winner = vendorRecommendations.find((rec: any) => rec.is_winner);
-    const winnerName = winner?.vendor_name || winner?.vendorName || "Unknown";
-    const winnerCost = winner?.total_cost || winner?.totalCost || 0;
+    const winnerName = winner?.vendor_name || winner?.vendorName || winner?.vendor || "Unknown";
+    const winnerCost = winner?.total_cost || winner?.totalCost || winner?.total || 0;
+    
+    console.log('DEBUG: Winner calculation:', {
+      winner,
+      winnerName,
+      winnerCost,
+      vendorRecommendations
+    });
 
     // Debug: Log the actual structure
     console.log('Current Result:', currentResult);
