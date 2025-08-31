@@ -378,6 +378,9 @@ export default function LandingPage() {
   const downloadResults = (format: 'json' | 'csv' | 'pdf') => {
     if (!currentResult) return;
     
+    // Get the correct quotes array
+    const quotes = currentResult.quotes || currentResult.multi_vendor_analysis?.quotes || [];
+    
     let content = '';
     let filename = 'autoprocure-analysis';
     
@@ -387,7 +390,7 @@ export default function LandingPage() {
     } else if (format === 'csv') {
       // Create CSV content
       content = 'Vendor,Item,Quantity,Unit Price,Total\n';
-      currentResult.quotes?.forEach((quote: any) => {
+      quotes.forEach((quote: any) => {
         quote.items?.forEach((item: any) => {
           content += `${quote.vendorName},${item.description},${item.quantity},${item.unitPrice},${item.total}\n`;
         });
@@ -458,6 +461,13 @@ export default function LandingPage() {
     const automatedTimeMinutes = 2;
     const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
 
+    // Handle both single and multi-vendor analysis results
+    const quotes = currentResult.quotes || currentResult.multi_vendor_analysis?.quotes || [];
+    const comparison = currentResult.comparison || currentResult.multi_vendor_analysis?.comparison || {};
+    const recommendation = currentResult.recommendation || currentResult.multi_vendor_analysis?.recommendation || "";
+    const vendorRecommendations = currentResult.multi_vendor_analysis?.vendor_recommendations || [];
+    const advancedAnalysis = currentResult.advanced_analysis || {};
+
     return (
       <div className="space-y-6">
         {/* Debug Info - Remove after testing */}
@@ -513,15 +523,15 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Vendors</p>
                 <p className="text-2xl font-bold text-white">
-                  {currentResult.quotes?.length || currentResult.comparison?.vendorCount || 1}
+                  {quotes.length || comparison.vendorCount || 1}
                 </p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-400">Total Cost</p>
                 <p className="text-2xl font-bold text-green-400">
-                  ${(currentResult.quotes?.reduce((sum: number, quote: any) => 
+                  ${(quotes.reduce((sum: number, quote: any) => 
                     sum + quote.items?.reduce((itemSum: number, item: any) => itemSum + item.total, 0) || 0
-                  , 0) || currentResult.comparison?.totalCost || 0).toLocaleString()}
+                  , 0) || comparison.totalCost || 0).toLocaleString()}
                 </p>
               </div>
               {totalSavings > 0 && (
@@ -535,7 +545,7 @@ export default function LandingPage() {
             </div>
           
           {/* Winner Badge */}
-          {currentResult.quotes && currentResult.quotes.length > 1 && (
+          {quotes.length > 1 && (
             <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
@@ -546,7 +556,7 @@ export default function LandingPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-white">🏆 Recommended Winner</h3>
                   {(() => {
-                    const winner = currentResult.quotes.reduce((best: any, current: any) => {
+                    const winner = quotes.reduce((best: any, current: any) => {
                       const currentTotal = current.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                       const bestTotal = best.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
                       return currentTotal < bestTotal ? current : best;
@@ -566,12 +576,12 @@ export default function LandingPage() {
           
           <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
             <h3 className="font-semibold text-white mb-2">AI Recommendation</h3>
-            <p className="text-gray-300 whitespace-pre-line">{currentResult.recommendation}</p>
+            <p className="text-gray-300 whitespace-pre-line">{recommendation}</p>
           </div>
         </EnterpriseCard>
 
         {/* Scenario Simulation - DEMO FEATURE */}
-        {currentResult.quotes && currentResult.quotes.length > 1 && (
+        {quotes.length > 1 && (
           <EnterpriseCard>
             <div className="flex items-center gap-2 mb-4">
               <Calculator className="h-5 w-5 text-gray-300" />
@@ -587,7 +597,7 @@ export default function LandingPage() {
                   <div>
                     <p className="text-sm text-gray-400">Best Single Vendor</p>
                     <p className="text-lg font-bold text-white">
-                      ${Math.min(...currentResult.quotes.map((q: any) => 
+                      ${Math.min(...quotes.map((q: any) => 
                         q.items.reduce((sum: number, item: any) => sum + item.total, 0)
                       )).toLocaleString()}
                     </p>
@@ -605,7 +615,7 @@ export default function LandingPage() {
         )}
 
         {/* Side-by-Side Comparison Table - DEMO FEATURE */}
-        {currentResult.quotes && currentResult.quotes.length > 1 && (
+        {quotes.length > 1 && (
           <EnterpriseCard>
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="h-5 w-5 text-gray-300" />
@@ -616,7 +626,7 @@ export default function LandingPage() {
                 <thead>
                   <tr className="border-b border-gray-700">
                     <th className="text-left py-2 px-3 text-gray-400 font-medium">Item</th>
-                    {currentResult.quotes.map((quote: any, index: number) => (
+                    {quotes.map((quote: any, index: number) => (
                       <th key={index} className="text-center py-2 px-3 text-gray-400 font-medium">
                         {quote.vendorName}
                       </th>
@@ -625,8 +635,8 @@ export default function LandingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentResult.quotes[0]?.items?.map((item: any, itemIndex: number) => {
-                    const prices = currentResult.quotes.map((quote: any) => {
+                  {quotes[0]?.items?.map((item: any, itemIndex: number) => {
+                    const prices = quotes.map((quote: any) => {
                       const matchingItem = quote.items?.find((i: any) => 
                         i.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
                       );
@@ -641,7 +651,7 @@ export default function LandingPage() {
                         <td className="py-2 px-3 text-white font-medium">
                           {item.description}
                         </td>
-                        {currentResult.quotes.map((quote: any, quoteIndex: number) => {
+                        {quotes.map((quote: any, quoteIndex: number) => {
                           const matchingItem = quote.items?.find((i: any) => 
                             i.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
                           );
@@ -691,9 +701,9 @@ export default function LandingPage() {
           )}
 
           <div className="space-y-4">
-            {currentResult.quotes?.map((quote: any, index: number) => {
+            {quotes.map((quote: any, index: number) => {
               const totalCost = quote.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
-              const isWinner = currentResult.comparison?.summary?.winner?.vendor_name === quote.vendorName;
+              const isWinner = vendorRecommendations.find((rec: any) => rec.is_winner)?.vendor_name === quote.vendorName;
               
               return (
                 <div key={index} className={`border rounded-lg p-4 ${
