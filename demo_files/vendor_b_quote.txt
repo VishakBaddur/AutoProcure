@@ -1,0 +1,5 @@
+Vendor B Quote
+XYZ Office Solutions
+Item: Office Chair - .00 x 50 = ,750.00
+Item: Desk Lamp - .00 x 100 = ,200.00
+Total: ,950.00

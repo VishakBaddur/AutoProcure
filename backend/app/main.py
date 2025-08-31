@@ -382,7 +382,22 @@ async def analyze_multiple_quotes(
             file_content = await file.read()
             if file_extension == 'pdf':
                 text_content = extract_text_from_pdf(file_content)
-                parsed_quote = await ai_processor.analyze_quote(text_content)
+                print(f"[PDF PROCESSING] File: {file.filename}, Text length: {len(text_content) if text_content else 0}")
+                
+                # Check if text extraction was successful
+                if not text_content or len(text_content.strip()) < 10:
+                    print(f"[PDF ERROR] Failed to extract meaningful text from {file.filename}")
+                    # Create a fallback quote with error message
+                    parsed_quote = VendorQuote(
+                        vendorName=f"Error: Could not extract text from {file.filename}",
+                        items=[],
+                        terms=QuoteTerms(payment="N/A", warranty="N/A"),
+                        reliability_score=None,
+                        delivery_rating=None,
+                        quality_rating=None
+                    )
+                else:
+                    parsed_quote = await ai_processor.analyze_quote(text_content)
             elif file_extension == 'csv':
                 # Handle CSV files - create structured quote directly
                 parsed_quote = parse_csv_to_quote(file_content, file.filename)
