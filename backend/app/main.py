@@ -143,11 +143,14 @@ def parse_csv_to_quote(file_content: bytes, filename: str) -> VendorQuote:
                 if row_num == 1:
                     vendor_name = vendor
                 
-                # Convert strings to numbers
+                # Convert strings to numbers, handling multiple currency symbols
                 try:
                     quantity = float(quantity_str) if quantity_str else 1
-                    unit_price = float(unit_price_str.replace('$', '').replace(',', '')) if unit_price_str else 0
-                    total = float(total_str.replace('$', '').replace(',', '')) if total_str else 0
+                    # Remove all currency symbols and commas
+                    unit_price_clean = unit_price_str.replace('$', '').replace('€', '').replace('£', '').replace('¥', '').replace('₹', '').replace(',', '') if unit_price_str else "0"
+                    total_clean = total_str.replace('$', '').replace('€', '').replace('£', '').replace('¥', '').replace('₹', '').replace(',', '') if total_str else "0"
+                    unit_price = float(unit_price_clean) if unit_price_clean else 0
+                    total = float(total_clean) if total_clean else 0
                 except ValueError:
                     quantity = 1
                     unit_price = 0
@@ -178,6 +181,41 @@ def parse_csv_to_quote(file_content: bytes, filename: str) -> VendorQuote:
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"CSV parsing error: {str(e)}")
+
+async def apply_currency_conversion(quote: VendorQuote, file_content: bytes) -> VendorQuote:
+    """Apply currency conversion to CSV quotes"""
+    try:
+        # Detect currency from file content
+        csv_content = file_content.decode('utf-8')
+        detected_currency = ai_processor._detect_currency(csv_content)
+        
+        if detected_currency and detected_currency != ai_processor.base_currency:
+            print(f"Converting from {detected_currency} to {ai_processor.base_currency}")
+            # Convert items
+            converted_items = []
+            for item in quote.items:
+                converted_item = item.copy()
+                rate = ai_processor.exchange_rates.get(detected_currency, 1.0)
+                converted_item.unitPrice = round(item.unitPrice * rate, 2)
+                converted_item.total = round(item.total * rate, 2)
+                converted_items.append(converted_item)
+            
+            # Create new quote with converted items
+            converted_quote = VendorQuote(
+                vendorName=quote.vendorName,
+                items=converted_items,
+                terms=quote.terms,
+                reliability_score=quote.reliability_score,
+                delivery_rating=quote.delivery_rating,
+                quality_rating=quote.quality_rating
+            )
+            return converted_quote
+        
+        return quote
+        
+    except Exception as e:
+        print(f"Currency conversion failed: {e}")
+        return quote
 
 def extract_text_from_csv(file_content: bytes) -> str:
     """Extract text from CSV files and format for AI analysis"""
@@ -269,6 +307,8 @@ async def upload_file(
         elif file_extension == 'csv':
             # Handle CSV files - create structured quote directly
             parsed_quote = parse_csv_to_quote(file_content, file.filename)
+            # Apply currency conversion if needed
+            parsed_quote = await apply_currency_conversion(parsed_quote, file_content)
             text_content = f"CSV Quote from {parsed_quote.vendorName}: {len(parsed_quote.items)} items"
         else:
             # Try structured Excel first
