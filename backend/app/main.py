@@ -22,6 +22,7 @@ from .multi_vendor_analyzer import multi_vendor_analyzer
 from .database import db
 from .pdf_processor import enhanced_pdf_processor
 from .excel_processor import enhanced_excel_processor
+from .enhanced_file_processor import enhanced_file_processor
 # Import new analysis modules
 from .obfuscation_detector import obfuscation_detector
 from .math_validator import math_validator
@@ -378,39 +379,31 @@ async def analyze_multiple_quotes(
             if file_extension not in ['pdf', 'xlsx', 'xls', 'csv']:
                 continue
             
-            # Read and extract text
+            # Read and extract text using enhanced processor
             file_content = await file.read()
-            if file_extension == 'pdf':
-                text_content = extract_text_from_pdf(file_content)
-                print(f"[PDF PROCESSING] File: {file.filename}, Text length: {len(text_content) if text_content else 0}")
+            
+            # Use enhanced file processor for all file types
+            result = enhanced_file_processor.process_file(file_content, file.filename)
+            
+            if result['success']:
+                text_content = result['text']
+                print(f"[FILE PROCESSING] File: {file.filename}, Method: {result['method']}, Text length: {len(text_content)}")
                 
-                # Check if text extraction was successful
-                if not text_content or len(text_content.strip()) < 10:
-                    print(f"[PDF ERROR] Failed to extract meaningful text from {file.filename}")
-                    # Create a fallback quote with error message
-                    parsed_quote = VendorQuote(
-                        vendorName=f"Error: Could not extract text from {file.filename}",
-                        items=[],
-                        terms=QuoteTerms(payment="N/A", warranty="N/A"),
-                        reliability_score=None,
-                        delivery_rating=None,
-                        quality_rating=None
-                    )
-                else:
-                    parsed_quote = await ai_processor.analyze_quote(text_content)
-            elif file_extension == 'csv':
-                # Handle CSV files - create structured quote directly
-                parsed_quote = parse_csv_to_quote(file_content, file.filename)
-                text_content = f"CSV Quote from {parsed_quote.vendorName}: {len(parsed_quote.items)} items"
+                # Use AI processor to analyze the extracted text
+                parsed_quote = await ai_processor.analyze_quote(text_content)
+                
             else:
-                # Structured Excel first
-                structured_quote = enhanced_excel_processor.parse(file_content, filename=file.filename)
-                if structured_quote and structured_quote.items:
-                    parsed_quote = structured_quote
-                    text_content = "\n".join([f"{it.quantity} x {it.description} @ {it.unitPrice}" for it in structured_quote.items])
-                else:
-                    text_content = extract_text_from_excel(file_content)
-                    parsed_quote = await ai_processor.analyze_quote(text_content)
+                print(f"[FILE ERROR] Failed to process {file.filename}: {result['error']}")
+                # Create a fallback quote with error message
+                parsed_quote = VendorQuote(
+                    vendorName=f"Error: Could not process {file.filename}",
+                    items=[],
+                    terms=QuoteTerms(payment="N/A", warranty="N/A"),
+                    reliability_score=None,
+                    delivery_rating=None,
+                    quality_rating=None
+                )
+                text_content = f"Processing failed: {result['error']}"
             
             # Analyze quote
             quote = parsed_quote

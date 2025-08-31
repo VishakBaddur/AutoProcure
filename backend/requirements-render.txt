@@ -18,4 +18,6 @@ tabula-py==2.8.2
 opencv-python-headless==4.8.1.78
 # Additional dependencies for better table detection
 pdf2image==1.16.3
-numpy==1.24.3 
+numpy==1.24.3
+# Enhanced file processing
+PyMuPDF==1.23.8 
