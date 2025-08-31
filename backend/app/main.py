@@ -382,33 +382,33 @@ async def analyze_multiple_quotes(
             # Read and extract text using enhanced processor
             file_content = await file.read()
             
-            # Use enhanced file processor for all file types
-            result = enhanced_file_processor.process_file(file_content, file.filename)
-            
-            if result['success']:
-                text_content = result['text']
-                print(f"[FILE PROCESSING] File: {file.filename}, Method: {result['method']}, Text length: {len(text_content)}")
+            # For CSV files, use the structured data directly (this works perfectly)
+            if file_extension == 'csv':
+                print(f"[CSV PROCESSING] Using structured CSV data for {file.filename}")
+                parsed_quote = parse_csv_to_quote(file_content, file.filename)
+                text_content = f"CSV Quote from {parsed_quote.vendorName}: {len(parsed_quote.items)} items"
+            else:
+                # Use enhanced file processor for other file types
+                result = enhanced_file_processor.process_file(file_content, file.filename)
                 
-                # For CSV files, use the structured data directly
-                if file_extension == 'csv':
-                    print(f"[CSV PROCESSING] Using structured CSV data for {file.filename}")
-                    parsed_quote = parse_csv_to_quote(file_content, file.filename)
-                else:
+                if result['success']:
+                    text_content = result['text']
+                    print(f"[FILE PROCESSING] File: {file.filename}, Method: {result['method']}, Text length: {len(text_content)}")
+                    
                     # Use AI processor to analyze the extracted text
                     parsed_quote = await ai_processor.analyze_quote(text_content)
-                
-            else:
-                print(f"[FILE ERROR] Failed to process {file.filename}: {result['error']}")
-                # Create a fallback quote with error message
-                parsed_quote = VendorQuote(
-                    vendorName=f"Error: Could not process {file.filename}",
-                    items=[],
-                    terms=QuoteTerms(payment="N/A", warranty="N/A"),
-                    reliability_score=None,
-                    delivery_rating=None,
-                    quality_rating=None
-                )
-                text_content = f"Processing failed: {result['error']}"
+                else:
+                    print(f"[FILE ERROR] Failed to process {file.filename}: {result['error']}")
+                    # Create a fallback quote with error message
+                    parsed_quote = VendorQuote(
+                        vendorName=f"Error: Could not process {file.filename}",
+                        items=[],
+                        terms=QuoteTerms(payment="N/A", warranty="N/A"),
+                        reliability_score=None,
+                        delivery_rating=None,
+                        quality_rating=None
+                    )
+                    text_content = f"Processing failed: {result['error']}"
             
             # Analyze quote
             quote = parsed_quote
