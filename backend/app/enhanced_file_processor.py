@@ -42,6 +42,7 @@ class EnhancedFileProcessor:
                     text_content = file_content.decode('utf-8')
                     # If it's readable text, treat it as a text file
                     if text_content.isprintable() and len(text_content) > 10:
+                        print(f"[ENHANCED PROCESSOR] Detected text file with .pdf extension: {filename}")
                         return {
                             'success': True,
                             'text': text_content,
@@ -50,6 +51,7 @@ class EnhancedFileProcessor:
                         }
                 except UnicodeDecodeError:
                     # If it's not readable text, process as actual PDF
+                    print(f"[ENHANCED PROCESSOR] Processing as real PDF: {filename}")
                     pass
             
             if file_extension not in self.supported_formats:
@@ -64,6 +66,7 @@ class EnhancedFileProcessor:
             return processor(file_content, filename)
             
         except Exception as e:
+            print(f"[ENHANCED PROCESSOR ERROR] {str(e)}")
             return {
                 'success': False,
                 'error': str(e),
@@ -74,6 +77,21 @@ class EnhancedFileProcessor:
     def process_pdf(self, file_content: bytes, filename: str) -> Dict[str, Any]:
         """Process PDF files including scanned documents"""
         try:
+            # First, check if this is actually a text file with .pdf extension
+            try:
+                text_content = file_content.decode('utf-8')
+                if text_content.isprintable() and len(text_content) > 10:
+                    print(f"[PDF PROCESSOR] Detected text file with .pdf extension: {filename}")
+                    return {
+                        'success': True,
+                        'text': text_content,
+                        'method': 'text_as_pdf',
+                        'structured_data': self._parse_text_to_structured(text_content)
+                    }
+            except UnicodeDecodeError:
+                # Not a text file, proceed with PDF processing
+                pass
+            
             # Method 1: Try pdfplumber for text-based PDFs
             text = self._extract_text_pdfplumber(file_content)
             if text.strip():

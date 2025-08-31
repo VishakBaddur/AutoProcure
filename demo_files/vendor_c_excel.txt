@@ -1,0 +1,13 @@
+Vendor C Excel Quote
+XYZ Manufacturing
+Date: 2024-01-20
+
+Item: Laptop - Dell XPS 13 - $1,200.00 x 25 = $30,000.00
+Item: Monitor - 27" 4K - $450.00 x 50 = $22,500.00
+Item: Keyboard - Mechanical - $150.00 x 100 = $15,000.00
+Item: Mouse - Wireless - $75.00 x 100 = $7,500.00
+Item: Setup Fee - $1,000.00 x 1 = $1,000.00
+
+Total: $76,000.00
+Payment Terms: Net 45
+Delivery: 3 weeks
