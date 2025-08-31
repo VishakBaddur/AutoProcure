@@ -248,6 +248,9 @@ JSON Response:"""
     def _extract_vendor_name(self, text: str) -> str:
         """Extract vendor name with improved patterns for real PDFs"""
         vendor_patterns = [
+            # Text file patterns
+            r'([A-Za-z0-9\s&.,\-]+)\s+Quote',
+            r'Quote\s+([A-Za-z0-9\s&.,\-]+)',
             # Real-world patterns
             r'vendor[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
             r'quote from\s*([A-Za-z0-9\s&.,\-]+)',
@@ -295,8 +298,12 @@ JSON Response:"""
         items = []
         lines = text.split('\n')
         
-        # More flexible patterns that can handle real-world messy PDFs
+        # More flexible patterns that can handle real-world messy PDFs and text files
         item_patterns = [
+            # Text file pattern: "Item: Description - $Price x Quantity = $Total"
+            r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)',
+            # Alternative text file pattern: "Item: Description - Quantity x $Price = $Total"
+            r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)\s*=\s*\$?([\d,]+\.?\d*)',
             # Real-world patterns from actual PDFs
             r'([A-Za-z0-9\s\-]+?)\s*-\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)',
             r'([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)\s*=\s*\$?([\d,]+\.?\d*)',
