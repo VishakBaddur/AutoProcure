@@ -1,0 +1,18 @@
+INFO:     Will watch for changes in these directories: ['/Users/vishak/Documents/AutoProcure/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [97017] using WatchFiles
+INFO:     Started server process [97067]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+🤖 AI Processor initialized: huggingface with model nlp-pattern-matching
+🔗 Ollama URL: http://localhost:11434
+❌ Database connection failed: Tenant or user not found
+⚠️  Falling back to in-memory storage
+✅ Database connected successfully
+[CSV PROCESSING] Using structured CSV data for vendor_a_quote.csv
+[CSV PROCESSING] Using structured CSV data for vendor_b_quote.csv
+Multi-vendor analysis failed: '>' not supported between instances of 'NoneType' and 'NoneType'
+⚠️  No database connection, skipping save
+⚠️  No database connection, skipping save
+Warning: No Slack webhook URL configured
+INFO:     127.0.0.1:51371 - "POST /analyze-multiple HTTP/1.1" 200 OK
