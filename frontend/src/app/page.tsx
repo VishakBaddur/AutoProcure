@@ -300,7 +300,7 @@ function InteractiveDemo() {
 }
 
 // API functions
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://autoprocure-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const uploadFile = async (file: File) => {
   const formData = new FormData();

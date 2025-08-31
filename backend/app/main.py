@@ -113,15 +113,104 @@ def extract_text_from_excel(file_content: bytes) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Excel parsing error: {str(e)}")
 
-def extract_text_from_csv(file_content: bytes) -> str:
-    """Extract text from CSV files"""
+def parse_csv_to_quote(file_content: bytes, filename: str) -> VendorQuote:
+    """Parse CSV file directly into a VendorQuote object"""
     try:
         import csv
-        text = ""
         csv_content = file_content.decode('utf-8')
         csv_reader = csv.reader(io.StringIO(csv_content))
-        for row in csv_reader:
-            text += " ".join(str(cell) for cell in row if cell) + "\n"
+        
+        # Skip header row
+        header = next(csv_reader, None)
+        if not header:
+            raise HTTPException(status_code=400, detail="No data found in CSV file")
+        
+        vendor_name = "Unknown Vendor"
+        items = []
+        
+        for row_num, row in enumerate(csv_reader, 1):
+            if len(row) >= 6:  # Ensure we have enough columns
+                vendor = row[0] if row[0] else "Unknown"
+                description = row[1] if row[1] else f"Item {row_num}"
+                sku = row[2] if row[2] else f"SKU-{row_num}"
+                quantity_str = row[3] if row[3] else "1"
+                unit_price_str = row[4] if row[4] else "0"
+                total_str = row[5] if row[5] else "0"
+                delivery_time = row[6] if len(row) > 6 and row[6] else "N/A"
+                
+                # Set vendor name from first row
+                if row_num == 1:
+                    vendor_name = vendor
+                
+                # Convert strings to numbers
+                try:
+                    quantity = float(quantity_str) if quantity_str else 1
+                    unit_price = float(unit_price_str.replace('$', '').replace(',', '')) if unit_price_str else 0
+                    total = float(total_str.replace('$', '').replace(',', '')) if total_str else 0
+                except ValueError:
+                    quantity = 1
+                    unit_price = 0
+                    total = 0
+                
+                # Create QuoteItem
+                item = QuoteItem(
+                    sku=sku,
+                    description=description,
+                    quantity=quantity,
+                    unitPrice=unit_price,
+                    deliveryTime=delivery_time,
+                    total=total
+                )
+                items.append(item)
+        
+        # Create VendorQuote
+        quote = VendorQuote(
+            vendorName=vendor_name,
+            items=items,
+            terms=QuoteTerms(payment="N/A", warranty="N/A"),
+            reliability_score=None,
+            delivery_rating=None,
+            quality_rating=None
+        )
+        
+        return quote
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"CSV parsing error: {str(e)}")
+
+def extract_text_from_csv(file_content: bytes) -> str:
+    """Extract text from CSV files and format for AI analysis"""
+    try:
+        import csv
+        csv_content = file_content.decode('utf-8')
+        csv_reader = csv.reader(io.StringIO(csv_content))
+        
+        # Skip header row
+        header = next(csv_reader, None)
+        if not header:
+            return "No data found in CSV file"
+        
+        # Format as structured quote text
+        text = f"Vendor Quote Analysis:\n"
+        text += f"Vendor: {header[0] if len(header) > 0 else 'Unknown'}\n\n"
+        text += "Items:\n"
+        
+        for row_num, row in enumerate(csv_reader, 1):
+            if len(row) >= 6:  # Ensure we have enough columns
+                vendor = row[0] if row[0] else "Unknown"
+                description = row[1] if row[1] else "Unknown Item"
+                sku = row[2] if row[2] else f"SKU-{row_num}"
+                quantity = row[3] if row[3] else "1"
+                unit_price = row[4] if row[4] else "0"
+                total = row[5] if row[5] else "0"
+                delivery_time = row[6] if len(row) > 6 and row[6] else "N/A"
+                
+                text += f"Item {row_num}: {description} (SKU: {sku})\n"
+                text += f"  Quantity: {quantity}\n"
+                text += f"  Unit Price: ${unit_price}\n"
+                text += f"  Total: ${total}\n"
+                text += f"  Delivery Time: {delivery_time}\n\n"
+        
         return text
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"CSV parsing error: {str(e)}")
@@ -177,9 +266,9 @@ async def upload_file(
             text_content = extract_text_from_pdf(file_content)
             parsed_quote = await ai_processor.analyze_quote(text_content)
         elif file_extension == 'csv':
-            # Handle CSV files
-            text_content = extract_text_from_csv(file_content)
-            parsed_quote = await ai_processor.analyze_quote(text_content)
+            # Handle CSV files - create structured quote directly
+            parsed_quote = parse_csv_to_quote(file_content, file.filename)
+            text_content = f"CSV Quote from {parsed_quote.vendorName}: {len(parsed_quote.items)} items"
         else:
             # Try structured Excel first
             structured_quote = enhanced_excel_processor.parse(file_content, filename=file.filename)
