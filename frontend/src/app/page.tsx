@@ -631,6 +631,49 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* Advanced Scenario Simulation */}
+              {quotes.length > 1 && (
+                <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg mt-4">
+                  <h4 className="font-semibold text-white mb-2">📊 Advanced Scenario Simulation</h4>
+                  <p className="text-gray-300 mb-3">
+                    What if you buy 60% from the cheapest vendor and 40% from the second cheapest?
+                  </p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-400">60% from Cheapest</p>
+                      <p className="text-lg font-bold text-blue-400">
+                        ${quotes.length > 0 ? (Math.min(...quotes.map((q: any) => 
+                          q.items.reduce((sum: number, item: any) => sum + item.total, 0)
+                        )) * 0.6).toLocaleString() : '0'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">40% from Second</p>
+                      <p className="text-lg font-bold text-blue-400">
+                        ${quotes.length > 1 ? (quotes.sort((a: any, b: any) => 
+                          a.items.reduce((sum: number, item: any) => sum + item.total, 0) - 
+                          b.items.reduce((sum: number, item: any) => sum + item.total, 0)
+                        )[1].items.reduce((sum: number, item: any) => sum + item.total, 0) * 0.4).toLocaleString() : '0'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Total Scenario</p>
+                      <p className="text-lg font-bold text-green-400">
+                        ${quotes.length > 1 ? (
+                          Math.min(...quotes.map((q: any) => 
+                            q.items.reduce((sum: number, item: any) => sum + item.total, 0)
+                          )) * 0.6 + 
+                          quotes.sort((a: any, b: any) => 
+                            a.items.reduce((sum: number, item: any) => sum + item.total, 0) - 
+                            b.items.reduce((sum: number, item: any) => sum + item.total, 0)
+                          )[1].items.reduce((sum: number, item: any) => sum + item.total, 0) * 0.4
+                        ).toLocaleString() : '0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </EnterpriseCard>
         )}
