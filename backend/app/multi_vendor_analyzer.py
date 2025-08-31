@@ -375,8 +375,15 @@ JSON Response:"""
         
         recommendation = VendorRecommendation(
             vendor_name=cheapest_quote.vendorName,
-            items_to_purchase=[item.sku for item in cheapest_quote.items],
+            recommendation_type="WINNER",
+            recommendation_reason="Lowest total cost among available quotes",
             total_cost=total_cost,
+            cost_difference=0.0,
+            cost_percentage=0.0,
+            badge_color="green",
+            analysis={"strengths": ["Lowest cost"], "weaknesses": []},
+            is_winner=True,
+            items_to_purchase=[item.sku for item in cheapest_quote.items],
             delivery_time=cheapest_quote.items[0].deliveryTime if cheapest_quote.items else "TBD",
             reasoning="Lowest total cost among available quotes",
             reliability_score=0.7

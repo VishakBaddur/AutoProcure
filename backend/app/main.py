@@ -384,8 +384,9 @@ async def analyze_multiple_quotes(
                 text_content = extract_text_from_pdf(file_content)
                 parsed_quote = await ai_processor.analyze_quote(text_content)
             elif file_extension == 'csv':
-                text_content = extract_text_from_csv(file_content)
-                parsed_quote = await ai_processor.analyze_quote(text_content)
+                # Handle CSV files - create structured quote directly
+                parsed_quote = parse_csv_to_quote(file_content, file.filename)
+                text_content = f"CSV Quote from {parsed_quote.vendorName}: {len(parsed_quote.items)} items"
             else:
                 # Structured Excel first
                 structured_quote = enhanced_excel_processor.parse(file_content, filename=file.filename)

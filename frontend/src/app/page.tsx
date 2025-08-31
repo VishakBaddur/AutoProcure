@@ -360,12 +360,18 @@ export default function LandingPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    console.log('Files selected:', files);
     setSelectedFiles(files);
   };
 
   const handleUpload = () => {
+    console.log('Upload button clicked, files:', selectedFiles);
     if (selectedFiles.length > 0) {
+      console.log('Starting file upload...');
       handleFileUpload(selectedFiles);
+    } else {
+      console.log('No files selected');
+      alert('Please select files first');
     }
   };
 
@@ -1092,7 +1098,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                               {selectedFiles.length > 0 && (
+                {selectedFiles.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                       <FileText className="w-5 h-5" />
@@ -1100,12 +1106,9 @@ export default function LandingPage() {
                     </h3>
                     <div className="space-y-3">
                       {selectedFiles.map((file, index) => (
-                        <motion.div 
+                        <div 
                           key={index} 
                           className="flex items-center justify-between bg-gray-800/30 border border-gray-700 rounded-lg p-4 hover:bg-gray-800/50 transition-colors"
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
@@ -1116,16 +1119,20 @@ export default function LandingPage() {
                           <span className="text-sm text-gray-400 bg-gray-800/50 px-2 py-1 rounded">
                             {(file.size / 1024 / 1024).toFixed(2)} MB
                           </span>
-                        </motion.div>
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                               <EnterpriseButton
+                <button
                   onClick={handleUpload}
-                  className="w-full py-4 text-lg"
-                  variant={selectedFiles.length > 0 && !isUploading ? "primary" : "ghost"}
+                  disabled={selectedFiles.length === 0 || isUploading}
+                  className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 ${
+                    selectedFiles.length > 0 && !isUploading
+                      ? 'bg-gradient-to-r from-gray-700 to-gray-800 text-white border border-gray-600 hover:from-gray-600 hover:to-gray-700 hover:scale-105'
+                      : 'bg-transparent border border-gray-600 text-gray-400 cursor-not-allowed'
+                  }`}
                 >
                   {isUploading ? (
                     <div className="flex items-center justify-center gap-3">
@@ -1138,7 +1145,7 @@ export default function LandingPage() {
                       <span>Analyze with AI</span>
                     </div>
                   )}
-                </EnterpriseButton>
+                </button>
              </EnterpriseCard>
            </div>
 
