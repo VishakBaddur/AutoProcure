@@ -21,6 +21,7 @@ class EnhancedFileProcessor:
             'xlsx': self.process_excel,
             'xls': self.process_excel,
             'csv': self.process_csv,
+            'txt': self.process_text,
             'jpg': self.process_image,
             'jpeg': self.process_image,
             'png': self.process_image,
@@ -268,6 +269,27 @@ class EnhancedFileProcessor:
             return {
                 'success': False,
                 'error': f'CSV processing failed: {str(e)}',
+                'text': '',
+                'structured_data': None
+            }
+    
+    def process_text(self, file_content: bytes, filename: str) -> Dict[str, Any]:
+        """Process text files"""
+        try:
+            # Decode text content
+            text = file_content.decode('utf-8')
+            
+            return {
+                'success': True,
+                'text': text,
+                'method': 'text',
+                'structured_data': self._parse_text_to_structured(text)
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Text processing failed: {str(e)}',
                 'text': '',
                 'structured_data': None
             }

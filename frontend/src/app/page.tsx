@@ -1250,13 +1250,13 @@ export default function LandingPage() {
                 
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-300 mb-3">
-                    Supported Formats: PDF, Excel, CSV, Images (JPG, PNG, TIFF, BMP)
+                    Supported Formats: PDF, Excel, CSV, Text, Images (JPG, PNG, TIFF, BMP)
                   </label>
                   <div className="relative">
                     <input
                       type="file"
                       multiple
-                      accept=".pdf,.xlsx,.xls,.csv,.jpg,.jpeg,.png,.tiff,.tif,.bmp"
+                      accept=".pdf,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png,.tiff,.tif,.bmp"
                       onChange={handleFileChange}
                       className="enterprise-input w-full file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-gray-700 file:to-gray-800 file:text-white hover:file:from-gray-600 hover:file:to-gray-700 file:transition-all file:duration-300"
                     />
