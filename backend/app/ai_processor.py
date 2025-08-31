@@ -421,91 +421,161 @@ JSON Response:"""
     
     def _intelligent_item_extraction(self, text: str) -> list:
         """Intelligent extraction that can handle ANY format without specific patterns"""
+        print(f"Intelligent extraction called with text length: {len(text)}")
+        print(f"Intelligent extraction text preview: {text[:100]}...")
         items = []
         lines = text.split('\n')
         
-        for line in lines:
-            line_clean = line.strip()
-            if not line_clean or len(line_clean) < 5:
-                continue
-                
-            # Skip obvious non-item lines
-            skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'date', 'payment', 'delivery', 'terms']
-            if any(word in line_clean.lower() for word in skip_words):
-                continue
-                
-            # Look for any line with currency symbols and numbers
-            if '$' in line_clean and any(char.isdigit() for char in line_clean):
-                try:
-                    # Extract ALL numbers from the line
-                    all_numbers = re.findall(r'[\d,]+\.?\d*', line_clean)
-                    if not all_numbers:
+        # Handle both multi-line and single-line text
+        if len(lines) == 1 and len(lines[0]) > 200:
+            # Single long line - split by common item patterns
+            print("Detected single long line, splitting by item patterns...")
+            text_clean = lines[0]
+            
+            # Split by "Item:" patterns
+            item_sections = re.split(r'Item:\s*', text_clean)
+            if len(item_sections) > 1:
+                for i, section in enumerate(item_sections[1:], 1):  # Skip first empty section
+                    line_clean = f"Item: {section.strip()}"
+                    print(f"Processing item section: '{line_clean[:100]}...'")
+                    
+                    # Skip obvious non-item lines
+                    skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'date', 'payment', 'delivery', 'terms']
+                    if any(word in line_clean.lower() for word in skip_words):
+                        print(f"Skipping item section (contains skip word): '{line_clean[:50]}...'")
                         continue
                         
-                    # Extract ALL currency amounts
-                    currency_amounts = re.findall(r'\$?([\d,]+\.?\d*)', line_clean)
-                    if not currency_amounts:
-                        continue
-                    
-                    # Intelligent parsing based on number of values found
-                    if len(currency_amounts) >= 2:
-                        # Multiple prices: assume unit price and total
-                        unit_price = float(currency_amounts[0].replace(',', ''))
-                        total_price = float(currency_amounts[-1].replace(',', ''))
-                        
-                        # Calculate quantity if reasonable
-                        quantity = 1
-                        if unit_price > 0:
-                            calculated_qty = total_price / unit_price
-                            if 0.1 <= calculated_qty <= 10000:  # Reasonable range
-                                quantity = calculated_qty
-                        
-                        # Extract description (everything before first $)
-                        first_dollar = line_clean.find('$')
-                        if first_dollar > 0:
-                            description = line_clean[:first_dollar].strip()
+                    # Process this item section
+                    if '$' in line_clean and any(char.isdigit() for char in line_clean):
+                        try:
+                            # Extract ALL currency amounts
+                            currency_amounts = re.findall(r'\$?([\d,]+\.?\d*)', line_clean)
+                            if not currency_amounts:
+                                continue
                             
-                            # Clean up description
-                            description = re.sub(r'^[A-Za-z]+:\s*', '', description)  # Remove "Item:" prefix
-                            description = description.strip()
-                            
-                            if len(description) >= 3:
-                                items.append({
-                                    "sku": f"ITEM-{len(items)+1:03d}",
-                                    "description": description,
-                                    "quantity": quantity,
-                                    "unitPrice": unit_price,
-                                    "deliveryTime": "7-10 days",
-                                    "total": total_price
-                                })
-                                print(f"Intelligent extraction: {quantity}x {description} @ ${unit_price} = ${total_price}")
-                    
-                    elif len(currency_amounts) == 1:
-                        # Single price: assume it's unit price, quantity = 1
-                        unit_price = float(currency_amounts[0].replace(',', ''))
-                        total_price = unit_price
-                        
-                        # Extract description
-                        first_dollar = line_clean.find('$')
-                        if first_dollar > 0:
-                            description = line_clean[:first_dollar].strip()
-                            description = re.sub(r'^[A-Za-z]+:\s*', '', description)
-                            description = description.strip()
-                            
-                            if len(description) >= 3:
-                                items.append({
-                                    "sku": f"ITEM-{len(items)+1:03d}",
-                                    "description": description,
-                                    "quantity": 1,
-                                    "unitPrice": unit_price,
-                                    "deliveryTime": "7-10 days",
-                                    "total": total_price
-                                })
-                                print(f"Intelligent extraction: 1x {description} @ ${unit_price}")
+                            # Intelligent parsing based on number of values found
+                            if len(currency_amounts) >= 2:
+                                # Multiple prices: assume unit price and total
+                                unit_price = float(currency_amounts[0].replace(',', ''))
+                                total_price = float(currency_amounts[-1].replace(',', ''))
                                 
-                except Exception as e:
-                    print(f"Intelligent extraction error: {e}")
+                                # Calculate quantity if reasonable
+                                quantity = 1
+                                if unit_price > 0:
+                                    calculated_qty = total_price / unit_price
+                                    if 0.1 <= calculated_qty <= 10000:  # Reasonable range
+                                        quantity = calculated_qty
+                                
+                                # Extract description (everything before first $)
+                                first_dollar = line_clean.find('$')
+                                if first_dollar > 0:
+                                    description = line_clean[:first_dollar].strip()
+                                    
+                                    # Clean up description
+                                    description = re.sub(r'^[A-Za-z]+:\s*', '', description)  # Remove "Item:" prefix
+                                    description = description.strip()
+                                    
+                                    if len(description) >= 3:
+                                        items.append({
+                                            "sku": f"ITEM-{len(items)+1:03d}",
+                                            "description": description,
+                                            "quantity": quantity,
+                                            "unitPrice": unit_price,
+                                            "deliveryTime": "7-10 days",
+                                            "total": total_price
+                                        })
+                                        print(f"Intelligent extraction: {quantity}x {description} @ ${unit_price} = ${total_price}")
+                        
+                        except Exception as e:
+                            print(f"Intelligent extraction error: {e}")
+                            continue
+        else:
+            # Normal multi-line processing
+            for line in lines:
+                line_clean = line.strip()
+                if not line_clean or len(line_clean) < 5:
                     continue
+                    
+                print(f"Processing line: '{line_clean}'")
+                    
+                # Skip obvious non-item lines
+                skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'date', 'payment', 'delivery', 'terms']
+                if any(word in line_clean.lower() for word in skip_words):
+                    print(f"Skipping line (contains skip word): '{line_clean}'")
+                    continue
+                
+                # Look for any line with currency symbols and numbers
+                if '$' in line_clean and any(char.isdigit() for char in line_clean):
+                    try:
+                        # Extract ALL numbers from the line
+                        all_numbers = re.findall(r'[\d,]+\.?\d*', line_clean)
+                        if not all_numbers:
+                            continue
+                            
+                        # Extract ALL currency amounts
+                        currency_amounts = re.findall(r'\$?([\d,]+\.?\d*)', line_clean)
+                        if not currency_amounts:
+                            continue
+                        
+                        # Intelligent parsing based on number of values found
+                        if len(currency_amounts) >= 2:
+                            # Multiple prices: assume unit price and total
+                            unit_price = float(currency_amounts[0].replace(',', ''))
+                            total_price = float(currency_amounts[-1].replace(',', ''))
+                            
+                            # Calculate quantity if reasonable
+                            quantity = 1
+                            if unit_price > 0:
+                                calculated_qty = total_price / unit_price
+                                if 0.1 <= calculated_qty <= 10000:  # Reasonable range
+                                    quantity = calculated_qty
+                            
+                            # Extract description (everything before first $)
+                            first_dollar = line_clean.find('$')
+                            if first_dollar > 0:
+                                description = line_clean[:first_dollar].strip()
+                                
+                                # Clean up description
+                                description = re.sub(r'^[A-Za-z]+:\s*', '', description)  # Remove "Item:" prefix
+                                description = description.strip()
+                                
+                                if len(description) >= 3:
+                                    items.append({
+                                        "sku": f"ITEM-{len(items)+1:03d}",
+                                        "description": description,
+                                        "quantity": quantity,
+                                        "unitPrice": unit_price,
+                                        "deliveryTime": "7-10 days",
+                                        "total": total_price
+                                    })
+                                    print(f"Intelligent extraction: {quantity}x {description} @ ${unit_price} = ${total_price}")
+                        
+                        elif len(currency_amounts) == 1:
+                            # Single price: assume it's unit price, quantity = 1
+                            unit_price = float(currency_amounts[0].replace(',', ''))
+                            total_price = unit_price
+                            
+                            # Extract description
+                            first_dollar = line_clean.find('$')
+                            if first_dollar > 0:
+                                description = line_clean[:first_dollar].strip()
+                                description = re.sub(r'^[A-Za-z]+:\s*', '', description)
+                                description = description.strip()
+                                
+                                if len(description) >= 3:
+                                    items.append({
+                                        "sku": f"ITEM-{len(items)+1:03d}",
+                                        "description": description,
+                                        "quantity": 1,
+                                        "unitPrice": unit_price,
+                                        "deliveryTime": "7-10 days",
+                                        "total": total_price
+                                    })
+                                    print(f"Intelligent extraction: 1x {description} @ ${unit_price}")
+                                    
+                    except Exception as e:
+                        print(f"Intelligent extraction error: {e}")
+                        continue
         
         return items
     
