@@ -285,15 +285,12 @@ const uploadMultipleFiles = async (files: File[]) => {
     formData.append('files', file);
   });
 
-  console.log('Sending request to:', `${API_BASE_URL}/analyze-multiple`);
   const response = await fetch(`${API_BASE_URL}/analyze-multiple`, {
     method: 'POST',
     body: formData,
   });
   
-  console.log('Response status:', response.status);
   const result = await response.json();
-  console.log('Response data:', result);
   return result;
 };
 
@@ -337,8 +334,6 @@ export default function LandingPage() {
       } else {
         result = await uploadMultipleFiles(files);
         console.log('Multi-file result:', result);
-        console.log('Result quotes:', result.quotes);
-        console.log('Result multi_vendor_analysis:', result.multi_vendor_analysis);
         setCurrentResult(result);
       }
       
@@ -476,13 +471,7 @@ export default function LandingPage() {
     const vendorRecommendations = currentResult.multi_vendor_analysis?.vendor_recommendations || [];
     const advancedAnalysis = currentResult.advanced_analysis || {};
 
-    // Debug logging
-    console.log('=== DEBUG: Data Structure ===');
-    console.log('currentResult:', currentResult);
-    console.log('quotes:', quotes);
-    console.log('comparison:', comparison);
-    console.log('recommendation:', recommendation);
-    console.log('vendorRecommendations:', vendorRecommendations);
+
 
     return (
       <div className="space-y-6">
