@@ -18,71 +18,49 @@ class AIProcessor:
             ai_provider: "ollama" for local, "openai" for cloud, "huggingface" for free cloud AI
             model_name: Model name (defaults to env var)
         """
-        self.ai_provider = ai_provider or os.getenv('AI_PROVIDER', 'huggingface')
-        self.model_name = model_name or os.getenv('AI_MODEL', 'mistral-7b-instruct')
+        # Use NLP-only approach for reliability and deployment compatibility
+        self.ai_provider = ai_provider or os.getenv('AI_PROVIDER', 'nlp')
+        self.model_name = model_name or os.getenv('AI_MODEL', 'nlp-pattern-matching')
         
-        # Use localhost for local development, but allow override for cloud deployment
-        default_ollama_url = 'http://localhost:11434'
-        if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RENDER'):
-            # In cloud deployment, Ollama runs on the same container
-            default_ollama_url = 'http://localhost:11434'
-        
-        self.ollama_url = os.getenv('OLLAMA_URL', default_ollama_url)
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
-        self.huggingface_api_key = os.getenv('HUGGINGFACE_API_KEY')
+        # Currency conversion setup
+        self.base_currency = os.getenv('BASE_CURRENCY', 'USD')
+        self.exchange_rates = {
+            'USD': 1.0,
+            'EUR': 0.85,  # Will be updated with real-time rates
+            'GBP': 0.73,
+            'CAD': 1.25,
+            'AUD': 1.35,
+            'JPY': 110.0,
+            'INR': 75.0,
+            'CNY': 6.5
+        }
         
         print(f"🤖 AI Processor initialized: {self.ai_provider} with model {self.model_name}")
-        print(f"🔗 Ollama URL: {self.ollama_url}")
+        print(f"💰 Base currency: {self.base_currency}")
         
     async def analyze_quote(self, text_content: str, rag_context: str = None) -> VendorQuote:
         """
-        Analyze quote text and extract structured data using AI
+        Analyze quote text and extract structured data using NLP patterns
         Optionally augment with RAG context.
         """
         try:
             print(f"[AI ANALYSIS] Starting analysis of text (length: {len(text_content)})")
             print(f"[AI ANALYSIS] Text preview: {text_content[:200]}...")
             
-            # Create the prompt for quote analysis
-            prompt = self._create_analysis_prompt(text_content, rag_context)
+            # Use NLP analysis directly (no external APIs needed)
+            print(f"[AI ANALYSIS] Using NLP pattern matching")
+            nlp_result = self._analyze_quote_with_nlp(text_content)
+            quote_data = json.loads(nlp_result)
             
-            # Get AI response
-            if self.ai_provider == "ollama":
-                try:
-                    response = await self._call_ollama(prompt)
-                except Exception as e:
-                    print(f"Ollama failed, trying Hugging Face: {str(e)}")
-                    response = await self._call_huggingface(prompt)
-            elif self.ai_provider == "openai":
-                response = await self._call_openai(prompt)
-            elif self.ai_provider == "huggingface":
-                response = await self._call_huggingface(prompt)
-            else:
-                raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
-            
-            print(f"[AI ANALYSIS] Raw AI response: {response[:500]}...")
-            
-            # Parse and validate the response
-            quote_data = self._parse_ai_response(response)
-            
-            print(f"[AI ANALYSIS] Parsed quote data: {json.dumps(quote_data, indent=2)}")
+            print(f"[AI ANALYSIS] NLP result: {json.dumps(quote_data, indent=2)}")
             
             # Convert to VendorQuote model
             return self._create_vendor_quote(quote_data)
             
         except Exception as e:
-            print(f"AI analysis failed: {str(e)}")
-            # Fallback to NLP analysis
-            try:
-                print(f"[AI ANALYSIS] Falling back to NLP analysis")
-                nlp_result = self._analyze_quote_with_nlp(text_content)
-                quote_data = json.loads(nlp_result)
-                print(f"[AI ANALYSIS] NLP result: {json.dumps(quote_data, indent=2)}")
-                return self._create_vendor_quote(quote_data)
-            except Exception as nlp_error:
-                print(f"NLP fallback also failed: {str(nlp_error)}")
-                # Final fallback to error message
-                return self._get_fallback_quote()
+            print(f"NLP analysis failed: {str(e)}")
+            # Final fallback to error message
+            return self._get_fallback_quote()
     
     def _create_analysis_prompt(self, text_content: str, rag_context: str = None) -> str:
         """Create a detailed prompt for quote analysis, optionally with RAG context."""
@@ -204,8 +182,17 @@ JSON Response:"""
             # Extract vendor name with improved patterns
             vendor_name = self._extract_vendor_name(quote_text)
             
+            # Detect currency and convert if needed
+            detected_currency = self._detect_currency(quote_text)
+            print(f"Detected currency: {detected_currency}")
+            
             # Extract items with better patterns
             items = self._extract_items(quote_text)
+            
+            # Convert currency if needed
+            if detected_currency and detected_currency != self.base_currency:
+                items = self._convert_currency(items, detected_currency)
+                print(f"Converted items from {detected_currency} to {self.base_currency}")
             
             # If no items found, don't create fake data
             if not items:
@@ -304,6 +291,10 @@ JSON Response:"""
         
         # More flexible patterns that can handle various formats
         item_patterns = [
+            # Item: Description - Price x Qty = Total
+            r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)',
+            # Item: Description - Qty x Price = Total
+            r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)\s*=\s*\$?([\d,]+\.?\d*)',
             # Standard format: SKU Description Qty Price
             r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s\-]+?)\s+(\d+)\s+\$?([\d,]+\.?\d*)',
             # Description Qty Price
@@ -338,21 +329,34 @@ JSON Response:"""
                     try:
                         groups = match.groups()
                         
-                        if len(groups) == 4:  # SKU Description Qty Price
-                            sku = groups[0].strip()
-                            description = groups[1].strip()
-                            quantity = int(groups[2])
-                            unit_price = float(groups[3].replace(',', ''))
+                        if len(groups) == 4:
+                            # Check if it's the new "Item: Description - Price x Qty = Total" format
+                            if 'Item:' in line_clean:
+                                # Format: Item: Description - Price x Qty = Total
+                                description = groups[0].strip()
+                                unit_price = float(groups[1].replace(',', ''))
+                                quantity = int(groups[2])
+                                total = float(groups[3].replace(',', ''))
+                                sku = f"ITEM-{len(items)+1:03d}"
+                            else:
+                                # Format: SKU Description Qty Price
+                                sku = groups[0].strip()
+                                description = groups[1].strip()
+                                quantity = int(groups[2])
+                                unit_price = float(groups[3].replace(',', ''))
+                                total = quantity * unit_price
                         elif len(groups) == 3:  # Description Qty Price
                             sku = f"ITEM-{len(items)+1:03d}"
                             description = groups[0].strip()
                             quantity = int(groups[1])
                             unit_price = float(groups[2].replace(',', ''))
+                            total = quantity * unit_price
                         elif len(groups) == 2:  # Description Price (assume qty=1)
                             sku = f"ITEM-{len(items)+1:03d}"
                             description = groups[0].strip()
                             quantity = 1
                             unit_price = float(groups[1].replace(',', ''))
+                            total = quantity * unit_price
                         else:
                             continue
                         
@@ -360,7 +364,6 @@ JSON Response:"""
                         if not self._validate_item_values(quantity, unit_price, description):
                             continue
                             
-                        total = quantity * unit_price
                         items.append({
                             "sku": sku,
                             "description": description,
@@ -436,6 +439,45 @@ JSON Response:"""
                     continue
         
         return items
+    
+    def _detect_currency(self, text: str) -> str:
+        """Detect currency from text"""
+        currency_patterns = {
+            'USD': [r'\$', r'USD', r'US\$', r'dollars?', r'bucks?'],
+            'EUR': [r'€', r'EUR', r'euros?'],
+            'GBP': [r'£', r'GBP', r'pounds?'],
+            'CAD': [r'CAD', r'C\$', r'Canadian dollars?'],
+            'AUD': [r'AUD', r'A\$', r'Australian dollars?'],
+            'JPY': [r'¥', r'JPY', r'yen'],
+            'INR': [r'₹', r'INR', r'rupees?'],
+            'CNY': [r'¥', r'CNY', r'RMB', r'yuan']
+        }
+        
+        text_upper = text.upper()
+        for currency, patterns in currency_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, text_upper, re.IGNORECASE):
+                    return currency
+        
+        # Default to USD if no currency detected
+        return 'USD'
+    
+    def _convert_currency(self, items: list, from_currency: str) -> list:
+        """Convert items to base currency"""
+        if from_currency == self.base_currency:
+            return items
+        
+        # Get exchange rate (in real implementation, this would be real-time)
+        rate = self.exchange_rates.get(from_currency, 1.0)
+        
+        converted_items = []
+        for item in items:
+            converted_item = item.copy()
+            converted_item['unitPrice'] = round(item['unitPrice'] * rate, 2)
+            converted_item['total'] = round(item['total'] * rate, 2)
+            converted_items.append(converted_item)
+        
+        return converted_items
     
     def _extract_terms(self, text: str) -> dict:
         """Extract payment and warranty terms"""
