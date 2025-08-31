@@ -294,11 +294,18 @@ JSON Response:"""
         return vendor_name
     
     def _extract_items(self, text: str) -> list:
-        """Extract items with improved patterns for any file format"""
-        items = []
-        lines = text.split('\n')
+        """Extract items with intelligent parsing for any file format"""
+        print("Starting intelligent extraction...")
+        print(f"Text length: {len(text)}")
+        print(f"Text preview: {text[:200]}...")
+        items = self._intelligent_item_extraction(text)
         
-        # More flexible patterns that can handle real-world messy PDFs and text files
+        if items:
+            print(f"Intelligent extraction found {len(items)} items")
+            return items
+        
+        print("Intelligent extraction failed, trying pattern matching...")
+        lines = text.split('\n')
         item_patterns = [
             # Text file pattern: "Item: Description - $Price x Quantity = $Total"
             r'Item:\s*([A-Za-z0-9\s\-]+?)\s*-\s*\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)',
@@ -392,10 +399,20 @@ JSON Response:"""
                         print(f"Error parsing item: {e}")
                         continue
         
-        # If no items found with patterns, try to extract from any line with numbers and currency
+        # Always try intelligent extraction as the primary method
         if not items:
             print("No items found with patterns, trying intelligent extraction...")
             items = self._intelligent_item_extraction(text)
+        
+        # If still no items, try intelligent extraction on the entire text
+        if not items:
+            print("Trying intelligent extraction on full text...")
+            items = self._intelligent_item_extraction(text)
+        
+        # If intelligent extraction found items, return them immediately
+        if items:
+            print(f"Intelligent extraction successful, found {len(items)} items")
+            return items
         
         # Deduplicate/group items by description and unit price
         items = self._deduplicate_items(items)
