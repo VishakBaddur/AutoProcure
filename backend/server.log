@@ -16,3 +16,60 @@ Multi-vendor analysis failed: '>' not supported between instances of 'NoneType' 
 ⚠️  No database connection, skipping save
 Warning: No Slack webhook URL configured
 INFO:     127.0.0.1:51371 - "POST /analyze-multiple HTTP/1.1" 200 OK
+[CSV PROCESSING] Using structured CSV data for vendor_a_quote.csv
+[CSV PROCESSING] Using structured CSV data for vendor_b_quote.csv
+Multi-vendor analysis failed: '>' not supported between instances of 'NoneType' and 'NoneType'
+⚠️  No database connection, skipping save
+⚠️  No database connection, skipping save
+Warning: No Slack webhook URL configured
+INFO:     127.0.0.1:51404 - "POST /analyze-multiple HTTP/1.1" 200 OK
+[CSV PROCESSING] Using structured CSV data for vendor_a_quote.csv
+[CSV PROCESSING] Using structured CSV data for vendor_b_quote.csv
+Multi-vendor analysis failed: '>' not supported between instances of 'NoneType' and 'NoneType'
+⚠️  No database connection, skipping save
+⚠️  No database connection, skipping save
+Warning: No Slack webhook URL configured
+INFO:     127.0.0.1:51407 - "POST /analyze-multiple HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51409 - "POST /analyze-multiple HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:51411 - "POST /analyze-multiple HTTP/1.1" 500 Internal Server Error
+WARNING:  WatchFiles detected changes in 'app/ai_processor.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [97067]
+INFO:     Started server process [2806]
+INFO:     Waiting for application startup.
+WARNING:  WatchFiles detected changes in 'app/ai_processor.py'. Reloading...
+INFO:     Application startup complete.
+INFO:     Started server process [2833]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/ai_processor.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2833]
+INFO:     Started server process [3199]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/ai_processor.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3199]
+INFO:     Started server process [3231]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+🤖 AI Processor initialized: huggingface with model nlp-pattern-matching
+🔗 Ollama URL: http://localhost:11434
+❌ Database connection failed: Tenant or user not found
+⚠️  Falling back to in-memory storage
+✅ Database connected successfully
+INFO:     127.0.0.1:51466 - "POST /analyze-multiple HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:51496 - "POST /analyze-multiple HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:51500 - "POST /analyze-multiple HTTP/1.1" 500 Internal Server Error
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3231]
+INFO:     Stopping reloader process [97017]

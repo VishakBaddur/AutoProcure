@@ -298,41 +298,61 @@ JSON Response:"""
         return vendor_name
     
     def _extract_items(self, text: str) -> list:
-        """Extract items with improved patterns"""
-        # Define item_patterns for robust PDF line extraction
-        item_patterns = [
-            r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s]+)\s+(\d+)\s+\$?([\d\.]+)',  # SKU, Description, Quantity, Price
-            r'([A-Za-z0-9\s\-]+?)\s*(\d+)\s*\$?([\d,]+\.?\d*)',          # fallback: Description, Quantity, Price
-            r'([A-Za-z0-9\s\-]+?)\s+(\d+)\s+([\d,]+\.?\d*)\s+USD',       # Description, Quantity, Price USD
-        ]
-
-        matched_lines = set()
+        """Extract items with improved patterns for any file format"""
         items = []
         lines = text.split('\n')
+        
+        # More flexible patterns that can handle various formats
+        item_patterns = [
+            # Standard format: SKU Description Qty Price
+            r'([A-Z0-9\-]+)\s+([A-Za-z0-9\s\-]+?)\s+(\d+)\s+\$?([\d,]+\.?\d*)',
+            # Description Qty Price
+            r'([A-Za-z0-9\s\-]+?)\s+(\d+)\s+\$?([\d,]+\.?\d*)',
+            # Description - Qty x Price
+            r'([A-Za-z0-9\s\-]+?)\s*-\s*(\d+)\s*x\s*\$?([\d,]+\.?\d*)',
+            # Description: Qty @ Price
+            r'([A-Za-z0-9\s\-]+?)\s*:\s*(\d+)\s*@\s*\$?([\d,]+\.?\d*)',
+            # Simple: Description Price (assume qty=1)
+            r'([A-Za-z0-9\s\-]+?)\s+\$?([\d,]+\.?\d*)\s*$',
+        ]
+        
+        matched_lines = set()
         
         for line in lines:
             line_clean = line.strip()
             if not line_clean or line_clean in matched_lines:
                 continue
                 
-            # Skip lines that look like instructions or metadata
-            if any(skip_word in line_clean.lower() for skip_word in ['extract', 'look for', 'choose', 'recommendation', 'unitprice']):
+            # Skip lines that look like instructions, headers, or metadata
+            skip_words = ['extract', 'look for', 'choose', 'recommendation', 'unitprice', 'vendor', 'supplier', 'quote', 'total', 'subtotal']
+            if any(skip_word in line_clean.lower() for skip_word in skip_words):
+                continue
+                
+            # Skip lines that are too short or too long
+            if len(line_clean) < 5 or len(line_clean) > 200:
                 continue
                 
             for pattern in item_patterns:
-                match = re.match(pattern, line_clean)
+                match = re.search(pattern, line_clean, re.IGNORECASE)
                 if match:
                     try:
-                        if len(match.groups()) == 4:
-                            sku = match.group(1).strip()
-                            description = match.group(2).strip()
-                            quantity = int(match.group(3))
-                            unit_price = float(match.group(4).replace(',', ''))
-                        elif len(match.groups()) == 3:
+                        groups = match.groups()
+                        
+                        if len(groups) == 4:  # SKU Description Qty Price
+                            sku = groups[0].strip()
+                            description = groups[1].strip()
+                            quantity = int(groups[2])
+                            unit_price = float(groups[3].replace(',', ''))
+                        elif len(groups) == 3:  # Description Qty Price
                             sku = f"ITEM-{len(items)+1:03d}"
-                            description = match.group(1).strip()
-                            quantity = int(match.group(2))
-                            unit_price = float(match.group(3).replace(',', ''))
+                            description = groups[0].strip()
+                            quantity = int(groups[1])
+                            unit_price = float(groups[2].replace(',', ''))
+                        elif len(groups) == 2:  # Description Price (assume qty=1)
+                            sku = f"ITEM-{len(items)+1:03d}"
+                            description = groups[0].strip()
+                            quantity = 1
+                            unit_price = float(groups[1].replace(',', ''))
                         else:
                             continue
                         
@@ -356,8 +376,64 @@ JSON Response:"""
                         print(f"Error parsing item: {e}")
                         continue
         
+        # If no items found with patterns, try to extract from any line with numbers and currency
+        if not items:
+            print("No items found with patterns, trying fallback extraction...")
+            items = self._fallback_item_extraction(text)
+        
         # Deduplicate/group items by description and unit price
         items = self._deduplicate_items(items)
+        
+        return items
+    
+    def _fallback_item_extraction(self, text: str) -> list:
+        """Fallback method to extract items from any line with numbers and currency"""
+        items = []
+        lines = text.split('\n')
+        
+        for line in lines:
+            line_clean = line.strip()
+            if not line_clean or len(line_clean) < 5:
+                continue
+                
+            # Look for lines with currency symbols and numbers
+            if '$' in line_clean and any(char.isdigit() for char in line_clean):
+                try:
+                    # Extract price from the line
+                    price_match = re.search(r'\$?([\d,]+\.?\d*)', line_clean)
+                    if price_match:
+                        price = float(price_match.group(1).replace(',', ''))
+                        
+                        # Extract description (everything before the price)
+                        price_pos = line_clean.find('$')
+                        if price_pos > 0:
+                            description = line_clean[:price_pos].strip()
+                            
+                            # Skip if description is too short or contains skip words
+                            skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'extract', 'look']
+                            if len(description) < 3 or any(word in description.lower() for word in skip_words):
+                                continue
+                                
+                            # Try to extract quantity
+                            quantity = 1
+                            qty_match = re.search(r'(\d+)\s*[xX×]\s*\$', line_clean)
+                            if qty_match:
+                                quantity = int(qty_match.group(1))
+                            
+                            # Validate the item
+                            if self._validate_item_values(quantity, price, description):
+                                items.append({
+                                    "sku": f"ITEM-{len(items)+1:03d}",
+                                    "description": description,
+                                    "quantity": quantity,
+                                    "unitPrice": price,
+                                    "deliveryTime": "7-10 days",
+                                    "total": quantity * price
+                                })
+                                print(f"Fallback extracted: {quantity}x {description} @ ${price}")
+                except Exception as e:
+                    print(f"Fallback extraction error: {e}")
+                    continue
         
         return items
     
