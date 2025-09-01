@@ -822,13 +822,98 @@ export default function LandingPage() {
           </EnterpriseCard>
         )}
 
-        {/* Side-by-Side Comparison Table - DEMO FEATURE */}
+        {/* Enhanced Side-by-Side Comparison Table */}
         {quotes.length > 1 && (
           <EnterpriseCard>
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="h-5 w-5 text-gray-300" />
-              <h3 className="text-xl font-semibold text-white">Side-by-Side Comparison</h3>
+              <h3 className="text-xl font-semibold text-white">Item-by-Item Comparison</h3>
             </div>
+            
+            {/* AI Recommendation Summary */}
+            <div className="mb-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Brain className="h-5 w-5 text-blue-400" />
+                <h4 className="font-semibold text-blue-400">🤖 AI Recommendation</h4>
+              </div>
+              <div className="text-gray-300 text-sm leading-relaxed">
+                                 {(() => {
+                   // Generate AI recommendation based on analysis
+                   const allItems = new Set<string>();
+                   quotes.forEach((quote: any) => {
+                     quote.items?.forEach((item: any) => allItems.add(item.description.toLowerCase()));
+                   });
+                   
+                   const itemAnalysis = Array.from(allItems).map((itemDesc: string) => {
+                     const itemPrices = quotes.map((quote: any) => {
+                       const matchingItem = quote.items?.find((i: any) => 
+                         i.description.toLowerCase().includes(itemDesc.split(' ')[0])
+                       );
+                       return {
+                         vendor: quote.vendorName,
+                         price: matchingItem?.unitPrice || null,
+                         quantity: matchingItem?.quantity || 0,
+                         total: matchingItem?.total || 0
+                       };
+                     }).filter((item: any) => item.price !== null);
+                     
+                     if (itemPrices.length === 0) return null;
+                     
+                     const bestPrice = Math.min(...itemPrices.map((item: any) => item.price));
+                     const bestVendor = itemPrices.find((item: any) => item.price === bestPrice);
+                     
+                     return {
+                       item: itemDesc,
+                       bestVendor: bestVendor?.vendor,
+                       bestPrice: bestPrice,
+                       allPrices: itemPrices
+                     };
+                   }).filter(Boolean);
+                   
+                   const vendorRecommendations: { [key: string]: string[] } = {};
+                   itemAnalysis.forEach((analysis: any) => {
+                     if (analysis && analysis.bestVendor) {
+                       if (!vendorRecommendations[analysis.bestVendor]) {
+                         vendorRecommendations[analysis.bestVendor] = [];
+                       }
+                       vendorRecommendations[analysis.bestVendor].push(analysis.item);
+                     }
+                   });
+                  
+                  const topVendor = Object.keys(vendorRecommendations).reduce((a, b) => 
+                    vendorRecommendations[a].length > vendorRecommendations[b].length ? a : b
+                  );
+                  
+                                     const savings = quotes.reduce((total: number, quote: any) => {
+                     const quoteTotal = quote.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+                     return total + quoteTotal;
+                   }, 0) - (quotes.find((q: any) => q.vendorName === winnerName)?.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0);
+                  
+                  return (
+                    <div>
+                      <p className="mb-2">
+                        <strong>Optimal Strategy:</strong> Consider a <span className="text-blue-400 font-semibold">split order approach</span> for maximum savings.
+                      </p>
+                      <p className="mb-2">
+                        <strong>Recommended Split:</strong>
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 ml-4">
+                        {Object.entries(vendorRecommendations).map(([vendor, items]) => (
+                          <li key={vendor} className="text-sm">
+                            <span className="font-medium text-blue-400">{vendor}</span>: {items.length} items 
+                            ({items.slice(0, 2).join(', ')}{items.length > 2 ? '...' : ''})
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-green-400">
+                        <strong>Potential Savings:</strong> {formatPrice(savings)} by selecting best price per item
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+            
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -836,50 +921,93 @@ export default function LandingPage() {
                     <th className="text-left py-2 px-3 text-gray-400 font-medium">Item</th>
                     {quotes.map((quote: any, index: number) => (
                       <th key={index} className="text-center py-2 px-3 text-gray-400 font-medium">
-                        {quote.vendorName}
+                        <div className="flex flex-col items-center">
+                          <span>{quote.vendorName}</span>
+                          <span className="text-xs text-gray-500">
+                            {formatPrice(quote.items?.reduce((sum: number, item: any) => sum + item.total, 0) || 0)}
+                          </span>
+                        </div>
                       </th>
                     ))}
                     <th className="text-center py-2 px-3 text-gray-400 font-medium">Best Price</th>
+                    <th className="text-center py-2 px-3 text-gray-400 font-medium">Recommendation</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {quotes[0]?.items?.map((item: any, itemIndex: number) => {
-                    const prices = quotes.map((quote: any) => {
-                      const matchingItem = quote.items?.find((i: any) => 
-                        i.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
+                                     {(() => {
+                     // Get all unique items across all vendors
+                     const allItems = new Set<string>();
+                     quotes.forEach((quote: any) => {
+                       quote.items?.forEach((item: any) => allItems.add(item.description.toLowerCase()));
+                     });
+                     
+                     return Array.from(allItems).map((itemDesc: string, itemIndex: number) => {
+                       const itemPrices = quotes.map((quote: any) => {
+                         const matchingItem = quote.items?.find((i: any) => 
+                           i.description.toLowerCase().includes(itemDesc.split(' ')[0])
+                         );
+                         return {
+                           vendor: quote.vendorName,
+                           price: matchingItem?.unitPrice || null,
+                           quantity: matchingItem?.quantity || 0,
+                           total: matchingItem?.total || 0,
+                           available: matchingItem !== undefined
+                         };
+                       });
+                       
+                       const availablePrices = itemPrices.filter((item: any) => item.price !== null);
+                       const bestPrice = availablePrices.length > 0 ? Math.min(...availablePrices.map((item: any) => item.price)) : 0;
+                       const bestVendor = availablePrices.find((item: any) => item.price === bestPrice);
+                      
+                      return (
+                        <tr key={itemIndex} className="border-b border-gray-800">
+                          <td className="py-2 px-3 text-white font-medium">
+                            {itemDesc.charAt(0).toUpperCase() + itemDesc.slice(1)}
+                          </td>
+                                                     {itemPrices.map((item: any, quoteIndex: number) => {
+                            const isBest = item.price === bestPrice && item.available;
+                            const isWinner = quotes[quoteIndex].vendorName === winnerName;
+                            
+                            return (
+                              <td key={quoteIndex} className={`py-2 px-3 text-center ${
+                                isBest ? 'text-green-400 font-bold bg-green-900/20' : 
+                                item.available ? 'text-gray-300' : 'text-gray-500'
+                              }`}>
+                                {item.available ? (
+                                  <div className="flex flex-col">
+                                    <span>{formatPrice(item.price)}</span>
+                                    <span className="text-xs text-gray-500">
+                                      Qty: {item.quantity}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      Total: {formatPrice(item.total)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-500">N/A</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="py-2 px-3 text-center text-green-400 font-bold">
+                            {bestPrice > 0 ? formatPrice(bestPrice) : 'N/A'}
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            {bestVendor && (
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs text-blue-400 font-medium">
+                                  {bestVendor.vendor}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Best Value
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
                       );
-                      return matchingItem ? matchingItem.unitPrice : null;
-                    }).filter(Boolean);
-                    
-                    const bestPrice = Math.min(...prices);
-                    const bestVendorIndex = prices.indexOf(bestPrice);
-                    
-                    return (
-                      <tr key={itemIndex} className="border-b border-gray-800">
-                        <td className="py-2 px-3 text-white font-medium">
-                          {item.description}
-                        </td>
-                        {quotes.map((quote: any, quoteIndex: number) => {
-                          const matchingItem = quote.items?.find((i: any) => 
-                            i.description.toLowerCase().includes(item.description.toLowerCase().split(' ')[0])
-                          );
-                          const price = matchingItem ? matchingItem.unitPrice : 'N/A';
-                          const isBest = quoteIndex === bestVendorIndex && price === bestPrice;
-                          
-                          return (
-                            <td key={quoteIndex} className={`py-2 px-3 text-center ${
-                              isBest ? 'text-green-400 font-bold' : 'text-gray-300'
-                            }`}>
-                              {price !== 'N/A' ? formatPrice(price) : price}
-                            </td>
-                          );
-                        })}
-                        <td className="py-2 px-3 text-center text-green-400 font-bold">
-                          {formatPrice(bestPrice)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
