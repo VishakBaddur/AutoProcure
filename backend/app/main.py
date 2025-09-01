@@ -68,6 +68,13 @@ class WaitlistResponse(BaseModel):
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF using enhanced processor with OCR fallback"""
     try:
+        # First, try to use enhanced file processor which can detect text-as-PDF
+        result = enhanced_file_processor.process_file(file_content, "temp.pdf")
+        if result['success']:
+            print(f"[PDF EXTRACTION] Enhanced processor success: {result['method']}")
+            return result['text']
+        
+        # If enhanced processor failed, try traditional PDF processing
         # Save file content to temporary file
         import tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:

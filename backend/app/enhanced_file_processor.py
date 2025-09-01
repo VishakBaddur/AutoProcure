@@ -40,8 +40,9 @@ class EnhancedFileProcessor:
                 # Try to decode as text first (for text files with .pdf extension)
                 try:
                     text_content = file_content.decode('utf-8')
-                    # If it's readable text, treat it as a text file
-                    if text_content.isprintable() and len(text_content) > 10:
+                    # If it's mostly readable text, treat it as a text file
+                    printable_chars = sum(1 for c in text_content if c.isprintable() or c in '\n\r\t')
+                    if printable_chars / len(text_content) > 0.9 and len(text_content) > 10:
                         print(f"[ENHANCED PROCESSOR] Detected text file with .pdf extension: {filename}")
                         return {
                             'success': True,
@@ -80,7 +81,9 @@ class EnhancedFileProcessor:
             # First, check if this is actually a text file with .pdf extension
             try:
                 text_content = file_content.decode('utf-8')
-                if text_content.isprintable() and len(text_content) > 10:
+                # If it's mostly readable text, treat it as a text file
+                printable_chars = sum(1 for c in text_content if c.isprintable() or c in '\n\r\t')
+                if printable_chars / len(text_content) > 0.9 and len(text_content) > 10:
                     print(f"[PDF PROCESSOR] Detected text file with .pdf extension: {filename}")
                     return {
                         'success': True,
