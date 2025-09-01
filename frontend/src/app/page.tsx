@@ -29,6 +29,14 @@ import {
   Search,
   Download
 } from 'lucide-react';
+import { 
+  HeroAnimations, 
+  FeatureCardAnimations, 
+  MouseTrailEffect, 
+  CounterAnimation, 
+  FileUploadAnimation, 
+  ResultsAnimation 
+} from '../components/AnimeAnimations';
 
 // Cool CSS-based 3D floating elements
 function FloatingElements({ mousePosition }: { mousePosition: { x: number; y: number } }) {
@@ -298,6 +306,9 @@ const uploadMultipleFiles = async (files: File[]) => {
 export default function LandingPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Animation components
+  const [showAnimations, setShowAnimations] = useState(true);
   // File upload states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -905,7 +916,7 @@ export default function LandingPage() {
               const isWinner = winnerName === quote.vendorName;
               
               return (
-                <div key={index} className={`border rounded-lg p-4 ${
+                <div key={index} className={`result-card border rounded-lg p-4 ${
                   isWinner ? 'bg-gray-800/50 border-green-500/30' : 'bg-gray-800/30 border-gray-700'
                 }`}>
                   <div className="flex items-center justify-between mb-3">
@@ -916,7 +927,7 @@ export default function LandingPage() {
                           🏆 WINNER
                         </span>
                       )}
-                      <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded-full">
+                      <span className="result-number px-2 py-1 bg-gray-600 text-white text-xs rounded-full" data-value={totalCost}>
                         {formatPrice(totalCost)}
                       </span>
                     </div>
@@ -957,7 +968,7 @@ export default function LandingPage() {
                   <div className="mt-4 pt-4 border-t border-gray-700">
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-white">Total:</span>
-                      <span className="font-bold text-lg text-white">
+                      <span className="result-number font-bold text-lg text-white" data-value={totalCost}>
                         {formatPrice(totalCost)}
                       </span>
                     </div>
@@ -1059,6 +1070,17 @@ export default function LandingPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-hidden">
+      {/* Anime.js Animation Components */}
+      {showAnimations && (
+        <>
+          <MouseTrailEffect />
+          <HeroAnimations />
+          <FeatureCardAnimations />
+          <FileUploadAnimation />
+          <ResultsAnimation />
+        </>
+      )}
+      
       <ParticleBackground mousePosition={mousePosition} />
       
       {/* Interactive Animated Background Gradient */}
@@ -1186,7 +1208,7 @@ export default function LandingPage() {
                </div>
              </motion.div>
              
-                         <h1 className="text-6xl md:text-8xl font-bold mb-6 text-shadow">
+                         <h1 className="hero-title text-6xl md:text-8xl font-bold mb-6 text-shadow">
               <span className="bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent text-glow">
                 The Future of
               </span>
@@ -1196,7 +1218,7 @@ export default function LandingPage() {
               </span>
             </h1>
              
-             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+             <p className="hero-subtitle text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
                Transform supplier quotes into actionable intelligence with AI-powered analysis. 
                <span className="text-gray-200 font-semibold"> Save millions. Make better decisions.</span>
              </p>
@@ -1206,7 +1228,7 @@ export default function LandingPage() {
                  onClick={scrollToUpload}
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
-                 className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center group border border-gray-600"
+                 className="hero-cta bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center group border border-gray-600"
                >
                  Start Free Trial
                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -1281,7 +1303,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <EnterpriseCard className="h-full">
+                <EnterpriseCard className="feature-card h-full">
                   <div className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center mb-4`}>
                     <feature.icon className="w-6 h-6 text-white" />
                   </div>
@@ -1316,7 +1338,7 @@ export default function LandingPage() {
 
                        {/* File Upload Interface */}
             <div className="max-w-4xl mx-auto">
-              <EnterpriseCard className="p-8" delay={0}>
+              <EnterpriseCard className="file-upload-area p-8" delay={0}>
                 <div className="text-center mb-8">
                   <div className="w-16 h-16 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center">
                     <Upload className="w-8 h-8 text-white" />
@@ -1393,7 +1415,7 @@ export default function LandingPage() {
 
            {/* Results Section */}
            {showResults && currentResult && (
-             <div className="max-w-6xl mx-auto mt-12">
+             <div className="results-section max-w-6xl mx-auto mt-12">
                {renderResults()}
              </div>
            )}
