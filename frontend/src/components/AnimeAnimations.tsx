@@ -1,54 +1,60 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import * as anime from 'animejs';
+
+
 
 export const HeroAnimations = () => {
   const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!heroRef.current) return;
+    if (!heroRef.current || typeof window === 'undefined') return;
 
-    // Animate the hero title
-    anime({
-      targets: '.hero-title',
-      opacity: [0, 1],
-      translateY: [50, 0],
-      duration: 1200,
-      easing: 'easeOutCubic',
-      delay: 200
-    });
+    // Load anime.js dynamically
+    import('animejs').then((module) => {
+      const anime = module.default;
+      
+      // Animate the hero title
+      anime({
+        targets: '.hero-title',
+        opacity: [0, 1],
+        translateY: [50, 0],
+        duration: 1200,
+        easing: 'easeOutCubic',
+        delay: 200
+      });
 
-    // Animate the subtitle
-    anime({
-      targets: '.hero-subtitle',
-      opacity: [0, 1],
-      translateY: [30, 0],
-      duration: 1000,
-      easing: 'easeOutCubic',
-      delay: 600
-    });
+      // Animate the subtitle
+      anime({
+        targets: '.hero-subtitle',
+        opacity: [0, 1],
+        translateY: [30, 0],
+        duration: 1000,
+        easing: 'easeOutCubic',
+        delay: 600
+      });
 
-    // Animate the CTA button
-    anime({
-      targets: '.hero-cta',
-      opacity: [0, 1],
-      scale: [0.8, 1],
-      duration: 800,
-      easing: 'easeOutBack',
-      delay: 1000
-    });
+      // Animate the CTA button
+      anime({
+        targets: '.hero-cta',
+        opacity: [0, 1],
+        scale: [0.8, 1],
+        duration: 800,
+        easing: 'easeOutBack',
+        delay: 1000
+      });
 
-    // Floating geometric shapes animation
-    anime({
-      targets: '.floating-shape',
-      translateY: [0, -20, 0],
-      rotate: [0, 360],
-      duration: 4000,
-      easing: 'easeInOutSine',
-      direction: 'alternate',
-      loop: true,
-      delay: anime.stagger(200)
+      // Floating geometric shapes animation
+      anime({
+        targets: '.floating-shape',
+        translateY: [0, -20, 0],
+        rotate: [0, 360],
+        duration: 4000,
+        easing: 'easeInOutSine',
+        direction: 'alternate',
+        loop: true,
+        delay: anime.stagger(200)
+      });
     });
 
   }, []);
@@ -66,26 +72,33 @@ export const HeroAnimations = () => {
 
 export const FeatureCardAnimations = () => {
   useEffect(() => {
-    // Animate feature cards on scroll
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          anime({
-            targets: entry.target,
-            opacity: [0, 1],
-            translateY: [50, 0],
-            duration: 800,
-            easing: 'easeOutCubic'
-          });
-        }
+    if (typeof window === 'undefined') return;
+
+    // Load anime.js dynamically
+    import('animejs').then((module) => {
+      const anime = module.default;
+      
+      // Animate feature cards on scroll
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            anime({
+              targets: entry.target,
+              opacity: [0, 1],
+              translateY: [50, 0],
+              duration: 800,
+              easing: 'easeOutCubic'
+            });
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.feature-card').forEach((card) => {
+        observer.observe(card);
       });
-    }, { threshold: 0.1 });
 
-    document.querySelectorAll('.feature-card').forEach((card) => {
-      observer.observe(card);
+      return () => observer.disconnect();
     });
-
-    return () => observer.disconnect();
   }, []);
 
   return null;
@@ -144,17 +157,22 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
   const counterRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (!counterRef.current) return;
+    if (!counterRef.current || typeof window === 'undefined') return;
 
-    anime({
-      targets: counterRef.current,
-      innerHTML: [0, value],
-      duration: duration,
-      easing: 'easeOutCubic',
-      round: 1,
-      update: function(anim) {
-        counterRef.current!.innerHTML = anim.animations[0].currentValue.toFixed(0);
-      }
+    // Load anime.js dynamically
+    import('animejs').then((module) => {
+      const anime = module.default;
+      
+      anime({
+        targets: counterRef.current,
+        innerHTML: [0, value],
+        duration: duration,
+        easing: 'easeOutCubic',
+        round: 1,
+        update: function(anim) {
+          counterRef.current!.innerHTML = anim.animations[0].currentValue.toFixed(0);
+        }
+      });
     });
   }, [value, duration]);
 
@@ -163,37 +181,44 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
 
 export const FileUploadAnimation = () => {
   useEffect(() => {
-    // Animate file upload area on hover
-    const uploadArea = document.querySelector('.file-upload-area');
-    if (!uploadArea) return;
+    if (typeof window === 'undefined') return;
 
-    const handleMouseEnter = () => {
-      anime({
-        targets: '.file-upload-area',
-        scale: [1, 1.02],
-        borderColor: ['#374151', '#3B82F6'],
-        duration: 300,
-        easing: 'easeOutCubic'
-      });
-    };
+    // Load anime.js dynamically
+    import('animejs').then((module) => {
+      const anime = module.default;
+      
+      // Animate file upload area on hover
+      const uploadArea = document.querySelector('.file-upload-area');
+      if (!uploadArea) return;
 
-    const handleMouseLeave = () => {
-      anime({
-        targets: '.file-upload-area',
-        scale: [1.02, 1],
-        borderColor: ['#3B82F6', '#374151'],
-        duration: 300,
-        easing: 'easeOutCubic'
-      });
-    };
+      const handleMouseEnter = () => {
+        anime({
+          targets: '.file-upload-area',
+          scale: [1, 1.02],
+          borderColor: ['#374151', '#3B82F6'],
+          duration: 300,
+          easing: 'easeOutCubic'
+        });
+      };
 
-    uploadArea.addEventListener('mouseenter', handleMouseEnter);
-    uploadArea.addEventListener('mouseleave', handleMouseLeave);
+      const handleMouseLeave = () => {
+        anime({
+          targets: '.file-upload-area',
+          scale: [1.02, 1],
+          borderColor: ['#3B82F6', '#374151'],
+          duration: 300,
+          easing: 'easeOutCubic'
+        });
+      };
 
-    return () => {
-      uploadArea.removeEventListener('mouseenter', handleMouseEnter);
-      uploadArea.removeEventListener('mouseleave', handleMouseLeave);
-    };
+      uploadArea.addEventListener('mouseenter', handleMouseEnter);
+      uploadArea.addEventListener('mouseleave', handleMouseLeave);
+
+      return () => {
+        uploadArea.removeEventListener('mouseenter', handleMouseEnter);
+        uploadArea.removeEventListener('mouseleave', handleMouseLeave);
+      };
+    });
   }, []);
 
   return null;
@@ -201,36 +226,43 @@ export const FileUploadAnimation = () => {
 
 export const ResultsAnimation = () => {
   useEffect(() => {
-    // Animate results when they appear
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          anime({
-            targets: '.result-card',
-            opacity: [0, 1],
-            translateX: [50, 0],
-            duration: 600,
-            easing: 'easeOutCubic',
-            delay: anime.stagger(100)
-          });
+    if (typeof window === 'undefined') return;
 
-          anime({
-            targets: '.result-number',
-            innerHTML: [0, (el: HTMLElement) => parseInt(el.getAttribute('data-value') || '0')],
-            duration: 1500,
-            easing: 'easeOutCubic',
-            round: 1,
-            delay: anime.stagger(200)
-          });
-        }
+    // Load anime.js dynamically
+    import('animejs').then((module) => {
+      const anime = module.default;
+      
+      // Animate results when they appear
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            anime({
+              targets: '.result-card',
+              opacity: [0, 1],
+              translateX: [50, 0],
+              duration: 600,
+              easing: 'easeOutCubic',
+              delay: anime.stagger(100)
+            });
+
+            anime({
+              targets: '.result-number',
+              innerHTML: [0, (el: HTMLElement) => parseInt(el.getAttribute('data-value') || '0')],
+              duration: 1500,
+              easing: 'easeOutCubic',
+              round: 1,
+              delay: anime.stagger(200)
+            });
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.results-section').forEach((section) => {
+        observer.observe(section);
       });
-    }, { threshold: 0.1 });
 
-    document.querySelectorAll('.results-section').forEach((section) => {
-      observer.observe(section);
+      return () => observer.disconnect();
     });
-
-    return () => observer.disconnect();
   }, []);
 
   return null;
