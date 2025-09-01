@@ -12,7 +12,7 @@ export const HeroAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = module.default;
+      const anime = module;
       
       // Animate the hero title
       anime({
@@ -76,7 +76,7 @@ export const FeatureCardAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = module.default;
+      const anime = module;
       
       // Animate feature cards on scroll
       const observer = new IntersectionObserver((entries) => {
@@ -161,7 +161,7 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = module.default;
+      const anime = module;
       
       anime({
         targets: counterRef.current,
@@ -185,7 +185,7 @@ export const FileUploadAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = module.default;
+      const anime = module;
       
       // Animate file upload area on hover
       const uploadArea = document.querySelector('.file-upload-area');
@@ -230,7 +230,7 @@ export const ResultsAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = module.default;
+      const anime = module;
       
       // Animate results when they appear
       const observer = new IntersectionObserver((entries) => {
