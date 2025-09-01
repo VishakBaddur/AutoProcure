@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import anime from 'animejs';
+import * as anime from 'animejs';
 
 export const HeroAnimations = () => {
   const heroRef = useRef<HTMLDivElement>(null);
