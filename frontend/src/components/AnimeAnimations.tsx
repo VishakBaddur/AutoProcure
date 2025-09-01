@@ -169,7 +169,7 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
         duration: duration,
         easing: 'easeOutCubic',
         round: 1,
-        update: function(anim) {
+        update: function(anim: any) {
           counterRef.current!.innerHTML = anim.animations[0].currentValue.toFixed(0);
         }
       });
