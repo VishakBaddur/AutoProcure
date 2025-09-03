@@ -1022,22 +1022,108 @@ export default function LandingPage() {
             <h3 className="text-xl font-semibold text-white">Vendor Quotes Analysis</h3>
           </div>
           
-          {/* Suspicious Items Detection - DEMO FEATURE */}
-          {quotes.length > 1 && advancedAnalysis.obfuscation_detection && (
-            <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-5 w-5 text-yellow-400" />
-                <h4 className="font-semibold text-yellow-400">⚠️ Suspicious Items Detected</h4>
+          {/* Dynamic Suspicious Items Detection */}
+          {quotes.length > 1 && (() => {
+            // Collect all issues from obfuscation detection and math validation
+            const obfuscationIssues = advancedAnalysis.obfuscation_detection?.results?.flatMap((result: any) => 
+              result.analysis.issues || []
+            ) || [];
+            
+            const mathIssues = advancedAnalysis.math_validation?.results?.flatMap((result: any) => 
+              result.validation.issues || []
+            ) || [];
+            
+            const allIssues = [...obfuscationIssues, ...mathIssues];
+            
+            // Show either issues or clean status
+            if (allIssues.length === 0) {
+              return (
+                <div className="mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                    <h4 className="font-semibold text-green-400">✅ All Quotes Validated</h4>
+                  </div>
+                  <p className="text-sm text-gray-300 mt-1">No suspicious items or calculation errors detected.</p>
+                </div>
+              );
+            }
+            
+            // Count issues by vendor
+            const issuesByVendor = quotes.map((quote: any) => {
+              const vendorIssues = allIssues.filter((issue: any) => {
+                if (issue.vendor) return issue.vendor === quote.vendorName;
+                // For math validation issues, find by vendor name
+                const mathResult = advancedAnalysis.math_validation?.results?.find((r: any) => r.vendor === quote.vendorName);
+                return mathResult?.validation?.issues?.some((mathIssue: any) => 
+                  mathIssue.item_index !== undefined && quote.items?.[mathIssue.item_index]
+                );
+              });
+              return { vendor: quote.vendorName, issueCount: vendorIssues.length };
+            }).filter((v: any) => v.issueCount > 0);
+            
+            return (
+              <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-400" />
+                  <h4 className="font-semibold text-yellow-400">⚠️ Issues Detected</h4>
+                </div>
+                
+                {/* Summary */}
+                <div className="mb-3 text-sm text-gray-300">
+                  <p>Found issues in {issuesByVendor.length} vendor(s):</p>
+                  {issuesByVendor.map((vendor: any) => (
+                    <p key={vendor.vendor} className="ml-4">• <strong>{vendor.vendor}</strong>: {vendor.issueCount} issue(s)</p>
+                  ))}
+                </div>
+                
+                <div className="space-y-2 text-sm text-gray-300">
+                  {/* Obfuscation Issues */}
+                  {advancedAnalysis.obfuscation_detection?.results?.map((result: any, index: number) => {
+                    if (!result.analysis.issues || result.analysis.issues.length === 0) return null;
+                    
+                    return result.analysis.issues.map((issue: any, issueIndex: number) => (
+                      <div key={`obf-${index}-${issueIndex}`} className="flex items-start gap-2">
+                        <span className="text-yellow-400 mt-1">•</span>
+                        <div>
+                          <strong className="text-yellow-300">{result.vendor}</strong>: 
+                          <span className="text-gray-300"> {issue.description}</span>
+                          {issue.details && issue.details.length > 0 && (
+                            <div className="ml-4 mt-1 text-xs text-gray-400">
+                              {issue.details.map((detail: any, detailIndex: number) => (
+                                <div key={detailIndex}>- {detail}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  })}
+                  
+                  {/* Math Validation Issues */}
+                  {advancedAnalysis.math_validation?.results?.map((result: any, index: number) => {
+                    if (!result.validation.issues || result.validation.issues.length === 0) return null;
+                    
+                    return result.validation.issues.map((issue: any, issueIndex: number) => (
+                      <div key={`math-${index}-${issueIndex}`} className="flex items-start gap-2">
+                        <span className="text-red-400 mt-1">⚠️</span>
+                        <div>
+                          <strong className="text-red-300">{result.vendor}</strong>: 
+                          <span className="text-gray-300"> {issue.description}</span>
+                          {issue.details && (
+                            <div className="ml-4 mt-1 text-xs text-gray-400">
+                              {Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
+                                <div key={detailIndex}>- {key}: {value}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  })}
+                </div>
               </div>
-              <div className="space-y-2 text-sm text-gray-300">
-                {advancedAnalysis.obfuscation_detection.results.map((result: any, index: number) => (
-                  result.analysis.issues.map((issue: any, issueIndex: number) => (
-                    <p key={`${index}-${issueIndex}`}>• <strong>{result.vendor}</strong>: {issue.description}</p>
-                  ))
-                ))}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="space-y-4">
             {quotes.map((quote: any, index: number) => {
@@ -1064,19 +1150,28 @@ export default function LandingPage() {
                   
                   <div className="space-y-2">
                     {quote.items?.map((item: any, itemIndex: number) => {
-                      // Check if this item has suspicious pricing
-                      const isSuspicious = item.unitPrice > 1000 || item.quantity > 1000;
+                      // Check for real-time validation issues for this specific item
+                      const mathIssues = advancedAnalysis.math_validation?.results?.find((r: any) => 
+                        r.vendor === quote.vendorName
+                      )?.validation?.issues?.filter((issue: any) => 
+                        issue.item_index === itemIndex
+                      ) || [];
+                      
+                      const hasIssues = mathIssues.length > 0;
+                      const isHighSeverity = mathIssues.some((issue: any) => issue.severity === 'high');
                       
                       return (
                         <div key={itemIndex} className={`flex justify-between items-center py-2 border-b border-gray-700 last:border-b-0 ${
-                          isSuspicious ? 'bg-red-900/10 border-l-2 border-l-red-500' : ''
+                          hasIssues ? (isHighSeverity ? 'bg-red-900/10 border-l-2 border-l-red-500' : 'bg-yellow-900/10 border-l-2 border-l-yellow-500') : ''
                         }`}>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-white">{item.description}</p>
-                              {isSuspicious && (
-                                <span className="px-1 py-0.5 bg-red-500 text-white text-xs rounded">
-                                  ⚠️
+                              {hasIssues && (
+                                <span className={`px-1 py-0.5 text-white text-xs rounded ${
+                                  isHighSeverity ? 'bg-red-500' : 'bg-yellow-500'
+                                }`}>
+                                  {isHighSeverity ? '🚨' : '⚠️'}
                                 </span>
                               )}
                             </div>
@@ -1084,10 +1179,27 @@ export default function LandingPage() {
                               SKU: {item.sku} | Qty: {item.quantity.toLocaleString()}
                               {item.deliveryTime && ` | Delivery: ${item.deliveryTime}`}
                             </p>
+                            {/* Show specific validation issues for this item */}
+                            {hasIssues && (
+                              <div className="mt-1 text-xs text-red-300">
+                                {mathIssues.map((issue: any, issueIndex: number) => (
+                                  <div key={issueIndex} className="flex items-center gap-1">
+                                    <span>•</span>
+                                    <span>{issue.description}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="text-right">
                             <p className="font-medium text-white">{formatPrice(item.unitPrice)}</p>
                             <p className="text-sm text-gray-400">Total: {formatPrice(item.total)}</p>
+                            {/* Show calculated vs stated total if there's a mismatch */}
+                            {mathIssues.some((issue: any) => issue.type === 'item_total_mismatch') && (
+                              <p className="text-xs text-red-400">
+                                Expected: {formatPrice(item.quantity * item.unitPrice)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
