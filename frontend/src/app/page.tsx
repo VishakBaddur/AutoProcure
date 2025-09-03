@@ -1095,16 +1095,23 @@ export default function LandingPage() {
           {/* Dynamic Suspicious Items Detection */}
           {quotes.length > 1 && (() => {
             try {
-              // Collect all issues from obfuscation detection and math validation
-              const obfuscationIssues = advancedAnalysis.obfuscation_detection?.results?.flatMap((result: any) => 
-                result.analysis.issues || []
-              ) || [];
+              // Get current vendor names to filter issues properly
+              const currentVendorNames = quotes.map((q: any) => q.vendorName);
+              console.log('DEBUG: Current vendor names:', currentVendorNames);
+              console.log('DEBUG: Available obfuscation results:', advancedAnalysis.obfuscation_detection?.results?.map((r: any) => r.vendor));
+              console.log('DEBUG: Available math validation results:', advancedAnalysis.math_validation?.results?.map((r: any) => r.vendor));
               
-              const mathIssues = advancedAnalysis.math_validation?.results?.flatMap((result: any) => 
-                result.validation.issues || []
-              ) || [];
+              // Filter issues to only show those for currently displayed vendors
+              const obfuscationIssues = advancedAnalysis.obfuscation_detection?.results
+                ?.filter((result: any) => currentVendorNames.includes(result.vendor))
+                ?.flatMap((result: any) => result.analysis.issues || []) || [];
+              
+              const mathIssues = advancedAnalysis.math_validation?.results
+                ?.filter((result: any) => currentVendorNames.includes(result.vendor))
+                ?.flatMap((result: any) => result.validation.issues || []) || [];
               
               const allIssues = [...obfuscationIssues, ...mathIssues];
+              console.log('DEBUG: Filtered issues count:', allIssues.length);
             
             // Show either issues or clean status
             if (allIssues.length === 0) {
