@@ -12,8 +12,8 @@ export const HeroAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js exports the function directly
-      const anime = module;
+      // anime.js v4 exports the animate function
+      const anime = module.animate;
       
       try {
         // Animate the hero title with more dramatic entrance
@@ -88,8 +88,8 @@ export const FeatureCardAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js exports the function directly
-      const anime = module;
+      // anime.js v4 exports the animate function
+      const anime = module.animate;
       
       // Animate feature cards on scroll
       const observer = new IntersectionObserver((entries) => {
@@ -176,8 +176,8 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js exports the function directly
-      const anime = module;
+      // anime.js v4 exports the animate function
+      const anime = module.animate;
       
       anime({
         targets: counterRef.current,
@@ -201,8 +201,8 @@ export const FileUploadAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js exports the function directly
-      const anime = module;
+      // anime.js v4 exports the animate function
+      const anime = module.animate;
       
       // Animate file upload area on hover
       const uploadArea = document.querySelector('.file-upload-area');
@@ -251,8 +251,8 @@ export const ResultsAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js exports the function directly
-      const anime = module;
+      // anime.js v4 exports the animate function
+      const anime = module.animate;
       
       // Animate results when they appear
       const observer = new IntersectionObserver((entries) => {
