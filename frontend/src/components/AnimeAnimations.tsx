@@ -2,6 +2,50 @@
 
 import { useEffect, useRef } from 'react';
 
+// Helper function to safely load and use anime.js
+const loadAnimeJS = async () => {
+  try {
+    const module = await import('animejs');
+    let anime: any;
+    
+    // Handle different module formats - use type assertion to bypass TypeScript strictness
+    const moduleAny = module as any;
+    
+    if (moduleAny && typeof moduleAny === 'function') {
+      anime = moduleAny;
+    } else if (moduleAny && moduleAny.default && typeof moduleAny.default === 'function') {
+      anime = moduleAny.default;
+    } else if (moduleAny && moduleAny.anime && typeof moduleAny.anime === 'function') {
+      anime = moduleAny.anime;
+    } else {
+      console.warn('anime.js not properly loaded, skipping animations');
+      return null;
+    }
+    
+    // Verify anime is a function before using
+    if (typeof anime !== 'function') {
+      console.warn('anime is not a function:', typeof anime, anime);
+      return null;
+    }
+    
+    return anime;
+  } catch (error) {
+    console.error('Failed to load anime.js:', error);
+    return null;
+  }
+};
+
+// Fallback function to prevent crashes when anime.js is not available
+const safeAnime = (config: any) => {
+  console.warn('anime.js not available, animation skipped');
+  return { 
+    add: () => {}, 
+    remove: () => {}, 
+    disconnect: () => {},
+    stagger: () => 0 
+  };
+};
+
 
 
 export const HeroAnimations = () => {
@@ -10,9 +54,9 @@ export const HeroAnimations = () => {
   useEffect(() => {
     if (!heroRef.current || typeof window === 'undefined') return;
 
-    // Load anime.js dynamically
-    import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+    // Load anime.js safely
+    loadAnimeJS().then((anime) => {
+      if (!anime) return;
       
       // Animate the hero title with more dramatic entrance
       anime({
@@ -81,9 +125,9 @@ export const FeatureCardAnimations = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Load anime.js dynamically
-    import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+    // Load anime.js safely
+    loadAnimeJS().then((anime) => {
+      if (!anime) return;
       
       // Animate feature cards on scroll
       const observer = new IntersectionObserver((entries) => {
@@ -168,9 +212,9 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
   useEffect(() => {
     if (!counterRef.current || typeof window === 'undefined') return;
 
-    // Load anime.js dynamically
-    import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+    // Load anime.js safely
+    loadAnimeJS().then((anime) => {
+      if (!anime) return;
       
       anime({
         targets: counterRef.current,
@@ -192,9 +236,9 @@ export const FileUploadAnimation = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Load anime.js dynamically
-    import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+    // Load anime.js safely
+    loadAnimeJS().then((anime) => {
+      if (!anime) return;
       
       // Animate file upload area on hover
       const uploadArea = document.querySelector('.file-upload-area');
@@ -241,9 +285,9 @@ export const ResultsAnimation = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Load anime.js dynamically
-    import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+    // Load anime.js safely
+    loadAnimeJS().then((anime) => {
+      if (!anime) return;
       
       // Animate results when they appear
       const observer = new IntersectionObserver((entries) => {
