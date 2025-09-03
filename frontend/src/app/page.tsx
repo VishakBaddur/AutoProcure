@@ -318,6 +318,9 @@ export default function LandingPage() {
   const [totalSavings, setTotalSavings] = useState(0);
   // Currency conversion state
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  // Processing timer state
+  const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
+  const [processingEndTime, setProcessingEndTime] = useState<number | null>(null);
 
   // Currency conversion rates (in real implementation, these would be fetched from an API)
   const exchangeRates = {
@@ -380,6 +383,9 @@ export default function LandingPage() {
     setIsUploading(true);
     setCurrentResult(null);
     setShowResults(false);
+    
+    // Start processing timer
+    setProcessingStartTime(Date.now());
 
     try {
       let result: any;
@@ -411,6 +417,9 @@ export default function LandingPage() {
       
       setShowResults(true);
       
+      // End processing timer
+      setProcessingEndTime(Date.now());
+      
       // Debug: Check if data is set correctly
       setTimeout(() => {
         console.log('Current result after setState:', result);
@@ -434,6 +443,8 @@ export default function LandingPage() {
     } catch (error) {
       console.error('Upload error:', error);
       alert('Upload failed. Please try again.');
+      // End processing timer on error
+      setProcessingEndTime(Date.now());
     } finally {
       setIsUploading(false);
     }
@@ -538,9 +549,45 @@ export default function LandingPage() {
     if (!currentResult) return null;
 
     // Calculate time saved (estimate: manual comparison takes 3 hours, automated takes 2 minutes)
-    const manualTimeHours = 3;
-    const automatedTimeMinutes = 2;
-    const timeSavedHours = manualTimeHours - (automatedTimeMinutes / 60);
+      // Dynamic performance metrics based on actual processing
+  const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
+  const [processingEndTime, setProcessingEndTime] = useState<number | null>(null);
+  
+  // Calculate actual processing time
+  const actualProcessingTimeMs = processingEndTime && processingStartTime ? processingEndTime - processingStartTime : 0;
+  const actualProcessingTimeMinutes = actualProcessingTimeMs / (1000 * 60);
+  
+  // Estimate manual processing time based on document complexity
+  const estimateManualProcessingTime = () => {
+    if (!quotes.length) return 0;
+    
+    let totalItems = 0;
+    let totalVendors = quotes.length;
+    let hasComplexPricing = false;
+    
+    quotes.forEach((quote: any) => {
+      totalItems += quote.items?.length || 0;
+      // Check for complex pricing structures
+      if (quote.items?.some((item: any) => item.unitPrice > 1000 || item.quantity > 100)) {
+        hasComplexPricing = true;
+      }
+    });
+    
+    // Base time: 5 minutes per item + 10 minutes per vendor + complexity bonus
+    let baseTime = (totalItems * 5) + (totalVendors * 10);
+    
+    // Add complexity factors
+    if (hasComplexPricing) baseTime *= 1.5;
+    if (totalVendors > 2) baseTime *= 1.3;
+    if (totalItems > 20) baseTime *= 1.2;
+    
+    // Convert to hours (minimum 0.5 hours, maximum 8 hours)
+    return Math.max(0.5, Math.min(8, baseTime / 60));
+  };
+  
+  const manualTimeHours = estimateManualProcessingTime();
+  const automatedTimeMinutes = actualProcessingTimeMinutes || 0.1; // Minimum 0.1 minutes
+  const timeSavedHours = Math.max(0, manualTimeHours - (automatedTimeMinutes / 60));
 
     // Extract data from the correct structure
     const multiVendorAnalysis = currentResult.multi_vendor_analysis;
@@ -648,12 +695,22 @@ export default function LandingPage() {
             <h3 className="text-2xl font-bold text-white mb-6">Performance Impact</h3>
             <div className="grid grid-cols-3 gap-8 mb-6">
               <div className="text-center">
-                <div className="text-4xl font-bold text-red-400 mb-2">{manualTimeHours}h</div>
+                <div className="text-4xl font-bold text-red-400 mb-2">{manualTimeHours.toFixed(1)}h</div>
                 <div className="text-sm text-gray-400 font-medium">Manual Processing</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-green-400 mb-2">{automatedTimeMinutes}m</div>
-                <div className="text-sm text-gray-400 font-medium">AI Processing</div>
+                <div className="text-4xl font-bold text-green-400 mb-2">
+                  {processingStartTime && !processingEndTime ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
+                    </div>
+                  ) : (
+                    `${automatedTimeMinutes.toFixed(1)}m`
+                  )}
+                </div>
+                <div className="text-sm text-gray-400 font-medium">
+                  {processingStartTime && !processingEndTime ? 'Processing...' : 'AI Processing'}
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-4xl font-bold text-blue-400 mb-2">{timeSavedHours.toFixed(1)}h</div>
@@ -662,7 +719,9 @@ export default function LandingPage() {
             </div>
             <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl p-4">
               <p className="text-gray-300 text-lg font-semibold">
-                ⚡ <span className="text-green-400">{(timeSavedHours/manualTimeHours*100).toFixed(0)}% faster</span> than traditional methods
+                ⚡ <span className="text-green-400">
+                  {manualTimeHours > 0 ? (timeSavedHours/manualTimeHours*100).toFixed(0) : 0}% faster
+                </span> than traditional methods
               </p>
             </div>
           </div>
@@ -1654,16 +1713,18 @@ export default function LandingPage() {
 
                 {/* Reset Button */}
                 {(selectedFiles.length > 0 || showResults) && (
-                  <button
-                    onClick={() => {
-                      setSelectedFiles([]);
-                      setCurrentResult(null);
-                      setShowResults(false);
-                      setTotalSavings(0);
-                      // Reset file input
-                      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-                      if (fileInput) fileInput.value = '';
-                    }}
+                            <button
+            onClick={() => {
+              setSelectedFiles([]);
+              setCurrentResult(null);
+              setShowResults(false);
+              setTotalSavings(0);
+              setProcessingStartTime(null);
+              setProcessingEndTime(null);
+              // Reset file input
+              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+              if (fileInput) fileInput.value = '';
+            }}
                     className="w-full mt-3 py-3 text-lg font-semibold rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white border border-red-500 hover:from-red-500 hover:to-red-600 hover:scale-105 transition-all duration-300"
                   >
                     <div className="flex items-center justify-center gap-3">
