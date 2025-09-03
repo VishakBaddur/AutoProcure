@@ -537,8 +537,8 @@ export default function LandingPage() {
   const renderResults = () => {
     if (!currentResult) return null;
 
-    // Calculate time saved based on actual processing and document complexity
-    const estimateManualProcessingTime = () => {
+    // Calculate time saved based on actual analysis complexity
+    const calculateManualTime = () => {
       if (!quotes.length) return 3; // Default fallback
       
       let totalItems = 0;
@@ -565,10 +565,10 @@ export default function LandingPage() {
       return Math.max(0.5, Math.min(8, baseTime / 60));
     };
     
-    const manualTimeHours = estimateManualProcessingTime();
+    const manualTimeHours = calculateManualTime();
     
     // Estimate AI processing time based on document complexity
-    const estimateAIProcessingTime = () => {
+    const calculateAITime = () => {
       if (!quotes.length) return 0.1; // Default fallback
       
       let totalItems = 0;
@@ -594,7 +594,7 @@ export default function LandingPage() {
       return Math.max(0.1, Math.min(5, baseTime));
     };
     
-    const automatedTimeMinutes = estimateAIProcessingTime();
+    const automatedTimeMinutes = calculateAITime();
     const timeSavedHours = Math.max(0, manualTimeHours - (automatedTimeMinutes / 60));
 
     // Extract data from the correct structure
@@ -701,35 +701,35 @@ export default function LandingPage() {
               </div>
             </div>
             <h3 className="text-2xl font-bold text-white mb-6">Performance Impact</h3>
-                          <div className="grid grid-cols-3 gap-8 mb-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-red-400 mb-2">{manualTimeHours.toFixed(1)}h</div>
-                  <div className="text-sm text-gray-400 font-medium">Manual Processing</div>
-                  {quotes.length > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {quotes.length} vendor(s), {quotes.reduce((sum: any, q: any) => sum + (q.items?.length || 0), 0)} items
-                    </div>
-                  )}
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-green-400 mb-2">{automatedTimeMinutes}m</div>
-                  <div className="text-sm text-gray-400 font-medium">AI Processing</div>
-                  {quotes.length > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      Real-time analysis
-                    </div>
-                  )}
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-blue-400 mb-2">{timeSavedHours.toFixed(1)}h</div>
-                  <div className="text-sm text-gray-400 font-medium">Time Saved</div>
-                  {quotes.length > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {((timeSavedHours/manualTimeHours)*100).toFixed(0)}% efficiency gain
-                    </div>
-                  )}
-                </div>
+            <div className="grid grid-cols-3 gap-8 mb-6">
+              <div className="text-center">
+                <div className="text-4xl font-bold text-red-400 mb-2">{manualTimeHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-400 font-medium">Manual Processing</div>
+                {quotes.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {quotes.length} vendor(s), {quotes.reduce((sum: any, q: any) => sum + (q.items?.length || 0), 0)} items
+                  </div>
+                )}
               </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-green-400 mb-2">{automatedTimeMinutes}m</div>
+                <div className="text-sm text-gray-400 font-medium">AI Processing</div>
+                {quotes.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Real-time analysis
+                  </div>
+                )}
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-blue-400 mb-2">{timeSavedHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-400 font-medium">Time Saved</div>
+                {quotes.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {((timeSavedHours/manualTimeHours)*100).toFixed(0)}% efficiency gain
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl p-4">
               <p className="text-gray-300 text-lg font-semibold">
                 ⚡ <span className="text-green-400">{(timeSavedHours/manualTimeHours*100).toFixed(0)}% faster</span> than traditional methods
