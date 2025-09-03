@@ -12,54 +12,75 @@ export const HeroAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+      // Handle different module export patterns
+      let anime: any;
+      if (typeof module === 'function') {
+        anime = module;
+      } else if (module.default && typeof module.default === 'function') {
+        anime = module.default;
+      } else if (module.anime && typeof module.anime === 'function') {
+        anime = module.anime;
+      } else {
+        console.warn('anime.js not properly loaded, skipping animations');
+        return;
+      }
       
-      // Animate the hero title with more dramatic entrance
-      anime({
-        targets: '.hero-title',
-        opacity: [0, 1],
-        translateY: [100, 0],
-        scale: [0.8, 1],
-        duration: 1500,
-        easing: 'easeOutElastic(1, 0.5)',
-        delay: 200
-      });
+      // Verify anime is actually callable
+      if (typeof anime !== 'function') {
+        console.error('anime.js loaded but not callable:', typeof anime, anime);
+        return;
+      }
+      
+      try {
+        // Animate the hero title with more dramatic entrance
+        anime({
+          targets: '.hero-title',
+          opacity: [0, 1],
+          translateY: [100, 0],
+          scale: [0.8, 1],
+          duration: 1500,
+          easing: 'easeOutElastic(1, 0.5)',
+          delay: 200
+        });
 
-      // Animate the subtitle with staggered text effect
-      anime({
-        targets: '.hero-subtitle',
-        opacity: [0, 1],
-        translateY: [50, 0],
-        duration: 1200,
-        easing: 'easeOutCubic',
-        delay: 800
-      });
+        // Animate the subtitle with staggered text effect
+        anime({
+          targets: '.hero-subtitle',
+          opacity: [0, 1],
+          translateY: [50, 0],
+          duration: 1200,
+          easing: 'easeOutCubic',
+          delay: 800
+        });
 
-      // Animate the CTA button with bounce effect
-      anime({
-        targets: '.hero-cta',
-        opacity: [0, 1],
-        scale: [0.5, 1.1, 1],
-        translateY: [30, 0],
-        duration: 1000,
-        easing: 'easeOutBack',
-        delay: 1200
-      });
+        // Animate the CTA button with bounce effect
+        anime({
+          targets: '.hero-cta',
+          opacity: [0, 1],
+          scale: [0.5, 1.1, 1],
+          translateY: [30, 0],
+          duration: 1000,
+          easing: 'easeOutBack',
+          delay: 1200
+        });
 
-      // Enhanced floating geometric shapes animation
-      anime({
-        targets: '.floating-shape',
-        translateY: [0, -40, 0],
-        translateX: [0, 20, 0],
-        rotate: [0, 360],
-        scale: [1, 1.2, 1],
-        opacity: [0.3, 0.8, 0.3],
-        duration: 6000,
-        easing: 'easeInOutSine',
-        direction: 'alternate',
-        loop: true,
-        delay: anime.stagger(300)
-      });
+        // Enhanced floating geometric shapes animation
+        anime({
+          targets: '.floating-shape',
+          translateY: [0, -40, 0],
+          translateX: [0, 20, 0],
+          rotate: [0, 360],
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.8, 0.3],
+          duration: 6000,
+          easing: 'easeInOutSine',
+          direction: 'alternate',
+          loop: true,
+          delay: anime.stagger(300)
+        });
+      } catch (error) {
+        console.error('Error running hero animations:', error);
+      }
     });
 
   }, []);
@@ -83,7 +104,24 @@ export const FeatureCardAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+      // Handle different module export patterns
+      let anime: any;
+      if (typeof module === 'function') {
+        anime = module;
+      } else if (module.default && typeof module.default === 'function') {
+        anime = module.default;
+      } else if (module.anime && typeof module.anime === 'function') {
+        anime = module.anime;
+      } else {
+        console.warn('anime.js not properly loaded, skipping animations');
+        return;
+      }
+      
+      // Verify anime is actually callable
+      if (typeof anime !== 'function') {
+        console.error('anime.js loaded but not callable:', typeof anime, anime);
+        return;
+      }
       
       // Animate feature cards on scroll
       const observer = new IntersectionObserver((entries) => {
@@ -170,7 +208,24 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+      // Handle different module export patterns
+      let anime: any;
+      if (typeof module === 'function') {
+        anime = module;
+      } else if (module.default && typeof module.default === 'function') {
+        anime = module.default;
+      } else if (module.anime && typeof module.anime === 'function') {
+        anime = module.anime;
+      } else {
+        console.warn('anime.js not properly loaded, skipping animations');
+        return;
+      }
+      
+      // Verify anime is actually callable
+      if (typeof anime !== 'function') {
+        console.error('anime.js loaded but not callable:', typeof anime, anime);
+        return;
+      }
       
       anime({
         targets: counterRef.current,
@@ -194,7 +249,24 @@ export const FileUploadAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+      // Handle different module export patterns
+      let anime: any;
+      if (typeof module === 'function') {
+        anime = module;
+      } else if (module.default && typeof module.default === 'function') {
+        anime = module.default;
+      } else if (module.anime && typeof module.anime === 'function') {
+        anime = module.anime;
+      } else {
+        console.warn('anime.js not properly loaded, skipping animations');
+        return;
+      }
+      
+      // Verify anime is actually callable
+      if (typeof anime !== 'function') {
+        console.error('anime.js loaded but not callable:', typeof anime, anime);
+        return;
+      }
       
       // Animate file upload area on hover
       const uploadArea = document.querySelector('.file-upload-area');
@@ -243,7 +315,24 @@ export const ResultsAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      const anime = (module as any).default || module;
+      // Handle different module export patterns
+      let anime: any;
+      if (typeof module === 'function') {
+        anime = module;
+      } else if (module.default && typeof module.default === 'function') {
+        anime = module.default;
+      } else if (module.anime && typeof module.anime === 'function') {
+        anime = module.anime;
+      } else {
+        console.warn('anime.js not properly loaded, skipping animations');
+        return;
+      }
+      
+      // Verify anime is actually callable
+      if (typeof anime !== 'function') {
+        console.error('anime.js loaded but not callable:', typeof anime, anime);
+        return;
+      }
       
       // Animate results when they appear
       const observer = new IntersectionObserver((entries) => {
