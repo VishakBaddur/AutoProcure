@@ -175,15 +175,20 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
       // anime.js v4 exports the animate function
       const animate = module.animate;
       
-      animate(counterRef.current, {
-        innerHTML: [0, value],
-        duration: duration,
-        easing: 'easeOutCubic',
-        round: 1,
-        update: function(anim: any) {
-          counterRef.current!.innerHTML = anim.animations[0].currentValue.toFixed(0);
-        }
-      });
+      // Ensure counterRef.current is not null before using it
+      if (counterRef.current) {
+        animate(counterRef.current, {
+          innerHTML: [0, value],
+          duration: duration,
+          easing: 'easeOutCubic',
+          round: 1,
+          update: function(anim: any) {
+            if (counterRef.current) {
+              counterRef.current.innerHTML = anim.animations[0].currentValue.toFixed(0);
+            }
+          }
+        });
+      }
     });
   }, [value, duration]);
 
