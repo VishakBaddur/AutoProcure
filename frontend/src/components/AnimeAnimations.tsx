@@ -12,24 +12,8 @@ export const HeroAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // Handle different module export patterns
-      let anime: any;
-      if (typeof module === 'function') {
-        anime = module;
-      } else if (module.default && typeof module.default === 'function') {
-        anime = module.default;
-      } else if (module.anime && typeof module.anime === 'function') {
-        anime = module.anime;
-      } else {
-        console.warn('anime.js not properly loaded, skipping animations');
-        return;
-      }
-      
-      // Verify anime is actually callable
-      if (typeof anime !== 'function') {
-        console.error('anime.js loaded but not callable:', typeof anime, anime);
-        return;
-      }
+      // anime.js exports the function directly
+      const anime = module;
       
       try {
         // Animate the hero title with more dramatic entrance
@@ -104,24 +88,8 @@ export const FeatureCardAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // Handle different module export patterns
-      let anime: any;
-      if (typeof module === 'function') {
-        anime = module;
-      } else if (module.default && typeof module.default === 'function') {
-        anime = module.default;
-      } else if (module.anime && typeof module.anime === 'function') {
-        anime = module.anime;
-      } else {
-        console.warn('anime.js not properly loaded, skipping animations');
-        return;
-      }
-      
-      // Verify anime is actually callable
-      if (typeof anime !== 'function') {
-        console.error('anime.js loaded but not callable:', typeof anime, anime);
-        return;
-      }
+      // anime.js exports the function directly
+      const anime = module;
       
       // Animate feature cards on scroll
       const observer = new IntersectionObserver((entries) => {
@@ -208,24 +176,8 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // Handle different module export patterns
-      let anime: any;
-      if (typeof module === 'function') {
-        anime = module;
-      } else if (module.default && typeof module.default === 'function') {
-        anime = module.default;
-      } else if (module.anime && typeof module.anime === 'function') {
-        anime = module.anime;
-      } else {
-        console.warn('anime.js not properly loaded, skipping animations');
-        return;
-      }
-      
-      // Verify anime is actually callable
-      if (typeof anime !== 'function') {
-        console.error('anime.js loaded but not callable:', typeof anime, anime);
-        return;
-      }
+      // anime.js exports the function directly
+      const anime = module;
       
       anime({
         targets: counterRef.current,
@@ -249,24 +201,8 @@ export const FileUploadAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // Handle different module export patterns
-      let anime: any;
-      if (typeof module === 'function') {
-        anime = module;
-      } else if (module.default && typeof module.default === 'function') {
-        anime = module.default;
-      } else if (module.anime && typeof module.anime === 'function') {
-        anime = module.anime;
-      } else {
-        console.warn('anime.js not properly loaded, skipping animations');
-        return;
-      }
-      
-      // Verify anime is actually callable
-      if (typeof anime !== 'function') {
-        console.error('anime.js loaded but not callable:', typeof anime, anime);
-        return;
-      }
+      // anime.js exports the function directly
+      const anime = module;
       
       // Animate file upload area on hover
       const uploadArea = document.querySelector('.file-upload-area');
@@ -315,24 +251,8 @@ export const ResultsAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // Handle different module export patterns
-      let anime: any;
-      if (typeof module === 'function') {
-        anime = module;
-      } else if (module.default && typeof module.default === 'function') {
-        anime = module.default;
-      } else if (module.anime && typeof module.anime === 'function') {
-        anime = module.anime;
-      } else {
-        console.warn('anime.js not properly loaded, skipping animations');
-        return;
-      }
-      
-      // Verify anime is actually callable
-      if (typeof anime !== 'function') {
-        console.error('anime.js loaded but not callable:', typeof anime, anime);
-        return;
-      }
+      // anime.js exports the function directly
+      const anime = module;
       
       // Animate results when they appear
       const observer = new IntersectionObserver((entries) => {
