@@ -12,56 +12,54 @@ export const HeroAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js v4 exports the animate function and utilities
-      const animate = module.animate;
-      const stagger = module.stagger;
+      const anime = (module as any).default || module;
       
-      try {
-        // Animate the hero title with more dramatic entrance
-        animate('.hero-title', {
-          opacity: [0, 1],
-          translateY: [100, 0],
-          scale: [0.8, 1],
-          duration: 1500,
-          easing: 'easeOutElastic(1, 0.5)',
-          delay: 200
-        });
+      // Animate the hero title with more dramatic entrance
+      anime({
+        targets: '.hero-title',
+        opacity: [0, 1],
+        translateY: [100, 0],
+        scale: [0.8, 1],
+        duration: 1500,
+        easing: 'easeOutElastic(1, 0.5)',
+        delay: 200
+      });
 
-        // Animate the subtitle with staggered text effect
-        animate('.hero-subtitle', {
-          opacity: [0, 1],
-          translateY: [50, 0],
-          duration: 1200,
-          easing: 'easeOutCubic',
-          delay: 800
-        });
+      // Animate the subtitle with staggered text effect
+      anime({
+        targets: '.hero-subtitle',
+        opacity: [0, 1],
+        translateY: [50, 0],
+        duration: 1200,
+        easing: 'easeOutCubic',
+        delay: 800
+      });
 
-        // Animate the CTA button with bounce effect
-        animate('.hero-cta', {
-          opacity: [0, 1],
-          scale: [0.5, 1.1, 1],
-          translateY: [30, 0],
-          duration: 1000,
-          easing: 'easeOutBack',
-          delay: 1200
-        });
+      // Animate the CTA button with bounce effect
+      anime({
+        targets: '.hero-cta',
+        opacity: [0, 1],
+        scale: [0.5, 1.1, 1],
+        translateY: [30, 0],
+        duration: 1000,
+        easing: 'easeOutBack',
+        delay: 1200
+      });
 
-        // Enhanced floating geometric shapes animation
-        animate('.floating-shape', {
-          translateY: [0, -40, 0],
-          translateX: [0, 20, 0],
-          rotate: [0, 360],
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.8, 0.3],
-          duration: 6000,
-          easing: 'easeInOutSine',
-          direction: 'alternate',
-          loop: true,
-          delay: stagger(300)
-        });
-      } catch (error) {
-        console.error('Error running hero animations:', error);
-      }
+      // Enhanced floating geometric shapes animation
+      anime({
+        targets: '.floating-shape',
+        translateY: [0, -40, 0],
+        translateX: [0, 20, 0],
+        rotate: [0, 360],
+        scale: [1, 1.2, 1],
+        opacity: [0.3, 0.8, 0.3],
+        duration: 6000,
+        easing: 'easeInOutSine',
+        direction: 'alternate',
+        loop: true,
+        delay: anime.stagger(300)
+      });
     });
 
   }, []);
@@ -85,14 +83,14 @@ export const FeatureCardAnimations = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js v4 exports the animate function
-      const animate = module.animate;
+      const anime = (module as any).default || module;
       
       // Animate feature cards on scroll
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-                      animate(entry.target, {
+                      anime({
+            targets: entry.target,
             opacity: [0, 1],
             translateY: [80, 0],
             scale: [0.9, 1],
@@ -172,23 +170,18 @@ export const CounterAnimation = ({ value, duration = 2000 }: { value: number; du
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js v4 exports the animate function
-      const animate = module.animate;
+      const anime = (module as any).default || module;
       
-      // Ensure counterRef.current is not null before using it
-      if (counterRef.current) {
-        animate(counterRef.current, {
-          innerHTML: [0, value],
-          duration: duration,
-          easing: 'easeOutCubic',
-          round: 1,
-          update: function(anim: any) {
-            if (counterRef.current) {
-              counterRef.current.innerHTML = anim.animations[0].currentValue.toFixed(0);
-            }
-          }
-        });
-      }
+      anime({
+        targets: counterRef.current,
+        innerHTML: [0, value],
+        duration: duration,
+        easing: 'easeOutCubic',
+        round: 1,
+        update: function(anim: any) {
+          counterRef.current!.innerHTML = anim.animations[0].currentValue.toFixed(0);
+        }
+      });
     });
   }, [value, duration]);
 
@@ -201,15 +194,15 @@ export const FileUploadAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js v4 exports the animate function
-      const animate = module.animate;
+      const anime = (module as any).default || module;
       
       // Animate file upload area on hover
       const uploadArea = document.querySelector('.file-upload-area');
       if (!uploadArea) return;
 
       const handleMouseEnter = () => {
-        animate('.file-upload-area', {
+        anime({
+          targets: '.file-upload-area',
           scale: [1, 1.05],
           translateY: [-5, 0],
           borderColor: ['#374151', '#3B82F6'],
@@ -220,7 +213,8 @@ export const FileUploadAnimation = () => {
       };
 
       const handleMouseLeave = () => {
-        animate('.file-upload-area', {
+        anime({
+          targets: '.file-upload-area',
           scale: [1.05, 1],
           translateY: [0, 0],
           borderColor: ['#3B82F6', '#374151'],
@@ -249,30 +243,30 @@ export const ResultsAnimation = () => {
 
     // Load anime.js dynamically
     import('animejs').then((module) => {
-      // anime.js v4 exports the animate function and utilities
-      const animate = module.animate;
-      const stagger = module.stagger;
+      const anime = (module as any).default || module;
       
       // Animate results when they appear
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            animate('.result-card', {
+            anime({
+              targets: '.result-card',
               opacity: [0, 1],
               translateX: [100, 0],
               scale: [0.8, 1],
               rotateY: [15, 0],
               duration: 800,
               easing: 'easeOutBack',
-              delay: stagger(150)
+              delay: anime.stagger(150)
             });
 
-            animate('.result-number', {
+            anime({
+              targets: '.result-number',
               innerHTML: [0, (el: HTMLElement) => parseInt(el.getAttribute('data-value') || '0')],
               duration: 2000,
               easing: 'easeOutElastic(1, 0.5)',
               round: 1,
-              delay: stagger(300)
+              delay: anime.stagger(300)
             });
           }
         });
