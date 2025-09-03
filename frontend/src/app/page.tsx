@@ -537,6 +537,13 @@ export default function LandingPage() {
   const renderResults = () => {
     if (!currentResult) return null;
 
+    // Extract data from the correct structure FIRST
+    const multiVendorAnalysis = currentResult.multi_vendor_analysis;
+    const quotes = multiVendorAnalysis?.quotes || [];
+    const vendorRecommendations = multiVendorAnalysis?.vendor_recommendations || [];
+    const recommendation = multiVendorAnalysis?.recommendation || currentResult.recommendation || "";
+    const advancedAnalysis = currentResult.advanced_analysis || {};
+
     // Calculate time saved based on actual analysis complexity
     const calculateManualTime = () => {
       if (!quotes.length) return 3; // Default fallback
@@ -596,13 +603,6 @@ export default function LandingPage() {
     
     const automatedTimeMinutes = calculateAITime();
     const timeSavedHours = Math.max(0, manualTimeHours - (automatedTimeMinutes / 60));
-
-    // Extract data from the correct structure
-    const multiVendorAnalysis = currentResult.multi_vendor_analysis;
-    const quotes = multiVendorAnalysis?.quotes || [];
-    const vendorRecommendations = multiVendorAnalysis?.vendor_recommendations || [];
-    const recommendation = multiVendorAnalysis?.recommendation || currentResult.recommendation || "";
-    const advancedAnalysis = currentResult.advanced_analysis || {};
     
     // Debug: Log the actual data structure
     console.log('DEBUG: Quotes structure:', JSON.stringify(quotes, null, 2));
