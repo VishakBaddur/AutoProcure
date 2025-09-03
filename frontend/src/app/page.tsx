@@ -697,6 +697,11 @@ export default function LandingPage() {
               <div className="text-center">
                 <div className="text-4xl font-bold text-red-400 mb-2">{manualTimeHours.toFixed(1)}h</div>
                 <div className="text-sm text-gray-400 font-medium">Manual Processing</div>
+                {quotes.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {quotes.length} vendor(s), {quotes.reduce((sum: any, q: any) => sum + (q.items?.length || 0), 0)} items
+                  </div>
+                )}
               </div>
               <div className="text-center">
                 <div className="text-4xl font-bold text-green-400 mb-2">
@@ -711,10 +716,20 @@ export default function LandingPage() {
                 <div className="text-sm text-gray-400 font-medium">
                   {processingStartTime && !processingEndTime ? 'Processing...' : 'AI Processing'}
                 </div>
+                {processingStartTime && processingEndTime && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Real-time measurement
+                  </div>
+                )}
               </div>
               <div className="text-center">
                 <div className="text-4xl font-bold text-blue-400 mb-2">{timeSavedHours.toFixed(1)}h</div>
                 <div className="text-sm text-gray-400 font-medium">Time Saved</div>
+                {quotes.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {((timeSavedHours/manualTimeHours)*100).toFixed(0)}% efficiency gain
+                  </div>
+                )}
               </div>
             </div>
             <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl p-4">
