@@ -1094,16 +1094,17 @@ export default function LandingPage() {
           
           {/* Dynamic Suspicious Items Detection */}
           {quotes.length > 1 && (() => {
-            // Collect all issues from obfuscation detection and math validation
-            const obfuscationIssues = advancedAnalysis.obfuscation_detection?.results?.flatMap((result: any) => 
-              result.analysis.issues || []
-            ) || [];
-            
-            const mathIssues = advancedAnalysis.math_validation?.results?.flatMap((result: any) => 
-              result.validation.issues || []
-            ) || [];
-            
-            const allIssues = [...obfuscationIssues, ...mathIssues];
+            try {
+              // Collect all issues from obfuscation detection and math validation
+              const obfuscationIssues = advancedAnalysis.obfuscation_detection?.results?.flatMap((result: any) => 
+                result.analysis.issues || []
+              ) || [];
+              
+              const mathIssues = advancedAnalysis.math_validation?.results?.flatMap((result: any) => 
+                result.validation.issues || []
+              ) || [];
+              
+              const allIssues = [...obfuscationIssues, ...mathIssues];
             
             // Show either issues or clean status
             if (allIssues.length === 0) {
@@ -1225,6 +1226,18 @@ export default function LandingPage() {
                 </div>
               </div>
             );
+            } catch (error) {
+              console.error('Error rendering issues detection:', error);
+              return (
+                <div className="mb-6 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <h4 className="font-semibold text-red-400">⚠️ Error Displaying Issues</h4>
+                  </div>
+                  <p className="text-sm text-gray-300 mt-1">Unable to display analysis results. Please try again.</p>
+                </div>
+              );
+            }
           })()}
 
           <div className="space-y-4">
@@ -1284,12 +1297,26 @@ export default function LandingPage() {
                             {/* Show specific validation issues for this item */}
                             {hasIssues && (
                               <div className="mt-1 text-xs text-red-300">
-                                {mathIssues.map((issue: any, issueIndex: number) => (
-                                  <div key={issueIndex} className="flex items-center gap-1">
-                                    <span>•</span>
-                                    <span>{issue.description}</span>
-                                  </div>
-                                ))}
+                                {mathIssues.map((issue: any, issueIndex: number) => {
+                                  try {
+                                    // Safely render issue description
+                                    const description = issue?.description || 'Issue detected';
+                                    return (
+                                      <div key={issueIndex} className="flex items-center gap-1">
+                                        <span>•</span>
+                                        <span>{description}</span>
+                                      </div>
+                                    );
+                                  } catch (error) {
+                                    console.warn('Error rendering item issue:', error, issue);
+                                    return (
+                                      <div key={issueIndex} className="flex items-center gap-1">
+                                        <span>•</span>
+                                        <span>Issue details unavailable</span>
+                                      </div>
+                                    );
+                                  }
+                                })}
                               </div>
                             )}
                           </div>
