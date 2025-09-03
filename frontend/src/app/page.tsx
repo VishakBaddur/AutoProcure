@@ -1157,11 +1157,27 @@ export default function LandingPage() {
                         <div>
                           <strong className="text-yellow-300">{result.vendor}</strong>: 
                           <span className="text-gray-300"> {issue.description}</span>
-                          {issue.details && issue.details.length > 0 && (
+                          {issue.details && (
                             <div className="ml-4 mt-1 text-xs text-gray-400">
-                              {issue.details.map((detail: any, detailIndex: number) => (
-                                <div key={detailIndex}>- {detail}</div>
-                              ))}
+                              {(() => {
+                                try {
+                                  // Handle different types of details
+                                  if (Array.isArray(issue.details)) {
+                                    return issue.details.map((detail: any, detailIndex: number) => (
+                                      <div key={detailIndex}>- {detail}</div>
+                                    ));
+                                  } else if (typeof issue.details === 'object' && issue.details !== null) {
+                                    return Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
+                                      <div key={detailIndex}>- {key}: {value}</div>
+                                    ));
+                                  } else {
+                                    return <div>- {String(issue.details)}</div>;
+                                  }
+                                } catch (error) {
+                                  console.warn('Error rendering obfuscation issue details:', error, issue.details);
+                                  return <div>- Details unavailable</div>;
+                                }
+                              })()}
                             </div>
                           )}
                         </div>
@@ -1181,9 +1197,25 @@ export default function LandingPage() {
                           <span className="text-gray-300"> {issue.description}</span>
                           {issue.details && (
                             <div className="ml-4 mt-1 text-xs text-gray-400">
-                              {Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
-                                <div key={detailIndex}>- {key}: {value}</div>
-                              ))}
+                              {(() => {
+                                try {
+                                  // Handle different types of details
+                                  if (Array.isArray(issue.details)) {
+                                    return issue.details.map((detail: any, detailIndex: number) => (
+                                      <div key={detailIndex}>- {detail}</div>
+                                    ));
+                                  } else if (typeof issue.details === 'object' && issue.details !== null) {
+                                    return Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
+                                      <div key={detailIndex}>- {key}: {value}</div>
+                                    ));
+                                  } else {
+                                    return <div>- {String(issue.details)}</div>;
+                                  }
+                                } catch (error) {
+                                  console.warn('Error rendering issue details:', error, issue.details);
+                                  return <div>- Details unavailable</div>;
+                                }
+                              })()}
                             </div>
                           )}
                         </div>
