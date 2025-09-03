@@ -439,10 +439,11 @@ JSON Response:"""
                     line_clean = f"Item: {section.strip()}"
                     print(f"Processing item section: '{line_clean[:100]}...'")
                     
-                    # Skip obvious non-item lines
+                    # Skip obvious non-item lines (but allow lines that contain item information)
                     skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'date', 'payment', 'delivery', 'terms']
-                    if any(word in line_clean.lower() for word in skip_words):
-                        print(f"Skipping item section (contains skip word): '{line_clean[:50]}...'")
+                    # Only skip if the line ONLY contains skip words, not if it contains both skip words AND item info
+                    if any(word in line_clean.lower() for word in skip_words) and not any(word in line_clean.lower() for word in ['item', 'quantity', 'price', 'sku', 'description']):
+                        print(f"Skipping item section (only contains skip words): '{line_clean[:50]}...'")
                         continue
                         
                     # Process this item section
@@ -455,16 +456,23 @@ JSON Response:"""
                             
                             # Intelligent parsing based on number of values found
                             if len(currency_amounts) >= 2:
-                                # Multiple prices: assume unit price and total
-                                unit_price = float(currency_amounts[0].replace(',', ''))
-                                total_price = float(currency_amounts[-1].replace(',', ''))
-                                
-                                # Calculate quantity if reasonable
-                                quantity = 1
-                                if unit_price > 0:
-                                    calculated_qty = total_price / unit_price
-                                    if 0.1 <= calculated_qty <= 10000:  # Reasonable range
-                                        quantity = calculated_qty
+                                # Look for the "x" format: $price x quantity = $total
+                                x_format_match = re.search(r'\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)', line_clean)
+                                if x_format_match:
+                                    unit_price = float(x_format_match.group(1).replace(',', ''))
+                                    quantity = int(x_format_match.group(2))
+                                    total_price = float(x_format_match.group(3).replace(',', ''))
+                                else:
+                                    # Fallback: assume first and last currency amounts
+                                    unit_price = float(currency_amounts[0].replace(',', ''))
+                                    total_price = float(currency_amounts[-1].replace(',', ''))
+                                    
+                                    # Calculate quantity if reasonable
+                                    quantity = 1
+                                    if unit_price > 0:
+                                        calculated_qty = total_price / unit_price
+                                        if 0.1 <= calculated_qty <= 10000:  # Reasonable range
+                                            quantity = calculated_qty
                                 
                                 # Extract description (everything before first $)
                                 first_dollar = line_clean.find('$')
@@ -484,6 +492,9 @@ JSON Response:"""
                                             "deliveryTime": "7-10 days",
                                             "total": total_price
                                         })
+                                        # Clean up trailing dashes and extra whitespace
+                                        description = re.sub(r'\s*-\s*$', '', description)
+                                        description = description.strip()
                                         print(f"Intelligent extraction: {quantity}x {description} @ ${unit_price} = ${total_price}")
                         
                         except Exception as e:
@@ -498,10 +509,11 @@ JSON Response:"""
                     
                 print(f"Processing line: '{line_clean}'")
                     
-                # Skip obvious non-item lines
+                # Skip obvious non-item lines (but allow lines that contain item information)
                 skip_words = ['vendor', 'supplier', 'quote', 'total', 'subtotal', 'date', 'payment', 'delivery', 'terms']
-                if any(word in line_clean.lower() for word in skip_words):
-                    print(f"Skipping line (contains skip word): '{line_clean}'")
+                # Only skip if the line ONLY contains skip words, not if it contains both skip words AND item info
+                if any(word in line_clean.lower() for word in skip_words) and not any(word in line_clean.lower() for word in ['item', 'quantity', 'price', 'sku', 'description']):
+                    print(f"Skipping line (only contains skip words): '{line_clean}'")
                     continue
                 
                 # Look for any line with currency symbols and numbers
@@ -519,25 +531,56 @@ JSON Response:"""
                         
                         # Intelligent parsing based on number of values found
                         if len(currency_amounts) >= 2:
-                            # Multiple prices: assume unit price and total
-                            unit_price = float(currency_amounts[0].replace(',', ''))
-                            total_price = float(currency_amounts[-1].replace(',', ''))
+                            # Look for specific price patterns
+                            unit_price_match = re.search(r'(?:unit\s+price|price|cost)\s*:?\s*\$?([\d,]+\.?\d*)', line_clean, re.IGNORECASE)
+                            total_price_match = re.search(r'(?:total|amount|sum)\s*:?\s*\$?([\d,]+\.?\d*)', line_clean, re.IGNORECASE)
                             
-                            # Calculate quantity if reasonable
-                            quantity = 1
-                            if unit_price > 0:
-                                calculated_qty = total_price / unit_price
-                                if 0.1 <= calculated_qty <= 10000:  # Reasonable range
-                                    quantity = calculated_qty
+                            # Look for the "x" format: $price x quantity = $total
+                            x_format_match = re.search(r'\$?([\d,]+\.?\d*)\s*x\s*(\d+)\s*=\s*\$?([\d,]+\.?\d*)', line_clean)
+                            if x_format_match:
+                                unit_price = float(x_format_match.group(1).replace(',', ''))
+                                quantity = int(x_format_match.group(2))
+                                total_price = float(x_format_match.group(3).replace(',', ''))
+                            elif unit_price_match and total_price_match:
+                                unit_price = float(unit_price_match.group(1).replace(',', ''))
+                                total_price = float(total_price_match.group(1).replace(',', ''))
+                            else:
+                                # Fallback: assume first and last currency amounts
+                                unit_price = float(currency_amounts[0].replace(',', ''))
+                                total_price = float(currency_amounts[-1].replace(',', ''))
+                            
+                            # Only calculate quantity if not already set by "x" format
+                            if quantity == 1:
+                                # Try to find quantity pattern like "Quantity: 10" or "Qty: 10"
+                                qty_match = re.search(r'(?:quantity|qty|qty\.?)\s*:?\s*(\d+)', line_clean, re.IGNORECASE)
+                                if qty_match:
+                                    quantity = int(qty_match.group(1))
+                                else:
+                                    # Calculate quantity if reasonable
+                                    if unit_price > 0:
+                                        calculated_qty = total_price / unit_price
+                                        if 0.1 <= calculated_qty <= 10000:  # Reasonable range
+                                            quantity = calculated_qty
                             
                             # Extract description (everything before first $)
                             first_dollar = line_clean.find('$')
                             if first_dollar > 0:
                                 description = line_clean[:first_dollar].strip()
                                 
-                                # Clean up description
+                                # Clean up description - remove common prefixes
                                 description = re.sub(r'^[A-Za-z]+:\s*', '', description)  # Remove "Item:" prefix
+                                description = re.sub(r'^[A-Za-z]+\s+[A-Za-z]+:\s*', '', description)  # Remove "Unit Price:" prefix
                                 description = description.strip()
+                                
+                                # If description is too long, try to extract just the item name
+                                if len(description) > 50:
+                                    # Look for "Item:" in the description
+                                    item_match = re.search(r'Item:\s*([^:]+)', description)
+                                    if item_match:
+                                        description = item_match.group(1).strip()
+                                
+                                # Clean up common suffixes that shouldn't be in item names
+                                description = re.sub(r'\s+(?:quantity|qty|qty\.?|unit\s+price|price|cost|total|amount|sum)\s*$', '', description, flags=re.IGNORECASE)
                                 
                                 if len(description) >= 3:
                                     items.append({
@@ -559,8 +602,19 @@ JSON Response:"""
                             first_dollar = line_clean.find('$')
                             if first_dollar > 0:
                                 description = line_clean[:first_dollar].strip()
-                                description = re.sub(r'^[A-Za-z]+:\s*', '', description)
+                                description = re.sub(r'^[A-Za-z]+:\s*', '', description)  # Remove "Item:" prefix
+                                description = re.sub(r'^[A-Za-z]+\s+[A-Za-z]+:\s*', '', description)  # Remove "Unit Price:" prefix
                                 description = description.strip()
+                                
+                                # If description is too long, try to extract just the item name
+                                if len(description) > 50:
+                                    # Look for "Item:" in the description
+                                    item_match = re.search(r'Item:\s*([^:]+)', description)
+                                    if item_match:
+                                        description = item_match.group(1).strip()
+                                
+                                # Clean up common suffixes that shouldn't be in item names
+                                description = re.sub(r'\s+(?:quantity|qty|qty\.?|unit\s+price|price|cost|total|amount|sum)\s*$', '', description, flags=re.IGNORECASE)
                                 
                                 if len(description) >= 3:
                                     items.append({
@@ -571,6 +625,9 @@ JSON Response:"""
                                         "deliveryTime": "7-10 days",
                                         "total": total_price
                                     })
+                                    # Clean up trailing dashes and extra whitespace
+                                    description = re.sub(r'\s*-\s*$', '', description)
+                                    description = description.strip()
                                     print(f"Intelligent extraction: 1x {description} @ ${unit_price}")
                                     
                     except Exception as e:

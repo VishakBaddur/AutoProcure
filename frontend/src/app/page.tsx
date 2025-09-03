@@ -27,7 +27,8 @@ import {
   Trophy,
   AlertCircle,
   Search,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { 
   HeroAnimations, 
@@ -1538,6 +1539,27 @@ export default function LandingPage() {
                     </div>
                   )}
                 </button>
+
+                {/* Reset Button */}
+                {(selectedFiles.length > 0 || showResults) && (
+                  <button
+                    onClick={() => {
+                      setSelectedFiles([]);
+                      setCurrentResult(null);
+                      setShowResults(false);
+                      setTotalSavings(0);
+                      // Reset file input
+                      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                      if (fileInput) fileInput.value = '';
+                    }}
+                    className="w-full mt-3 py-3 text-lg font-semibold rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white border border-red-500 hover:from-red-500 hover:to-red-600 hover:scale-105 transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <RefreshCw className="w-5 h-5" />
+                      <span>Reset & Start New Quote</span>
+                    </div>
+                  </button>
+                )}
              </EnterpriseCard>
            </div>
 

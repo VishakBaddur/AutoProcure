@@ -1,5 +1,0 @@
-Vendor Quote
-ABC Supplies Inc.
-Item: Office Chair - .00 x 50 = ,250.00
-Item: Desk Lamp - .00 x 100 = ,500.00
-Total: ,750.00
