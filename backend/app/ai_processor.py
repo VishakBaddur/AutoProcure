@@ -38,18 +38,19 @@ class AIProcessor:
         print(f"🤖 AI Processor initialized: {self.ai_provider} with model {self.model_name}")
         print(f"💰 Base currency: {self.base_currency}")
         
-    async def analyze_quote(self, text_content: str, rag_context: str = None) -> VendorQuote:
+    async def analyze_quote(self, text_content: str, rag_context: str = None, filename: str = "") -> VendorQuote:
         """
         Analyze quote text and extract structured data using NLP patterns
-        Optionally augment with RAG context.
+        Optionally augment with RAG context and filename for vendor extraction.
         """
         try:
             print(f"[AI ANALYSIS] Starting analysis of text (length: {len(text_content)})")
             print(f"[AI ANALYSIS] Text preview: {text_content[:200]}...")
+            print(f"[AI ANALYSIS] Filename: {filename}")
             
             # Use NLP analysis directly (no external APIs needed)
             print(f"[AI ANALYSIS] Using NLP pattern matching")
-            nlp_result = self._analyze_quote_with_nlp(text_content)
+            nlp_result = self._analyze_quote_with_nlp(text_content, filename)
             quote_data = json.loads(nlp_result)
             
             print(f"[AI ANALYSIS] NLP result: {json.dumps(quote_data, indent=2)}")
@@ -163,7 +164,7 @@ JSON Response:"""
             print(f"AI analysis failed: {str(e)}")
             raise ValueError("AI analysis unavailable")
     
-    def _analyze_quote_with_nlp(self, quote_text: str) -> str:
+    def _analyze_quote_with_nlp(self, quote_text: str, filename: str = "") -> str:
         """Analyze quote using NLP patterns and return JSON string"""
         try:
             # Clean the text first
@@ -179,8 +180,8 @@ JSON Response:"""
                     "analysis_note": f"This appears to be a {document_type}, not a vendor quote. Please upload a vendor quote for analysis."
                 })
             
-            # Extract vendor name with improved patterns
-            vendor_name = self._extract_vendor_name(quote_text)
+            # Extract vendor name with improved patterns and filename fallback
+            vendor_name = self._extract_vendor_name(quote_text, filename)
             
             # Detect currency and convert if needed
             detected_currency = self._detect_currency(quote_text)
@@ -245,53 +246,112 @@ JSON Response:"""
         
         return text
     
-    def _extract_vendor_name(self, text: str) -> str:
-        """Extract vendor name with improved patterns for real PDFs"""
+    def _extract_vendor_name(self, text: str, filename: str = "") -> str:
+        """Extract vendor name with improved patterns and filename fallback"""
+        # First, try to extract from filename if provided
+        if filename:
+            # Extract vendor name from filename (e.g., "vendor_a_quote.pdf" -> "Vendor A")
+            filename_vendor = self._extract_vendor_from_filename(filename)
+            if filename_vendor and filename_vendor != "Unknown":
+                print(f"Using vendor name from filename: {filename_vendor}")
+                return filename_vendor
+        
+        # Then try text-based extraction with more specific patterns
         vendor_patterns = [
-            # Text file patterns
+            # Specific quote patterns
             r'([A-Za-z0-9\s&.,\-]+)\s+Quote',
             r'Quote\s+([A-Za-z0-9\s&.,\-]+)',
-            # Real-world patterns
-            r'vendor[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
-            r'quote from\s*([A-Za-z0-9\s&.,\-]+)',
-            r'supplier[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
-            r'company[:\-]\s*([A-Za-z0-9\s&.,\-]+)',
-            r'([A-Za-z0-9\s&.,\-]+)\s+(?:inc|corp|llc|ltd|company|pvt)',
-            r'([A-Za-z0-9\s&.,\-]+)\s+supplies',
-            r'([A-Za-z0-9\s&.,\-]+)\s+date',
-            # Additional patterns for messy PDFs
-            r'([A-Za-z0-9\s&.,\-]+)\s+quote',
-            r'quote\s+([A-Za-z0-9\s&.,\-]+)',
-            r'([A-Za-z0-9\s&.,\-]+)\s+office',
-            r'([A-Za-z0-9\s&.,\-]+)\s+supply',
+            # Company identifier patterns
+            r'([A-Za-z0-9\s&.,\-]+)\s+(?:Inc|Corp|LLC|Ltd|Company|Pvt|Co)',
+            r'([A-Za-z0-9\s&.,\-]+)\s+(?:Supplies|Office|Solutions|Systems)',
+            # Document header patterns
+            r'^([A-Za-z0-9\s&.,\-]+)\s*$',  # First line as vendor name
+            r'^([A-Za-z0-9\s&.,\-]+)\s+Date',  # First line with date
         ]
         
         vendor_name = "Unknown Vendor"
         for pattern in vendor_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
             if match:
-                vendor_name = match.group(1).strip()
-                # Clean up the vendor name
-                vendor_name = re.sub(r'\s+date$', '', vendor_name, flags=re.IGNORECASE)
-                vendor_name = re.sub(r'\s+', ' ', vendor_name)
-                break
-        
-        # If no vendor found, try to extract from filename or first line
-        if vendor_name == "Unknown Vendor":
-            lines = text.split('\n')
-            for line in lines[:5]:  # Check first 5 lines
-                if any(word in line.lower() for word in ['vendor', 'supplier', 'company', 'inc', 'corp', 'llc', 'pvt']):
-                    vendor_name = line.strip()
-                    vendor_name = re.sub(r'\s+date$', '', vendor_name, flags=re.IGNORECASE)
+                candidate = match.group(1).strip()
+                # Validate the extracted name
+                if self._is_valid_vendor_name(candidate):
+                    vendor_name = candidate
                     break
         
-        # Final cleanup
+        # If still no valid vendor, try first meaningful line
+        if vendor_name == "Unknown Vendor":
+            lines = text.split('\n')
+            for line in lines[:3]:  # Check first 3 lines
+                line_clean = line.strip()
+                if line_clean and len(line_clean) > 3 and self._is_valid_vendor_name(line_clean):
+                    vendor_name = line_clean
+                    break
+        
+        # Final cleanup and validation
         vendor_name = vendor_name.strip()
+        if not self._is_valid_vendor_name(vendor_name):
+            vendor_name = "Unknown Vendor"
+        
         if len(vendor_name) > 50:  # If too long, truncate
             vendor_name = vendor_name[:50] + "..."
         
         print(f"Extracted vendor: {vendor_name}")
         return vendor_name
+    
+    def _extract_vendor_from_filename(self, filename: str) -> str:
+        """Extract vendor name from filename"""
+        try:
+            # Remove extension
+            name = filename.rsplit('.', 1)[0]
+            
+            # Common patterns in filenames
+            patterns = [
+                r'vendor_([a-z_]+)',  # vendor_a_quote -> Vendor A
+                r'([a-z_]+)_quote',   # abc_supplies_quote -> Abc Supplies
+                r'([a-z_]+)_proposal', # xyz_proposal -> Xyz
+                r'([a-z_]+)_bid',     # company_bid -> Company
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, name.lower())
+                if match:
+                    vendor_part = match.group(1)
+                    # Convert to readable format
+                    vendor_name = vendor_part.replace('_', ' ').title()
+                    # Clean up common words
+                    vendor_name = re.sub(r'\b(Quote|Proposal|Bid|Vendor)\b', '', vendor_name, flags=re.IGNORECASE).strip()
+                    if vendor_name:
+                        return vendor_name
+            
+            return "Unknown"
+        except Exception as e:
+            print(f"Error extracting vendor from filename: {e}")
+            return "Unknown"
+    
+    def _is_valid_vendor_name(self, name: str) -> bool:
+        """Validate if extracted text looks like a vendor name"""
+        if not name or len(name) < 2:
+            return False
+        
+        # Skip common non-vendor text
+        skip_patterns = [
+            r'^\d+$',  # Just numbers
+            r'^[A-Za-z\s]+$',  # Just letters and spaces (too generic)
+            r'extract', r'look for', r'choose', r'recommendation',
+            r'unitprice', r'vendor', r'supplier', r'quote', r'total',
+            r'date', r'time', r'payment', r'warranty'
+        ]
+        
+        for pattern in skip_patterns:
+            if re.search(pattern, name, re.IGNORECASE):
+                return False
+        
+        # Must have some meaningful content
+        if len(name.strip()) < 3:
+            return False
+        
+        return True
     
     def _extract_items(self, text: str) -> list:
         """Extract items with intelligent parsing for any file format"""

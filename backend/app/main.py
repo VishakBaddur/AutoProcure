@@ -310,7 +310,7 @@ async def upload_file(
         # Extract text based on file type
         if file_extension == 'pdf':
             text_content = extract_text_from_pdf(file_content)
-            parsed_quote = await ai_processor.analyze_quote(text_content)
+            parsed_quote = await ai_processor.analyze_quote(text_content, filename=file.filename)
         elif file_extension == 'csv':
             # Handle CSV files - create structured quote directly
             parsed_quote = parse_csv_to_quote(file_content, file.filename)
@@ -325,7 +325,7 @@ async def upload_file(
                 text_content = "\n".join([f"{it.quantity} x {it.description} @ {it.unitPrice}" for it in structured_quote.items])
             else:
                 text_content = extract_text_from_excel(file_content)
-                parsed_quote = await ai_processor.analyze_quote(text_content)
+                parsed_quote = await ai_processor.analyze_quote(text_content, filename=file.filename)
         
         # Get RAG context if available
         user_id = None  # Set user_id to None for public endpoints
@@ -442,8 +442,8 @@ async def analyze_multiple_quotes(
                     text_content = result['text']
                     print(f"[FILE PROCESSING] File: {file.filename}, Method: {result['method']}, Text length: {len(text_content)}")
                     
-                    # Use AI processor to analyze the extracted text
-                    parsed_quote = await ai_processor.analyze_quote(text_content)
+                    # Use AI processor to analyze the extracted text with filename
+                    parsed_quote = await ai_processor.analyze_quote(text_content, filename=file.filename)
                 else:
                     print(f"[FILE ERROR] Failed to process {file.filename}: {result['error']}")
                     # Create a fallback quote with error message
