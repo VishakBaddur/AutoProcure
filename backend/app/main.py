@@ -488,37 +488,58 @@ async def analyze_multiple_quotes(
 
         # Suggestion/Conclusion logic
         def suggest_best_vendor(quotes):
-            # Build a map of best price for each item across vendors
-            item_best = {}
-            for quote in quotes:
-                for item in quote.items:
-                    key = item.description.strip().lower()
-                    if key not in item_best or item.unitPrice < item_best[key]['unitPrice']:
-                        item_best[key] = {
-                            'vendor': quote.vendorName,
-                            'unitPrice': item.unitPrice,
-                            'total': item.total,
-                            'quantity': item.quantity
-                        }
-            
-            # Calculate totals for each vendor
-            vendor_totals = {}
-            for quote in quotes:
-                vendor_totals[quote.vendorName] = sum(item.total for item in quote.items)
-            
-            # Find best single vendor
-            best_vendor = min(vendor_totals, key=vendor_totals.get)
-            best_vendor_total = vendor_totals[best_vendor]
-            
-            # Calculate split order savings
-            split_total = sum(x['unitPrice'] * x['quantity'] for x in item_best.values())
-            savings = best_vendor_total - split_total
-            
-            # Generate recommendation
-            if savings > best_vendor_total * 0.05:  # More than 5% savings
-                return f"🎯 **RECOMMENDATION**: Split your order across vendors for maximum savings! You can save ${savings:.2f} by purchasing each item from the vendor offering the lowest price, compared to buying everything from {best_vendor} (${best_vendor_total:.2f})."
-            else:
-                return f"🎯 **RECOMMENDATION**: Choose {best_vendor} for simplicity and reliability. Total cost: ${best_vendor_total:.2f}. The savings from splitting the order (${savings:.2f}) don't justify the additional complexity."
+            try:
+                # Build a map of best price for each item across vendors
+                item_best = {}
+                for quote in quotes:
+                    for item in quote.items:
+                        # Skip items with validation errors (e.g., math inconsistencies)
+                        if hasattr(item, 'validation_errors') and item.validation_errors:
+                            continue
+                            
+                        key = item.description.strip().lower()
+                        if key not in item_best or item.unitPrice < item_best[key]['unitPrice']:
+                            item_best[key] = {
+                                'vendor': quote.vendorName,
+                                'unitPrice': item.unitPrice,
+                                'total': item.total,
+                                'quantity': item.quantity
+                            }
+                
+                # Calculate totals for each vendor (only valid items)
+                vendor_totals = {}
+                for quote in quotes:
+                    valid_items = [item for item in quote.items if not hasattr(item, 'validation_errors') or not item.validation_errors]
+                    vendor_totals[quote.vendorName] = sum(item.total for item in valid_items)
+                
+                if not vendor_totals:
+                    return "⚠️ **ANALYSIS**: Unable to generate recommendation due to data quality issues. Please verify your quotes."
+                
+                # Find best single vendor
+                best_vendor = min(vendor_totals, key=vendor_totals.get)
+                best_vendor_total = vendor_totals[best_vendor]
+                
+                # Calculate split order savings
+                split_total = sum(x['unitPrice'] * x['quantity'] for x in item_best.values())
+                
+                # Validate the calculation
+                if split_total <= 0 or split_total > best_vendor_total * 10:  # Sanity check
+                    return f"🎯 **RECOMMENDATION**: Choose {best_vendor} for simplicity. Total cost: ${best_vendor_total:.2f}. Split order analysis unavailable due to data inconsistencies."
+                
+                savings = best_vendor_total - split_total
+                
+                # Generate recommendation with sanity checks
+                if savings > 0 and savings < best_vendor_total:  # Reasonable savings
+                    if savings > best_vendor_total * 0.05:  # More than 5% savings
+                        return f"🎯 **RECOMMENDATION**: Consider a split order approach for maximum savings. You can save ${savings:.2f} by purchasing each item from the vendor offering the lowest price, compared to buying everything from {best_vendor} (${best_vendor_total:.2f})."
+                    else:
+                        return f"🎯 **RECOMMENDATION**: Choose {best_vendor} for simplicity. Total cost: ${best_vendor_total:.2f}. The savings from splitting the order (${savings:.2f}) don't justify the additional complexity."
+                else:
+                    return f"🎯 **RECOMMENDATION**: Choose {best_vendor} for simplicity. Total cost: ${best_vendor_total:.2f}. Split order analysis shows no significant savings."
+                    
+            except Exception as e:
+                print(f"Error in suggest_best_vendor: {e}")
+                return "⚠️ **ANALYSIS**: Unable to generate recommendation due to processing errors. Please try again."
 
         suggestion = suggest_best_vendor(quotes)
         

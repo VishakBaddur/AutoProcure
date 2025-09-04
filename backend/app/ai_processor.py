@@ -643,15 +643,16 @@ JSON Response:"""
                                 description = re.sub(r'\s+(?:quantity|qty|qty\.?|unit\s+price|price|cost|total|amount|sum)\s*$', '', description, flags=re.IGNORECASE)
                                 
                                 if len(description) >= 3:
-                                    items.append({
-                                        "sku": f"ITEM-{len(items)+1:03d}",
-                                        "description": description,
-                                        "quantity": quantity,
-                                        "unitPrice": unit_price,
-                                        "deliveryTime": "7-10 days",
-                                        "total": total_price
-                                    })
-                                    print(f"Intelligent extraction: {quantity}x {description} @ ${unit_price} = ${total_price}")
+                                    # Validate and correct the data before adding
+                                    validated_item = self._validate_and_correct_item(
+                                        description, quantity, unit_price, total_price
+                                    )
+                                    
+                                    if validated_item:
+                                        items.append(validated_item)
+                                        print(f"Intelligent extraction: {validated_item['quantity']}x {validated_item['description']} @ ${validated_item['unitPrice']} = ${validated_item['total']}")
+                                    else:
+                                        print(f"Skipping invalid item: {description}")
                         
                         elif len(currency_amounts) == 1:
                             # Single price: assume it's unit price, quantity = 1
@@ -677,18 +678,16 @@ JSON Response:"""
                                 description = re.sub(r'\s+(?:quantity|qty|qty\.?|unit\s+price|price|cost|total|amount|sum)\s*$', '', description, flags=re.IGNORECASE)
                                 
                                 if len(description) >= 3:
-                                    items.append({
-                                        "sku": f"ITEM-{len(items)+1:03d}",
-                                        "description": description,
-                                        "quantity": 1,
-                                        "unitPrice": unit_price,
-                                        "deliveryTime": "7-10 days",
-                                        "total": total_price
-                                    })
-                                    # Clean up trailing dashes and extra whitespace
-                                    description = re.sub(r'\s*-\s*$', '', description)
-                                    description = description.strip()
-                                    print(f"Intelligent extraction: 1x {description} @ ${unit_price}")
+                                    # Validate and correct the data before adding
+                                    validated_item = self._validate_and_correct_item(
+                                        description, 1, unit_price, total_price
+                                    )
+                                    
+                                    if validated_item:
+                                        items.append(validated_item)
+                                        print(f"Intelligent extraction: 1x {validated_item['description']} @ ${validated_item['unitPrice']}")
+                                    else:
+                                        print(f"Skipping invalid item: {description}")
                                     
                     except Exception as e:
                         print(f"Intelligent extraction error: {e}")
@@ -829,6 +828,52 @@ JSON Response:"""
             return False
         
         return True
+    
+    def _validate_and_correct_item(self, description: str, quantity: float, unit_price: float, total_price: float) -> dict:
+        """Validate and correct item data, returning None if invalid"""
+        try:
+            # Convert quantity to integer if it's a float
+            if isinstance(quantity, float):
+                if quantity < 0.1:  # Too small, likely an error
+                    return None
+                quantity = int(round(quantity))
+            
+            # Basic validation
+            if quantity <= 0 or quantity > 100000:
+                return None
+            
+            if unit_price <= 0 or unit_price > 100000:
+                return None
+            
+            if len(description) < 2:
+                return None
+            
+            # Check for mathematical consistency
+            expected_total = quantity * unit_price
+            discrepancy = abs(total_price - expected_total)
+            percentage_error = (discrepancy / expected_total) * 100 if expected_total > 0 else 0
+            
+            # If there's a significant discrepancy (>5%), correct the total
+            if percentage_error > 5:
+                print(f"Correcting total for {description}: expected ${expected_total}, found ${total_price} (error: {percentage_error:.1f}%)")
+                total_price = expected_total
+            
+            # Final validation
+            if not self._validate_item_values(quantity, unit_price, description):
+                return None
+            
+            return {
+                "sku": f"ITEM-{hash(description) % 1000:03d}",
+                "description": description,
+                "quantity": quantity,
+                "unitPrice": unit_price,
+                "deliveryTime": "7-10 days",
+                "total": total_price
+            }
+            
+        except Exception as e:
+            print(f"Error validating item {description}: {e}")
+            return None
 
     def _validate_quote_total(self, total: float) -> bool:
         """Validate that quote total is reasonable"""
