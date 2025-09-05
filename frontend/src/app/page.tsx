@@ -1104,11 +1104,25 @@ export default function LandingPage() {
               // Filter issues to only show those for currently displayed vendors
               const obfuscationIssues = advancedAnalysis.obfuscation_detection?.results
                 ?.filter((result: any) => currentVendorNames.includes(result.vendor))
-                ?.flatMap((result: any) => result.analysis.issues || []) || [];
+                ?.flatMap((result: any) => {
+                  try {
+                    return result.analysis?.issues || [];
+                  } catch (error) {
+                    console.warn('Error processing obfuscation result:', error, result);
+                    return [];
+                  }
+                }) || [];
               
               const mathIssues = advancedAnalysis.math_validation?.results
                 ?.filter((result: any) => currentVendorNames.includes(result.vendor))
-                ?.flatMap((result: any) => result.validation.issues || []) || [];
+                ?.flatMap((result: any) => {
+                  try {
+                    return result.validation?.issues || [];
+                  } catch (error) {
+                    console.warn('Error processing math validation result:', error, result);
+                    return [];
+                  }
+                }) || [];
               
               const allIssues = [...obfuscationIssues, ...mathIssues];
               console.log('DEBUG: Filtered issues count:', allIssues.length);
@@ -1157,78 +1171,102 @@ export default function LandingPage() {
                 <div className="space-y-2 text-sm text-gray-300">
                   {/* Obfuscation Issues */}
                   {advancedAnalysis.obfuscation_detection?.results?.map((result: any, index: number) => {
-                    if (!result.analysis.issues || result.analysis.issues.length === 0) return null;
-                    
-                    return result.analysis.issues.map((issue: any, issueIndex: number) => (
-                      <div key={`obf-${index}-${issueIndex}`} className="flex items-start gap-2">
-                        <span className="text-yellow-400 mt-1">•</span>
-                        <div>
-                          <strong className="text-yellow-300">{result.vendor}</strong>: 
-                          <span className="text-gray-300"> {issue.description}</span>
-                          {issue.details && (
-                            <div className="ml-4 mt-1 text-xs text-gray-400">
-                              {(() => {
-                                try {
-                                  // Handle different types of details
-                                  if (Array.isArray(issue.details)) {
-                                    return issue.details.map((detail: any, detailIndex: number) => (
-                                      <div key={detailIndex}>- {detail}</div>
-                                    ));
-                                  } else if (typeof issue.details === 'object' && issue.details !== null) {
-                                    return Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
-                                      <div key={detailIndex}>- {key}: {value}</div>
-                                    ));
-                                  } else {
-                                    return <div>- {String(issue.details)}</div>;
-                                  }
-                                } catch (error) {
-                                  console.warn('Error rendering obfuscation issue details:', error, issue.details);
-                                  return <div>- Details unavailable</div>;
-                                }
-                              })()}
+                    try {
+                      if (!result?.analysis?.issues || result.analysis.issues.length === 0) return null;
+                      
+                      return result.analysis.issues.map((issue: any, issueIndex: number) => {
+                        try {
+                          return (
+                            <div key={`obf-${index}-${issueIndex}`} className="flex items-start gap-2">
+                              <span className="text-yellow-400 mt-1">•</span>
+                              <div>
+                                <strong className="text-yellow-300">{result.vendor || 'Unknown Vendor'}</strong>: 
+                                <span className="text-gray-300"> {issue?.description || 'Issue detected'}</span>
+                                {issue?.details && (
+                                  <div className="ml-4 mt-1 text-xs text-gray-400">
+                                    {(() => {
+                                      try {
+                                        // Handle different types of details
+                                        if (Array.isArray(issue.details)) {
+                                          return issue.details.map((detail: any, detailIndex: number) => (
+                                            <div key={detailIndex}>- {String(detail)}</div>
+                                          ));
+                                        } else if (typeof issue.details === 'object' && issue.details !== null) {
+                                          return Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
+                                            <div key={detailIndex}>- {key}: {String(value)}</div>
+                                          ));
+                                        } else {
+                                          return <div>- {String(issue.details)}</div>;
+                                        }
+                                      } catch (error) {
+                                        console.warn('Error rendering obfuscation issue details:', error, issue.details);
+                                        return <div>- Details unavailable</div>;
+                                      }
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    ));
+                          );
+                        } catch (error) {
+                          console.warn('Error rendering obfuscation issue:', error, issue);
+                          return null;
+                        }
+                      });
+                    } catch (error) {
+                      console.warn('Error processing obfuscation result:', error, result);
+                      return null;
+                    }
                   })}
                   
                   {/* Math Validation Issues */}
                   {advancedAnalysis.math_validation?.results?.map((result: any, index: number) => {
-                    if (!result.validation.issues || result.validation.issues.length === 0) return null;
-                    
-                    return result.validation.issues.map((issue: any, issueIndex: number) => (
-                      <div key={`math-${index}-${issueIndex}`} className="flex items-start gap-2">
-                        <span className="text-red-400 mt-1">⚠️</span>
-                        <div>
-                          <strong className="text-red-300">{result.vendor}</strong>: 
-                          <span className="text-gray-300"> {issue.description}</span>
-                          {issue.details && (
-                            <div className="ml-4 mt-1 text-xs text-gray-400">
-                              {(() => {
-                                try {
-                                  // Handle different types of details
-                                  if (Array.isArray(issue.details)) {
-                                    return issue.details.map((detail: any, detailIndex: number) => (
-                                      <div key={detailIndex}>- {detail}</div>
-                                    ));
-                                  } else if (typeof issue.details === 'object' && issue.details !== null) {
-                                    return Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
-                                      <div key={detailIndex}>- {key}: {value}</div>
-                                    ));
-                                  } else {
-                                    return <div>- {String(issue.details)}</div>;
-                                  }
-                                } catch (error) {
-                                  console.warn('Error rendering issue details:', error, issue.details);
-                                  return <div>- Details unavailable</div>;
-                                }
-                              })()}
+                    try {
+                      if (!result?.validation?.issues || result.validation.issues.length === 0) return null;
+                      
+                      return result.validation.issues.map((issue: any, issueIndex: number) => {
+                        try {
+                          return (
+                            <div key={`math-${index}-${issueIndex}`} className="flex items-start gap-2">
+                              <span className="text-red-400 mt-1">⚠️</span>
+                              <div>
+                                <strong className="text-red-300">{result.vendor || 'Unknown Vendor'}</strong>: 
+                                <span className="text-gray-300"> {issue?.description || 'Issue detected'}</span>
+                                {issue?.details && (
+                                  <div className="ml-4 mt-1 text-xs text-gray-400">
+                                    {(() => {
+                                      try {
+                                        // Handle different types of details
+                                        if (Array.isArray(issue.details)) {
+                                          return issue.details.map((detail: any, detailIndex: number) => (
+                                            <div key={detailIndex}>- {String(detail)}</div>
+                                          ));
+                                        } else if (typeof issue.details === 'object' && issue.details !== null) {
+                                          return Object.entries(issue.details).map(([key, value]: [string, any], detailIndex: number) => (
+                                            <div key={detailIndex}>- {key}: {String(value)}</div>
+                                          ));
+                                        } else {
+                                          return <div>- {String(issue.details)}</div>;
+                                        }
+                                      } catch (error) {
+                                        console.warn('Error rendering math validation issue details:', error, issue.details);
+                                        return <div>- Details unavailable</div>;
+                                      }
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    ));
+                          );
+                        } catch (error) {
+                          console.warn('Error rendering math validation issue:', error, issue);
+                          return null;
+                        }
+                      });
+                    } catch (error) {
+                      console.warn('Error processing math validation result:', error, result);
+                      return null;
+                    }
                   })}
                 </div>
               </div>
@@ -1306,8 +1344,21 @@ export default function LandingPage() {
                               <div className="mt-1 text-xs text-red-300">
                                 {mathIssues.map((issue: any, issueIndex: number) => {
                                   try {
-                                    // Safely render issue description
-                                    const description = issue?.description || 'Issue detected';
+                                    // Safely render issue description - handle all possible issue structures
+                                    let description = 'Issue detected';
+                                    
+                                    if (typeof issue === 'string') {
+                                      description = issue;
+                                    } else if (issue && typeof issue === 'object') {
+                                      if (issue.description) {
+                                        description = String(issue.description);
+                                      } else if (issue.type) {
+                                        description = `Issue: ${issue.type}`;
+                                      } else if (issue.message) {
+                                        description = String(issue.message);
+                                      }
+                                    }
+                                    
                                     return (
                                       <div key={issueIndex} className="flex items-center gap-1">
                                         <span>•</span>
