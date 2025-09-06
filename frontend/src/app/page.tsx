@@ -38,6 +38,8 @@ import {
   FileUploadAnimation, 
   ResultsAnimation 
 } from '../components/AnimeAnimations';
+import VendorDashboard from '../components/VendorDashboard';
+import VendorSubmissionPortal from '../components/VendorSubmissionPortal';
 
 // Cool CSS-based 3D floating elements
 function FloatingElements({ mousePosition }: { mousePosition: { x: number; y: number } }) {
@@ -318,6 +320,9 @@ export default function LandingPage() {
   const [totalSavings, setTotalSavings] = useState(0);
   // Currency conversion state
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  // Navigation state
+  const [currentView, setCurrentView] = useState<'main' | 'vendor-dashboard' | 'vendor-submission'>('main');
+  const [vendorSubmissionLink, setVendorSubmissionLink] = useState<string>('');
 
   // Currency conversion rates (in real implementation, these would be fetched from an API)
   const exchangeRates = {
@@ -1496,6 +1501,15 @@ export default function LandingPage() {
     }
   ];
 
+  // Handle view switching
+  if (currentView === 'vendor-dashboard') {
+    return <VendorDashboard />;
+  }
+
+  if (currentView === 'vendor-submission') {
+    return <VendorSubmissionPortal uniqueLink={vendorSubmissionLink} />;
+  }
+
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-hidden">
       {/* Anime.js Animation Components */}
@@ -1572,14 +1586,22 @@ export default function LandingPage() {
             <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
             <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
             <a href="#about" className="text-gray-300 hover:text-white transition-colors">About</a>
-                         <motion.button
-               onClick={scrollToUpload}
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
-               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-6 py-2 rounded-xl font-semibold border border-gray-600"
-             >
-               Get Started
-             </motion.button>
+            <motion.button
+              onClick={() => setCurrentView('vendor-dashboard')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-xl font-semibold border border-blue-500"
+            >
+              Vendor Dashboard
+            </motion.button>
+            <motion.button
+              onClick={scrollToUpload}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-6 py-2 rounded-xl font-semibold border border-gray-600"
+            >
+              Get Started
+            </motion.button>
           </motion.div>
         </div>
       </nav>
