@@ -16,17 +16,21 @@ class VendorService:
     
     def create_vendor(self, vendor_data: VendorCreate) -> Vendor:
         """Create a new vendor"""
-        vendor = Vendor(
-            name=vendor_data.name,
-            company=vendor_data.company,
-            email=vendor_data.email,
-            phone=vendor_data.phone,
-            address=vendor_data.address
-        )
-        self.db.add(vendor)
-        self.db.commit()
-        self.db.refresh(vendor)
-        return vendor
+        try:
+            vendor = Vendor(
+                name=vendor_data.name,
+                company=vendor_data.company,
+                email=vendor_data.email,
+                phone=vendor_data.phone,
+                address=vendor_data.address
+            )
+            self.db.add(vendor)
+            self.db.commit()
+            self.db.refresh(vendor)
+            return vendor
+        except Exception as e:
+            self.db.rollback()
+            raise Exception(f"Failed to create vendor: {str(e)}")
     
     def create_rfq(self, rfq_data: RFQCreate, created_by: str) -> RFQ:
         """Create a new RFQ"""

@@ -8,4 +8,13 @@ httpx
 python-dotenv
 asyncpg
 PyJWT
+sqlalchemy
+sqlmodel
+psycopg2-binary
+jinja2
+PyMuPDF
+pytesseract
+tabula-py
+pandas
+numpy
 

@@ -5,17 +5,18 @@ from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
-        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_username = os.getenv("SMTP_USERNAME", "")
-        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.from_email = os.getenv("FROM_EMAIL", "noreply@autoprocure.com")
-        self.from_name = os.getenv("FROM_NAME", "AutoProcure")
+        self.smtp_server = settings.SMTP_SERVER
+        self.smtp_port = settings.SMTP_PORT
+        self.smtp_username = settings.SMTP_USERNAME
+        self.smtp_password = settings.SMTP_PASSWORD
+        self.from_email = settings.FROM_EMAIL
+        self.from_name = settings.FROM_NAME
     
     def send_rfq_email(self, vendor_email: str, vendor_name: str, rfq_title: str, 
                       rfq_description: str, deadline: datetime, unique_link: str, 
