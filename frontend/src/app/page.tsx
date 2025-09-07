@@ -40,6 +40,7 @@ import {
 } from '../components/AnimeAnimations';
 import VendorDashboard from '../components/VendorDashboard';
 import VendorSubmissionPortal from '../components/VendorSubmissionPortal';
+import VendorComparisonDashboard from '../components/VendorComparisonDashboard';
 
 // Cool CSS-based 3D floating elements
 function FloatingElements({ mousePosition }: { mousePosition: { x: number; y: number } }) {
@@ -321,7 +322,7 @@ export default function LandingPage() {
   // Currency conversion state
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   // Navigation state
-  const [currentView, setCurrentView] = useState<'main' | 'vendor-dashboard' | 'vendor-submission'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'vendor-dashboard' | 'vendor-submission' | 'vendor-comparison'>('main');
   const [vendorSubmissionLink, setVendorSubmissionLink] = useState<string>('');
 
   // Currency conversion rates (in real implementation, these would be fetched from an API)
@@ -1501,14 +1502,18 @@ export default function LandingPage() {
     }
   ];
 
-  // Handle view switching
-  if (currentView === 'vendor-dashboard') {
-    return <VendorDashboard />;
-  }
+    // Handle view switching
+    if (currentView === 'vendor-dashboard') {
+      return <VendorDashboard />;
+    }
 
-  if (currentView === 'vendor-submission') {
-    return <VendorSubmissionPortal uniqueLink={vendorSubmissionLink} />;
-  }
+    if (currentView === 'vendor-comparison') {
+      return <VendorComparisonDashboard onBack={() => setCurrentView('main')} />;
+    }
+
+    if (currentView === 'vendor-submission') {
+      return <VendorSubmissionPortal uniqueLink={vendorSubmissionLink} />;
+    }
 
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-hidden">

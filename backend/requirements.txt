@@ -17,4 +17,5 @@ pytesseract
 tabula-py
 pandas
 numpy
+reportlab
 

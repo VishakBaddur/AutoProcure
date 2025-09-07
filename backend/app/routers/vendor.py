@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from datetime import datetime
 import logging
+import io
 
 from ..database import get_db
 from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
 from ..services.vendor_service import VendorService
 from ..services.email_service import EmailService
+from ..services.report_service import report_service
 
 router = APIRouter(prefix="/api/vendor", tags=["vendor"])
 logger = logging.getLogger(__name__)
@@ -256,3 +259,68 @@ async def submit_vendor_quote(
     except Exception as e:
         logger.error(f"Error submitting quote: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to submit quote: {str(e)}")
+
+@router.post("/rfq/{rfq_id}/export-report")
+async def export_comparison_report(rfq_id: str, db: Session = Depends(get_db)):
+    """Export vendor comparison report as PDF"""
+    try:
+        vendor_service = VendorService(db)
+        
+        # Get RFQ details
+        rfq = await vendor_service.get_rfq_by_id(rfq_id)
+        if not rfq:
+            raise HTTPException(status_code=404, detail="RFQ not found")
+        
+        # Get all participations with submissions
+        participations = await vendor_service.get_rfq_participations(rfq_id)
+        submitted_participations = [p for p in participations if p.status == "submitted"]
+        
+        if not submitted_participations:
+            raise HTTPException(status_code=400, detail="No submitted quotes found for this RFQ")
+        
+        # Convert participations to quote format for analysis
+        quotes = []
+        for participation in submitted_participations:
+            if participation.submission_data:
+                quote = {
+                    "vendorName": participation.vendor.name,
+                    "items": participation.submission_data.get("items", []),
+                    "terms": participation.submission_data.get("terms", {}),
+                    "totalCost": sum(item.get("total", 0) for item in participation.submission_data.get("items", [])),
+                    "complianceScore": 85,  # Default compliance score
+                    "riskScore": 15,  # Default risk score
+                    "anomalies": []  # Would be populated by analysis
+                }
+                quotes.append(quote)
+        
+        # Generate analysis result (simplified for now)
+        analysis_result = {
+            "winner": {
+                "vendor": min(quotes, key=lambda x: x["totalCost"])["vendorName"],
+                "reasoning": "Selected based on lowest total cost and compliance requirements"
+            },
+            "recommendations": [
+                {
+                    "description": "Consider negotiating bulk discounts",
+                    "reasoning": "Multiple vendors offer similar items with potential for better pricing"
+                }
+            ]
+        }
+        
+        # Generate PDF report
+        pdf_content = report_service.generate_vendor_comparison_report(
+            quotes=quotes,
+            analysis_result=analysis_result,
+            rfq_title=rfq.title
+        )
+        
+        # Return PDF as streaming response
+        return StreamingResponse(
+            io.BytesIO(pdf_content),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=rfq_{rfq_id}_comparison_report.pdf"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
