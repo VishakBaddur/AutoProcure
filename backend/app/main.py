@@ -31,14 +31,17 @@ from .delay_tracker import delay_tracker
 from .currency_handler import currency_handler
 # Temporarily disabled for deployment fix
 # from .routers import vendor
-from .database_sqlalchemy import create_tables
+# Temporarily disabled for deployment fix
+# from .database_sqlalchemy import create_tables
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
 
 # Create database tables on startup
 @app.on_event("startup")
 async def startup_event():
-    create_tables()
+    # Temporarily disabled for deployment fix
+    # create_tables()
+    pass
 
 # CORS middleware for frontend integration
 app.add_middleware(
