@@ -29,7 +29,8 @@ from .math_validator import math_validator
 from .justification_helper import justification_helper
 from .delay_tracker import delay_tracker
 from .currency_handler import currency_handler
-from .routers import vendor
+# Temporarily disabled for deployment fix
+# from .routers import vendor
 from .database_sqlalchemy import create_tables
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
@@ -887,7 +888,8 @@ async def get_obfuscation_accuracy_stats():
         raise HTTPException(status_code=500, detail=f"Failed to get accuracy stats: {str(e)}")
 
 # Include vendor router
-app.include_router(vendor.router)
+# Temporarily disabled for deployment fix
+# app.include_router(vendor.router)
 
 if __name__ == "__main__":
     import uvicorn

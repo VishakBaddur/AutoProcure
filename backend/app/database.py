@@ -323,4 +323,9 @@ class Database:
             return 0
 
 # Global database instance
-db = Database() 
+db = Database()
+
+# Dependency function for FastAPI
+async def get_db():
+    """FastAPI dependency to get database instance"""
+    return db 

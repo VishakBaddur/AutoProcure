@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from datetime import datetime
 import logging
 import io
 
-from ..database import get_db
-from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
-from ..services.vendor_service import VendorService
-from ..services.email_service import EmailService
-from ..services.report_service import report_service
+from ..database import get_db, Database
+# Temporarily disable vendor imports to fix deployment
+# from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
+# from ..services.vendor_service import VendorService
+# from ..services.email_service import EmailService
+# from ..services.report_service import report_service
 
 router = APIRouter(prefix="/api/vendor", tags=["vendor"])
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 async def create_rfq(
     rfq_data: RFQCreate,
     created_by: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Create a new RFQ"""
     try:
@@ -34,7 +34,7 @@ async def create_rfq(
 async def upload_vendor_list(
     rfq_id: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Upload vendor list and create participations"""
     try:
@@ -64,7 +64,7 @@ async def upload_vendor_list(
 async def send_rfq_emails(
     rfq_id: str,
     base_url: str = "http://localhost:3000",
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Send RFQ emails to all vendors"""
     try:
@@ -138,7 +138,7 @@ async def send_rfq_emails(
 @router.get("/rfq/{rfq_id}/dashboard")
 async def get_rfq_dashboard(
     rfq_id: str,
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Get dashboard data for an RFQ"""
     try:
@@ -152,7 +152,7 @@ async def get_rfq_dashboard(
 @router.get("/rfq/{rfq_id}/participations", response_model=List[RFQParticipationResponse])
 async def get_rfq_participations(
     rfq_id: str,
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Get all participations for an RFQ"""
     try:
@@ -166,7 +166,7 @@ async def get_rfq_participations(
 @router.get("/vendor-portal/{unique_link}")
 async def get_vendor_portal_info(
     unique_link: str,
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Get vendor portal information for submission"""
     try:
@@ -205,7 +205,7 @@ async def get_vendor_portal_info(
 async def submit_vendor_quote(
     unique_link: str,
     submission_data: Dict[str, Any],
-    db: Session = Depends(get_db)
+    db: Database = Depends(get_db)
 ):
     """Submit vendor quote"""
     try:
