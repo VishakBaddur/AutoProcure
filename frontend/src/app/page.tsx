@@ -1504,7 +1504,7 @@ export default function LandingPage() {
 
     // Handle view switching
     if (currentView === 'vendor-dashboard') {
-      return <VendorDashboard />;
+      return <VendorDashboard onBack={() => setCurrentView('main')} />;
     }
 
     if (currentView === 'vendor-comparison') {

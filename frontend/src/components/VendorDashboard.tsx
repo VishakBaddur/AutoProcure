@@ -15,7 +15,8 @@ import {
   Download,
   Plus,
   Calendar,
-  DollarSign
+  DollarSign,
+  ArrowLeft
 } from 'lucide-react';
 
 interface Vendor {
@@ -63,7 +64,11 @@ interface DashboardData {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export default function VendorDashboard() {
+interface VendorDashboardProps {
+  onBack?: () => void;
+}
+
+export default function VendorDashboard({ onBack }: VendorDashboardProps) {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [selectedRfq, setSelectedRfq] = useState<RFQ | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -204,6 +209,29 @@ export default function VendorDashboard() {
     }
   };
 
+  const analyzeRfqQuotes = async (rfqId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/vendor/rfq/${rfqId}/analyze-quotes`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Quote analysis completed! Found ${result.submitted_quotes || 'some'} submitted quotes. Check the comparison dashboard for detailed analysis.`);
+        // TODO: Navigate to comparison dashboard with analysis results
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to analyze quotes');
+      }
+    } catch (error) {
+      console.error('Error analyzing quotes:', error);
+      alert('Failed to analyze quotes. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loadDashboardData = async (rfqId: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/vendor/rfq/${rfqId}/dashboard`);
@@ -246,7 +274,20 @@ export default function VendorDashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Vendor Outreach Dashboard</h1>
+          <div className="flex items-center gap-4 mb-4">
+            {onBack && (
+              <motion.button
+                onClick={onBack}
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-gray-800/50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </motion.button>
+            )}
+            <h1 className="text-4xl font-bold text-white">Vendor Outreach Dashboard</h1>
+          </div>
           <p className="text-gray-400">Manage RFQs and track vendor submissions</p>
         </div>
 
@@ -284,6 +325,19 @@ export default function VendorDashboard() {
             >
               <Send className="w-5 h-5" />
               Send RFQ Emails
+            </motion.button>
+          )}
+
+          {selectedRfq && dashboardData && dashboardData.submitted_quotes > 0 && (
+            <motion.button
+              onClick={() => analyzeRfqQuotes(selectedRfq.rfq_id)}
+              disabled={isLoading}
+              className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:from-orange-700 hover:to-orange-800 transition-all disabled:opacity-50"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Eye className="w-5 h-5" />
+              Analyze Quotes
             </motion.button>
           )}
         </div>

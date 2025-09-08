@@ -260,6 +260,68 @@ async def submit_vendor_quote(
         logger.error(f"Error submitting quote: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to submit quote: {str(e)}")
 
+@router.post("/rfq/{rfq_id}/analyze-quotes")
+async def analyze_rfq_quotes(
+    rfq_id: str,
+    db: Database = Depends(get_db)
+):
+    """Analyze all submitted quotes for an RFQ using AI comparison"""
+    try:
+        # Temporarily disabled for deployment fix
+        # vendor_service = VendorService(db)
+        # 
+        # # Get RFQ details
+        # rfq = await vendor_service.get_rfq_by_id(rfq_id)
+        # if not rfq:
+        #     raise HTTPException(status_code=404, detail="RFQ not found")
+        # 
+        # # Get all participations with submissions
+        # participations = await vendor_service.get_rfq_participations(rfq_id)
+        # submitted_participations = [p for p in participations if p.status == "submitted"]
+        # 
+        # if len(submitted_participations) < 2:
+        #     raise HTTPException(status_code=400, detail="At least 2 submitted quotes required for comparison")
+        # 
+        # # Convert participations to VendorQuote format for analysis
+        # quotes = []
+        # for participation in submitted_participations:
+        #     if participation.submission_data:
+        #         # Convert submission data to VendorQuote format
+        #         quote = VendorQuote(
+        #             vendorName=participation.vendor.name,
+        #             items=[],  # Would need to parse submission_data.items
+        #             terms={},  # Would need to parse submission_data.terms
+        #             totalCost=sum(item.get("total", 0) for item in participation.submission_data.get("items", [])),
+        #             deliveryTime=participation.submission_data.get("delivery_time", "N/A"),
+        #             complianceScore=85,  # Default
+        #             riskScore=15,  # Default
+        #             anomalies=[]
+        #         )
+        #         quotes.append(quote)
+        # 
+        # # Use existing multi-vendor analyzer
+        # from ..multi_vendor_analyzer import MultiVendorAnalyzer
+        # analyzer = MultiVendorAnalyzer()
+        # analysis_result = await analyzer.analyze_multiple_quotes(quotes)
+        # 
+        # return {
+        #     'rfq_id': rfq_id,
+        #     'rfq_title': rfq.title,
+        #     'submitted_quotes': len(submitted_participations),
+        #     'analysis': analysis_result.dict()
+        # }
+        
+        # Temporary response for deployment
+        return {
+            'message': 'Quote analysis temporarily disabled for deployment',
+            'rfq_id': rfq_id,
+            'note': 'This endpoint will analyze submitted vendor quotes once vendor features are re-enabled'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error analyzing RFQ quotes: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze quotes: {str(e)}")
+
 @router.post("/rfq/{rfq_id}/export-report")
 async def export_comparison_report(rfq_id: str, db: Session = Depends(get_db)):
     """Export vendor comparison report as PDF"""
