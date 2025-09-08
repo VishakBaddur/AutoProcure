@@ -10,6 +10,7 @@ import {
   Clock, 
   AlertCircle,
   FileText,
+  FileSpreadsheet,
   Send,
   Eye,
   Download,
@@ -233,6 +234,37 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
     }
   };
 
+  const exportRfqAnalysis = async (rfqId: string, format: 'pdf' | 'excel') => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/vendor/rfq/${rfqId}/export/${format}`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rfq_${rfqId}_analysis.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        alert(`${format.toUpperCase()} export completed successfully!`);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Failed to export ${format.toUpperCase()}`);
+      }
+    } catch (error) {
+      console.error(`Error exporting ${format}:`, error);
+      alert(`Failed to export ${format.toUpperCase()}. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loadDashboardData = async (rfqId: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/vendor/rfq/${rfqId}/dashboard`);
@@ -330,16 +362,40 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
           )}
 
           {selectedRfq && dashboardData && dashboardData.submitted_quotes > 0 && (
-            <motion.button
-              onClick={() => analyzeRfqQuotes(selectedRfq.rfq_id)}
-              disabled={isLoading}
-              className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:from-orange-700 hover:to-orange-800 transition-all disabled:opacity-50"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Eye className="w-5 h-5" />
-              Analyze Quotes
-            </motion.button>
+            <div className="flex gap-3">
+              <motion.button
+                onClick={() => analyzeRfqQuotes(selectedRfq.rfq_id)}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:from-orange-700 hover:to-orange-800 transition-all disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Eye className="w-5 h-5" />
+                Analyze Quotes
+              </motion.button>
+              
+              <motion.button
+                onClick={() => exportRfqAnalysis(selectedRfq.rfq_id, 'pdf')}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:from-red-700 hover:to-red-800 transition-all disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FileText className="w-5 h-5" />
+                Export PDF
+              </motion.button>
+              
+              <motion.button
+                onClick={() => exportRfqAnalysis(selectedRfq.rfq_id, 'excel')}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:from-green-700 hover:to-green-800 transition-all disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+                Export Excel
+              </motion.button>
+            </div>
           )}
         </div>
 

@@ -29,19 +29,15 @@ from .math_validator import math_validator
 from .justification_helper import justification_helper
 from .delay_tracker import delay_tracker
 from .currency_handler import currency_handler
-# Temporarily disabled for deployment fix
-# from .routers import vendor
-# Temporarily disabled for deployment fix
-# from .database_sqlalchemy import create_tables
+from .routers import vendor
+from .database_sqlalchemy import create_tables
 
 app = FastAPI(title="AutoProcure API", version="1.0.0")
 
 # Create database tables on startup
 @app.on_event("startup")
 async def startup_event():
-    # Temporarily disabled for deployment fix
-    # create_tables()
-    pass
+    create_tables()
 
 # CORS middleware for frontend integration
 app.add_middleware(
@@ -892,7 +888,7 @@ async def get_obfuscation_accuracy_stats():
 
 # Include vendor router
 # Temporarily disabled for deployment fix
-# app.include_router(vendor.router)
+app.include_router(vendor.router)
 
 if __name__ == "__main__":
     import uvicorn

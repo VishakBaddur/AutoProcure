@@ -7,11 +7,11 @@ import io
 
 from ..database import get_db, Database
 from ..template_service import template_service, OrganizationTemplate, TemplateMappingResult
-# Temporarily disable vendor imports to fix deployment
-# from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
-# from ..services.vendor_service import VendorService
-# from ..services.email_service import EmailService
-# from ..services.report_service import report_service
+from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
+from ..services.vendor_service import VendorService
+from ..services.email_service import EmailService
+from ..services.report_service import report_service
+from ..services.export_service import export_service
 
 router = APIRouter(prefix="/api/vendor", tags=["vendor"])
 logger = logging.getLogger(__name__)
@@ -268,60 +268,264 @@ async def analyze_rfq_quotes(
 ):
     """Analyze all submitted quotes for an RFQ using AI comparison"""
     try:
-        # Temporarily disabled for deployment fix
-        # vendor_service = VendorService(db)
-        # 
-        # # Get RFQ details
-        # rfq = await vendor_service.get_rfq_by_id(rfq_id)
-        # if not rfq:
-        #     raise HTTPException(status_code=404, detail="RFQ not found")
-        # 
-        # # Get all participations with submissions
-        # participations = await vendor_service.get_rfq_participations(rfq_id)
-        # submitted_participations = [p for p in participations if p.status == "submitted"]
-        # 
-        # if len(submitted_participations) < 2:
-        #     raise HTTPException(status_code=400, detail="At least 2 submitted quotes required for comparison")
-        # 
-        # # Convert participations to VendorQuote format for analysis
-        # quotes = []
-        # for participation in submitted_participations:
-        #     if participation.submission_data:
-        #         # Convert submission data to VendorQuote format
-        #         quote = VendorQuote(
-        #             vendorName=participation.vendor.name,
-        #             items=[],  # Would need to parse submission_data.items
-        #             terms={},  # Would need to parse submission_data.terms
-        #             totalCost=sum(item.get("total", 0) for item in participation.submission_data.get("items", [])),
-        #             deliveryTime=participation.submission_data.get("delivery_time", "N/A"),
-        #             complianceScore=85,  # Default
-        #             riskScore=15,  # Default
-        #             anomalies=[]
-        #         )
-        #         quotes.append(quote)
-        # 
-        # # Use existing multi-vendor analyzer
-        # from ..multi_vendor_analyzer import MultiVendorAnalyzer
-        # analyzer = MultiVendorAnalyzer()
-        # analysis_result = await analyzer.analyze_multiple_quotes(quotes)
-        # 
-        # return {
-        #     'rfq_id': rfq_id,
-        #     'rfq_title': rfq.title,
-        #     'submitted_quotes': len(submitted_participations),
-        #     'analysis': analysis_result.dict()
-        # }
+        vendor_service = VendorService(db)
         
-        # Temporary response for deployment
+        # Get RFQ details
+        rfq = vendor_service.get_rfq_by_id(rfq_id)
+        if not rfq:
+            raise HTTPException(status_code=404, detail="RFQ not found")
+        
+        # Get all participations with submissions
+        participations = vendor_service.get_rfq_participations(rfq_id)
+        submitted_participations = [p for p in participations if p.status == "submitted"]
+        
+        if len(submitted_participations) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 submitted quotes required for comparison")
+        
+        # Convert participations to VendorQuote format for analysis
+        quotes = []
+        for participation in submitted_participations:
+            if participation.submission_data:
+                try:
+                    # Parse submission data
+                    submission_data = json.loads(participation.submission_data)
+                    
+                    # Convert to VendorQuote format
+                    from ..models import VendorQuote, QuoteItem, QuoteTerms
+                    
+                    items = []
+                    if 'items' in submission_data:
+                        for item_data in submission_data['items']:
+                            item = QuoteItem(
+                                sku=item_data.get('sku', 'N/A'),
+                                description=item_data.get('description', 'Unknown Item'),
+                                quantity=item_data.get('quantity', 1),
+                                unitPrice=item_data.get('unitPrice', 0.0),
+                                deliveryTime=item_data.get('deliveryTime', 'TBD'),
+                                total=item_data.get('total', 0.0)
+                            )
+                            items.append(item)
+                    
+                    terms = QuoteTerms(
+                        payment=submission_data.get('terms', {}).get('payment', 'TBD'),
+                        warranty=submission_data.get('terms', {}).get('warranty', 'TBD')
+                    )
+                    
+                    quote = VendorQuote(
+                        vendorName=participation.vendor.name,
+                        items=items,
+                        terms=terms
+                    )
+                    quotes.append(quote)
+                    
+                except Exception as e:
+                    logger.error(f"Error parsing submission data for {participation.vendor.name}: {str(e)}")
+                    continue
+        
+        if len(quotes) < 2:
+            raise HTTPException(status_code=400, detail="Insufficient valid quotes for comparison")
+        
+        # Use existing multi-vendor analysis
+        from ..multi_vendor_analyzer import multi_vendor_analyzer
+        analysis_result = await multi_vendor_analyzer.analyze_multiple_quotes(quotes)
+        
         return {
-            'message': 'Quote analysis temporarily disabled for deployment',
             'rfq_id': rfq_id,
-            'note': 'This endpoint will analyze submitted vendor quotes once vendor features are re-enabled'
+            'rfq_title': rfq.title,
+            'analysis_result': analysis_result,
+            'submitted_count': len(submitted_participations),
+            'valid_quotes_count': len(quotes)
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error analyzing RFQ quotes: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to analyze quotes: {str(e)}")
+
+@router.post("/rfq/{rfq_id}/export/pdf")
+async def export_rfq_analysis_pdf(
+    rfq_id: str,
+    db: Database = Depends(get_db)
+):
+    """Export RFQ analysis results to PDF"""
+    try:
+        vendor_service = VendorService(db)
+        
+        # Get RFQ details
+        rfq = vendor_service.get_rfq_by_id(rfq_id)
+        if not rfq:
+            raise HTTPException(status_code=404, detail="RFQ not found")
+        
+        # Get analysis results (reuse the analyze-quotes logic)
+        participations = vendor_service.get_rfq_participations(rfq_id)
+        submitted_participations = [p for p in participations if p.status == "submitted"]
+        
+        if len(submitted_participations) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 submitted quotes required for export")
+        
+        # Convert to VendorQuote format
+        quotes = []
+        for participation in submitted_participations:
+            if participation.submission_data:
+                try:
+                    submission_data = json.loads(participation.submission_data)
+                    from ..models import VendorQuote, QuoteItem, QuoteTerms
+                    
+                    items = []
+                    if 'items' in submission_data:
+                        for item_data in submission_data['items']:
+                            item = QuoteItem(
+                                sku=item_data.get('sku', 'N/A'),
+                                description=item_data.get('description', 'Unknown Item'),
+                                quantity=item_data.get('quantity', 1),
+                                unitPrice=item_data.get('unitPrice', 0.0),
+                                deliveryTime=item_data.get('deliveryTime', 'TBD'),
+                                total=item_data.get('total', 0.0)
+                            )
+                            items.append(item)
+                    
+                    terms = QuoteTerms(
+                        payment=submission_data.get('terms', {}).get('payment', 'TBD'),
+                        warranty=submission_data.get('terms', {}).get('warranty', 'TBD')
+                    )
+                    
+                    quote = VendorQuote(
+                        vendorName=participation.vendor.name,
+                        items=items,
+                        terms=terms
+                    )
+                    quotes.append(quote)
+                except Exception as e:
+                    logger.error(f"Error parsing submission data: {str(e)}")
+                    continue
+        
+        # Perform analysis
+        from ..multi_vendor_analyzer import multi_vendor_analyzer
+        analysis_result = await multi_vendor_analyzer.analyze_multiple_quotes(quotes)
+        
+        # Prepare RFQ data
+        rfq_data = {
+            'title': rfq.title,
+            'description': rfq.description,
+            'deadline': rfq.deadline.isoformat() if rfq.deadline else 'N/A',
+            'total_budget': rfq.total_budget,
+            'currency': rfq.currency
+        }
+        
+        # Generate PDF
+        pdf_content = export_service.export_to_pdf(
+            rfq_data=rfq_data,
+            analysis_result=analysis_result,
+            issues_detected=[],  # TODO: Add issues detection
+            compliance_results={}  # TODO: Add compliance results
+        )
+        
+        # Return PDF as response
+        from fastapi.responses import Response
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=rfq_{rfq_id}_analysis.pdf"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to export PDF: {str(e)}")
+
+@router.post("/rfq/{rfq_id}/export/excel")
+async def export_rfq_analysis_excel(
+    rfq_id: str,
+    db: Database = Depends(get_db)
+):
+    """Export RFQ analysis results to Excel"""
+    try:
+        vendor_service = VendorService(db)
+        
+        # Get RFQ details
+        rfq = vendor_service.get_rfq_by_id(rfq_id)
+        if not rfq:
+            raise HTTPException(status_code=404, detail="RFQ not found")
+        
+        # Get analysis results (reuse the analyze-quotes logic)
+        participations = vendor_service.get_rfq_participations(rfq_id)
+        submitted_participations = [p for p in participations if p.status == "submitted"]
+        
+        if len(submitted_participations) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 submitted quotes required for export")
+        
+        # Convert to VendorQuote format
+        quotes = []
+        for participation in submitted_participations:
+            if participation.submission_data:
+                try:
+                    submission_data = json.loads(participation.submission_data)
+                    from ..models import VendorQuote, QuoteItem, QuoteTerms
+                    
+                    items = []
+                    if 'items' in submission_data:
+                        for item_data in submission_data['items']:
+                            item = QuoteItem(
+                                sku=item_data.get('sku', 'N/A'),
+                                description=item_data.get('description', 'Unknown Item'),
+                                quantity=item_data.get('quantity', 1),
+                                unitPrice=item_data.get('unitPrice', 0.0),
+                                deliveryTime=item_data.get('deliveryTime', 'TBD'),
+                                total=item_data.get('total', 0.0)
+                            )
+                            items.append(item)
+                    
+                    terms = QuoteTerms(
+                        payment=submission_data.get('terms', {}).get('payment', 'TBD'),
+                        warranty=submission_data.get('terms', {}).get('warranty', 'TBD')
+                    )
+                    
+                    quote = VendorQuote(
+                        vendorName=participation.vendor.name,
+                        items=items,
+                        terms=terms
+                    )
+                    quotes.append(quote)
+                except Exception as e:
+                    logger.error(f"Error parsing submission data: {str(e)}")
+                    continue
+        
+        # Perform analysis
+        from ..multi_vendor_analyzer import multi_vendor_analyzer
+        analysis_result = await multi_vendor_analyzer.analyze_multiple_quotes(quotes)
+        
+        # Prepare RFQ data
+        rfq_data = {
+            'title': rfq.title,
+            'description': rfq.description,
+            'deadline': rfq.deadline.isoformat() if rfq.deadline else 'N/A',
+            'total_budget': rfq.total_budget,
+            'currency': rfq.currency
+        }
+        
+        # Generate Excel
+        excel_content = export_service.export_to_excel(
+            rfq_data=rfq_data,
+            analysis_result=analysis_result,
+            issues_detected=[],  # TODO: Add issues detection
+            compliance_results={}  # TODO: Add compliance results
+        )
+        
+        # Return Excel as response
+        from fastapi.responses import Response
+        return Response(
+            content=excel_content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=rfq_{rfq_id}_analysis.xlsx"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting Excel: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to export Excel: {str(e)}")
 
 @router.get("/template/organization")
 async def get_organization_template():
