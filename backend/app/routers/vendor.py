@@ -6,6 +6,7 @@ import logging
 import io
 
 from ..database import get_db, Database
+from ..template_service import template_service, OrganizationTemplate, TemplateMappingResult
 # Temporarily disable vendor imports to fix deployment
 # from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
 # from ..services.vendor_service import VendorService
@@ -321,6 +322,44 @@ async def analyze_rfq_quotes(
     except Exception as e:
         logger.error(f"Error analyzing RFQ quotes: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to analyze quotes: {str(e)}")
+
+@router.get("/template/organization")
+async def get_organization_template():
+    """Get organization's standard quote template"""
+    try:
+        template = template_service.get_organization_template()
+        return {
+            "template": template.dict(),
+            "message": "Organization template retrieved successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error getting organization template: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get template: {str(e)}")
+
+@router.post("/template/map-vendor-quote")
+async def map_vendor_quote_to_template(
+    vendor_quote_data: Dict[str, Any],
+    template_id: str = None
+):
+    """Map vendor quote data to organization template"""
+    try:
+        # Get organization template
+        template = template_service.get_organization_template(template_id)
+        
+        # Map vendor quote to template
+        mapping_result = template_service.map_vendor_quote_to_template(
+            vendor_quote_data, template
+        )
+        
+        return {
+            "mapping_result": mapping_result.dict(),
+            "template_used": template.template_name,
+            "message": "Vendor quote mapped to organization template successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error mapping vendor quote to template: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to map quote: {str(e)}")
 
 @router.post("/rfq/{rfq_id}/export-report")
 async def export_comparison_report(rfq_id: str, db: Session = Depends(get_db)):

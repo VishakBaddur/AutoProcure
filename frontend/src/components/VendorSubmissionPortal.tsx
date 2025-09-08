@@ -39,6 +39,43 @@ interface QuoteItem {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+interface OrganizationTemplate {
+  template_id: string;
+  organization_name: string;
+  template_name: string;
+  description: string;
+  header_fields: Array<{
+    field_name: string;
+    field_type: string;
+    required: boolean;
+    description: string;
+  }>;
+  item_fields: Array<{
+    field_name: string;
+    field_type: string;
+    required: boolean;
+    description: string;
+  }>;
+  terms_fields: Array<{
+    field_name: string;
+    field_type: string;
+    required: boolean;
+    description: string;
+  }>;
+  required_documents: string[];
+  compliance_requirements: string[];
+}
+
+interface TemplateMappingResult {
+  vendor_name: string;
+  template_compliance_score: number;
+  mapped_fields: Record<string, any>;
+  unmapped_fields: string[];
+  confidence_scores: Record<string, number>;
+  mapping_notes: string[];
+  requires_manual_review: boolean;
+}
+
 interface VendorSubmissionPortalProps {
   uniqueLink: string;
 }
@@ -48,6 +85,11 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submissionMethod, setSubmissionMethod] = useState<'form' | 'upload' | null>(null);
+  
+  // Template-related state
+  const [organizationTemplate, setOrganizationTemplate] = useState<OrganizationTemplate | null>(null);
+  const [templateMappingResult, setTemplateMappingResult] = useState<TemplateMappingResult | null>(null);
+  const [showTemplateMapping, setShowTemplateMapping] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -63,6 +105,7 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
 
   useEffect(() => {
     loadPortalInfo();
+    loadOrganizationTemplate();
   }, [uniqueLink]);
 
   const loadPortalInfo = async () => {
@@ -92,6 +135,18 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
       setError('Failed to load submission portal');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadOrganizationTemplate = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/vendor/template/organization`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizationTemplate(data.template);
+      }
+    } catch (error) {
+      console.error('Error loading organization template:', error);
     }
   };
 
@@ -199,6 +254,57 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
       alert('Failed to submit quote. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const mapFileToTemplate = async () => {
+    if (!uploadFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    try {
+      // First, analyze the uploaded file using the existing AI processor
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+
+      const analysisResponse = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!analysisResponse.ok) {
+        throw new Error('Failed to analyze uploaded file');
+      }
+
+      const analysisResult = await analysisResponse.json();
+      
+      // Get the first quote from analysis (assuming single vendor quote)
+      const vendorQuote = analysisResult.quotes?.[0];
+      if (!vendorQuote) {
+        throw new Error('No quote data found in uploaded file');
+      }
+
+      // Map the analyzed quote to organization template
+      const mappingResponse = await fetch(`${API_BASE_URL}/api/vendor/template/map-vendor-quote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(vendorQuote)
+      });
+
+      if (!mappingResponse.ok) {
+        throw new Error('Failed to map quote to template');
+      }
+
+      const mappingResult = await mappingResponse.json();
+      setTemplateMappingResult(mappingResult.mapping_result);
+      setShowTemplateMapping(true);
+
+    } catch (error) {
+      console.error('Error mapping file to template:', error);
+      alert('Failed to map file to organization template. Please try again.');
     }
   };
 
@@ -348,6 +454,90 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
             </div>
           </div>
         </div>
+
+        {/* Organization Template Display */}
+        {organizationTemplate && (
+          <div className="mb-8">
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-white mb-4">
+                📋 Organization Quote Template
+              </h3>
+              <p className="text-gray-300 mb-4">
+                Please structure your quote according to our standard template. 
+                You can either fill the form below or upload your existing quote - 
+                our AI will automatically map it to our template format.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Header Fields */}
+                <div className="bg-gray-700/30 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-400 mb-3">Header Information</h4>
+                  <ul className="space-y-2 text-sm">
+                    {organizationTemplate.header_fields.map((field, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-gray-400 mt-1">•</span>
+                        <div>
+                          <span className="text-white">{field.field_name}</span>
+                          {field.required && <span className="text-red-400 ml-1">*</span>}
+                          <p className="text-gray-400 text-xs">{field.description}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Item Fields */}
+                <div className="bg-gray-700/30 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-400 mb-3">Item Details</h4>
+                  <ul className="space-y-2 text-sm">
+                    {organizationTemplate.item_fields.map((field, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-gray-400 mt-1">•</span>
+                        <div>
+                          <span className="text-white">{field.field_name}</span>
+                          {field.required && <span className="text-red-400 ml-1">*</span>}
+                          <p className="text-gray-400 text-xs">{field.description}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Terms Fields */}
+                <div className="bg-gray-700/30 rounded-lg p-4">
+                  <h4 className="font-semibold text-orange-400 mb-3">Terms & Conditions</h4>
+                  <ul className="space-y-2 text-sm">
+                    {organizationTemplate.terms_fields.map((field, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-gray-400 mt-1">•</span>
+                        <div>
+                          <span className="text-white">{field.field_name}</span>
+                          {field.required && <span className="text-red-400 ml-1">*</span>}
+                          <p className="text-gray-400 text-xs">{field.description}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Required Documents */}
+              {organizationTemplate.required_documents.length > 0 && (
+                <div className="mt-4 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-400 mb-2">Required Documents</h4>
+                  <ul className="space-y-1">
+                    {organizationTemplate.required_documents.map((doc, index) => (
+                      <li key={index} className="text-sm text-gray-300 flex items-start gap-2">
+                        <span className="text-blue-400 mt-1">•</span>
+                        {doc}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {isDeadlinePassed ? (
           <div className="bg-red-900/20 border border-red-500 rounded-lg p-6 text-center">
@@ -586,7 +776,16 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
                         </ul>
                       </div>
 
-                      <div className="flex justify-end">
+                      <div className="flex justify-between">
+                        <button
+                          onClick={mapFileToTemplate}
+                          disabled={!uploadFile}
+                          className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:from-orange-700 hover:to-orange-800 transition-all disabled:opacity-50"
+                        >
+                          <FileText className="w-5 h-5" />
+                          Map to Organization Template
+                        </button>
+                        
                         <button
                           onClick={submitFileQuote}
                           disabled={isSubmitting || !uploadFile}
@@ -606,6 +805,116 @@ export default function VendorSubmissionPortal({ uniqueLink }: VendorSubmissionP
                         </button>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Template Mapping Results */}
+                {showTemplateMapping && templateMappingResult && (
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-semibold text-white">Template Mapping Results</h3>
+                      <button
+                        onClick={() => setShowTemplateMapping(false)}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Compliance Score */}
+                      <div className="bg-gray-700/50 rounded-lg p-4">
+                        <h4 className="font-semibold text-white mb-2">Template Compliance</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl font-bold text-green-400">
+                            {templateMappingResult.template_compliance_score.toFixed(0)}%
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-300">
+                              {templateMappingResult.template_compliance_score >= 80 ? 'Excellent' : 
+                               templateMappingResult.template_compliance_score >= 60 ? 'Good' : 'Needs Review'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {templateMappingResult.requires_manual_review ? 'Manual review required' : 'Auto-approved'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mapping Summary */}
+                      <div className="bg-gray-700/50 rounded-lg p-4">
+                        <h4 className="font-semibold text-white mb-2">Mapping Summary</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-300">Mapped Fields:</span>
+                            <span className="text-green-400">
+                              {Object.keys(templateMappingResult.mapped_fields).length}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-300">Unmapped Fields:</span>
+                            <span className="text-orange-400">
+                              {templateMappingResult.unmapped_fields.length}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-300">Confidence:</span>
+                            <span className="text-blue-400">
+                              {Object.values(templateMappingResult.confidence_scores).length > 0 ? 
+                                (Object.values(templateMappingResult.confidence_scores).reduce((a, b) => a + b, 0) / 
+                                 Object.values(templateMappingResult.confidence_scores).length * 100).toFixed(0) + '%' : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mapped Fields Preview */}
+                    {Object.keys(templateMappingResult.mapped_fields).length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="font-semibold text-white mb-3">Mapped Data Preview</h4>
+                        <div className="bg-gray-700/30 rounded-lg p-4 max-h-60 overflow-y-auto">
+                          <pre className="text-sm text-gray-300 whitespace-pre-wrap">
+                            {JSON.stringify(templateMappingResult.mapped_fields, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mapping Notes */}
+                    {templateMappingResult.mapping_notes.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-semibold text-white mb-2">Mapping Notes</h4>
+                        <ul className="space-y-1">
+                          {templateMappingResult.mapping_notes.map((note, index) => (
+                            <li key={index} className="text-sm text-gray-300 flex items-start gap-2">
+                              <span className="text-blue-400 mt-1">•</span>
+                              {note}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Unmapped Fields */}
+                    {templateMappingResult.unmapped_fields.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-semibold text-orange-400 mb-2">Fields Requiring Manual Input</h4>
+                        <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
+                          <p className="text-sm text-gray-300 mb-2">
+                            The following fields could not be automatically mapped from your file:
+                          </p>
+                          <ul className="space-y-1">
+                            {templateMappingResult.unmapped_fields.map((field, index) => (
+                              <li key={index} className="text-sm text-orange-300 flex items-start gap-2">
+                                <span className="text-orange-400 mt-1">•</span>
+                                {field}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
