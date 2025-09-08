@@ -57,6 +57,7 @@ interface DashboardData {
   total_vendors: number;
   emails_sent: number;
   submissions_received: number;
+  submitted_quotes: number;
   pending: number;
   participation_rate: number;
   participations: Participation[];
