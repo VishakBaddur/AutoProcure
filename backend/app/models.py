@@ -14,6 +14,12 @@ class QuoteTerms(BaseModel):
     payment: str
     warranty: str
 
+class MathCorrection(BaseModel):
+    item: str
+    original_total: float
+    corrected_total: float
+    error_percentage: float
+
 class VendorQuote(BaseModel):
     vendorName: str
     items: List[QuoteItem]
@@ -21,6 +27,7 @@ class VendorQuote(BaseModel):
     reliability_score: Optional[float] = None  # Vendor reliability rating
     delivery_rating: Optional[str] = None  # Excellent/Good/Fair/Poor
     quality_rating: Optional[str] = None  # Based on past performance
+    major_corrections: Optional[List[MathCorrection]] = None  # Major math corrections made
 
 class VendorRecommendation(BaseModel):
     vendor_name: str

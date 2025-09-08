@@ -1130,7 +1130,12 @@ export default function LandingPage() {
                   }
                 }) || [];
               
-              const allIssues = [...obfuscationIssues, ...mathIssues];
+              // Count major corrections
+              const majorCorrections = quotes
+                ?.filter((quote: any) => quote.major_corrections && quote.major_corrections.length > 0)
+                ?.flatMap((quote: any) => quote.major_corrections) || [];
+              
+              const allIssues = [...obfuscationIssues, ...mathIssues, ...majorCorrections];
               console.log('DEBUG: Filtered issues count:', allIssues.length);
             
             // Show either issues or clean status
@@ -1156,7 +1161,11 @@ export default function LandingPage() {
                   mathIssue.item_index !== undefined && quote.items?.[mathIssue.item_index]
                 );
               });
-              return { vendor: quote.vendorName, issueCount: vendorIssues.length };
+              
+              // Add major corrections count for this vendor
+              const vendorCorrections = quote.major_corrections ? quote.major_corrections.length : 0;
+              
+              return { vendor: quote.vendorName, issueCount: vendorIssues.length + vendorCorrections };
             }).filter((v: any) => v.issueCount > 0);
             
             return (
@@ -1223,6 +1232,26 @@ export default function LandingPage() {
                       console.warn('Error processing obfuscation result:', error, result);
                       return null;
                     }
+                  })}
+                  
+                  {/* Major Math Corrections */}
+                  {quotes.map((quote: any, quoteIndex: number) => {
+                    if (!quote.major_corrections || quote.major_corrections.length === 0) return null;
+                    
+                    return quote.major_corrections.map((correction: any, correctionIndex: number) => (
+                      <div key={`correction-${quoteIndex}-${correctionIndex}`} className="flex items-start gap-2">
+                        <span className="text-orange-400 mt-1">🔧</span>
+                        <div>
+                          <strong className="text-orange-300">{quote.vendorName}</strong>: 
+                          <span className="text-gray-300"> Major math correction made</span>
+                          <div className="ml-4 mt-1 text-xs text-gray-400">
+                            <div>- Item: {correction.item}</div>
+                            <div>- Original: ${correction.original_total.toFixed(2)} → Corrected: ${correction.corrected_total.toFixed(2)}</div>
+                            <div>- Error: {correction.error_percentage.toFixed(1)}% discrepancy</div>
+                          </div>
+                        </div>
+                      </div>
+                    ));
                   })}
                   
                   {/* Math Validation Issues */}

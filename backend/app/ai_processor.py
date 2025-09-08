@@ -205,6 +205,14 @@ JSON Response:"""
                     "analysis_note": "No pricing information could be extracted. Please ensure this is a vendor quote with itemized pricing."
                 })
             
+            # Collect major corrections from items
+            major_corrections = []
+            for item in items:
+                if "correction_info" in item:
+                    major_corrections.append(item["correction_info"])
+                    # Remove correction_info from the item to keep it clean
+                    del item["correction_info"]
+            
             # Extract terms
             terms = self._extract_terms(quote_text)
             
@@ -214,6 +222,10 @@ JSON Response:"""
                 "items": items,
                 "terms": terms
             }
+            
+            # Add major corrections if any
+            if major_corrections:
+                result["major_corrections"] = major_corrections
             
             return json.dumps(result, indent=2)
             
@@ -853,16 +865,26 @@ JSON Response:"""
             discrepancy = abs(total_price - expected_total)
             percentage_error = (discrepancy / expected_total) * 100 if expected_total > 0 else 0
             
-            # If there's a significant discrepancy (>5%), correct the total
-            if percentage_error > 5:
-                print(f"Correcting total for {description}: expected ${expected_total}, found ${total_price} (error: {percentage_error:.1f}%)")
+            # Track major corrections (>20% error) for reporting
+            correction_info = None
+            if percentage_error > 20:
+                correction_info = {
+                    "item": description,
+                    "original_total": total_price,
+                    "corrected_total": expected_total,
+                    "error_percentage": percentage_error
+                }
+                print(f"MAJOR CORRECTION: {description}: ${total_price} → ${expected_total} ({percentage_error:.1f}% error)")
+                total_price = expected_total
+            elif percentage_error > 5:
+                print(f"Minor correction: {description}: ${total_price} → ${expected_total} ({percentage_error:.1f}% error)")
                 total_price = expected_total
             
             # Final validation
             if not self._validate_item_values(quantity, unit_price, description):
                 return None
             
-            return {
+            result = {
                 "sku": f"ITEM-{hash(description) % 1000:03d}",
                 "description": description,
                 "quantity": quantity,
@@ -870,6 +892,12 @@ JSON Response:"""
                 "deliveryTime": "7-10 days",
                 "total": total_price
             }
+            
+            # Include correction info if there was a major correction
+            if correction_info:
+                result["correction_info"] = correction_info
+            
+            return result
             
         except Exception as e:
             print(f"Error validating item {description}: {e}")
@@ -947,10 +975,25 @@ JSON Response:"""
                 warranty=terms_data.get("warranty", "TBD")
             )
             
+            # Convert major corrections if any
+            major_corrections = None
+            if "major_corrections" in quote_data:
+                from .models import MathCorrection
+                major_corrections = [
+                    MathCorrection(
+                        item=correction["item"],
+                        original_total=correction["original_total"],
+                        corrected_total=correction["corrected_total"],
+                        error_percentage=correction["error_percentage"]
+                    )
+                    for correction in quote_data["major_corrections"]
+                ]
+            
             return VendorQuote(
                 vendorName=vendor_name,
                 items=items,
-                terms=terms
+                terms=terms,
+                major_corrections=major_corrections
             )
             
         except Exception as e:
