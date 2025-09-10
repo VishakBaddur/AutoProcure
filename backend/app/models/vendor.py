@@ -1,10 +1,10 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, EmailStr
 import uuid
+from pydantic import BaseModel
+from typing import Optional
 
 Base = declarative_base()
 
@@ -14,8 +14,8 @@ class Vendor(Base):
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
-    company = Column(String, nullable=False)
-    email = Column(String, nullable=False, index=True)
+    company = Column(String, nullable=True)
+    email = Column(String, nullable=False, unique=True, index=True)
     phone = Column(String, nullable=True)
     address = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -65,15 +65,15 @@ class RFQParticipation(Base):
 # Pydantic models for API
 class VendorCreate(BaseModel):
     name: str
-    company: str
-    email: EmailStr
+    company: Optional[str] = None
+    email: str
     phone: Optional[str] = None
     address: Optional[str] = None
 
 class VendorResponse(BaseModel):
     vendor_id: str
     name: str
-    company: str
+    company: Optional[str] = None
     email: str
     phone: Optional[str] = None
     address: Optional[str] = None
@@ -112,11 +112,7 @@ class RFQParticipationResponse(BaseModel):
     email_sent_at: Optional[datetime] = None
     status: str
     submitted_at: Optional[datetime] = None
-    vendor: VendorResponse
+    created_at: datetime
     
     class Config:
         from_attributes = True
-
-class VendorListUpload(BaseModel):
-    vendors: List[VendorCreate]
-    rfq_id: str
