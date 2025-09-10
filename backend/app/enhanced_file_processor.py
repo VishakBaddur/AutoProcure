@@ -10,7 +10,14 @@ import pytesseract
 import fitz  # PyMuPDF
 import tabula
 import numpy as np
-import cv2
+
+# Optional import for image processing
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    print("⚠️  OpenCV not available - image processing features disabled")
 
 class EnhancedFileProcessor:
     """Comprehensive file processor that handles any format including scanned documents"""
@@ -212,6 +219,12 @@ class EnhancedFileProcessor:
     def _preprocess_image_for_ocr(self, img: Image.Image) -> Image.Image:
         """Preprocess image for better OCR results"""
         try:
+            if not CV2_AVAILABLE:
+                # If OpenCV is not available, just convert to grayscale
+                if img.mode != 'L':
+                    img = img.convert('L')
+                return img
+            
             # Convert to numpy array
             img_array = np.array(img)
             
@@ -342,6 +355,8 @@ class EnhancedFileProcessor:
             img = self._preprocess_image_for_ocr(img)
             
             # Extract text using OCR
+            if not CV2_AVAILABLE:
+                print("⚠️  Using basic OCR without image preprocessing")
             text = pytesseract.image_to_string(img, config='--psm 6')
             
             return {
