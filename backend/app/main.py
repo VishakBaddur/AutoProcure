@@ -37,7 +37,11 @@ app = FastAPI(title="AutoProcure API", version="1.0.0")
 # Create database tables on startup
 @app.on_event("startup")
 async def startup_event():
-    create_tables()
+    try:
+        create_tables()
+    except Exception as e:
+        print(f"⚠️  Database initialization failed: {e}")
+        print("⚠️  App will continue with limited functionality")
 
 # CORS middleware for frontend integration
 app.add_middleware(
