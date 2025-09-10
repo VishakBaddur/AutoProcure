@@ -186,6 +186,14 @@ class VendorService:
         self.db.commit()
         return True
     
+    def get_rfq_by_id(self, rfq_id: str) -> Optional[RFQ]:
+        """Get RFQ by ID"""
+        try:
+            return self.db.query(RFQ).filter(RFQ.rfq_id == rfq_id).first()
+        except Exception as e:
+            print(f"Error getting RFQ by ID: {str(e)}")
+            return None
+    
     def get_rfq_dashboard_data(self, rfq_id: str) -> Dict[str, Any]:
         """Get dashboard data for an RFQ"""
         participations = self.get_rfq_participations(rfq_id)

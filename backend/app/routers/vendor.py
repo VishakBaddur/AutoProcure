@@ -5,7 +5,8 @@ from datetime import datetime
 import logging
 import io
 
-from ..database import get_db, Database
+from ..database_sqlalchemy import get_sqlalchemy_db
+from sqlalchemy.orm import Session
 from ..template_service import template_service, OrganizationTemplate, TemplateMappingResult
 from ..models.vendor import VendorCreate, RFQCreate, VendorResponse, RFQResponse, RFQParticipationResponse
 from ..services.vendor_service import VendorService
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def create_rfq(
     rfq_data: RFQCreate,
     created_by: str = Form(...),
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Create a new RFQ"""
     try:
@@ -35,7 +36,7 @@ async def create_rfq(
 async def upload_vendor_list(
     rfq_id: str = Form(...),
     file: UploadFile = File(...),
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Upload vendor list and create participations"""
     try:
@@ -65,7 +66,7 @@ async def upload_vendor_list(
 async def send_rfq_emails(
     rfq_id: str,
     base_url: str = "http://localhost:3000",
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Send RFQ emails to all vendors"""
     try:
@@ -79,9 +80,7 @@ async def send_rfq_emails(
             raise HTTPException(status_code=404, detail="No vendors found for this RFQ")
         
         # Get RFQ details
-        rfq = db.query(vendor_service.db.query(VendorService).first().__class__.__bases__[0].__subclasses__()[0]).filter(
-            vendor_service.db.query(VendorService).first().__class__.__bases__[0].__subclasses__()[0].rfq_id == rfq_id
-        ).first()
+        rfq = vendor_service.get_rfq_by_id(rfq_id)
         
         if not rfq:
             raise HTTPException(status_code=404, detail="RFQ not found")
@@ -139,7 +138,7 @@ async def send_rfq_emails(
 @router.get("/rfq/{rfq_id}/dashboard")
 async def get_rfq_dashboard(
     rfq_id: str,
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Get dashboard data for an RFQ"""
     try:
@@ -153,7 +152,7 @@ async def get_rfq_dashboard(
 @router.get("/rfq/{rfq_id}/participations", response_model=List[RFQParticipationResponse])
 async def get_rfq_participations(
     rfq_id: str,
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Get all participations for an RFQ"""
     try:
@@ -167,7 +166,7 @@ async def get_rfq_participations(
 @router.get("/vendor-portal/{unique_link}")
 async def get_vendor_portal_info(
     unique_link: str,
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Get vendor portal information for submission"""
     try:
@@ -206,7 +205,7 @@ async def get_vendor_portal_info(
 async def submit_vendor_quote(
     unique_link: str,
     submission_data: Dict[str, Any],
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Submit vendor quote"""
     try:
@@ -264,7 +263,7 @@ async def submit_vendor_quote(
 @router.post("/rfq/{rfq_id}/analyze-quotes")
 async def analyze_rfq_quotes(
     rfq_id: str,
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Analyze all submitted quotes for an RFQ using AI comparison"""
     try:
@@ -346,7 +345,7 @@ async def analyze_rfq_quotes(
 @router.post("/rfq/{rfq_id}/export/pdf")
 async def export_rfq_analysis_pdf(
     rfq_id: str,
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Export RFQ analysis results to PDF"""
     try:
@@ -438,7 +437,7 @@ async def export_rfq_analysis_pdf(
 @router.post("/rfq/{rfq_id}/export/excel")
 async def export_rfq_analysis_excel(
     rfq_id: str,
-    db: Database = Depends(get_db)
+    db: Session = Depends(get_sqlalchemy_db)
 ):
     """Export RFQ analysis results to Excel"""
     try:
@@ -566,18 +565,18 @@ async def map_vendor_quote_to_template(
         raise HTTPException(status_code=500, detail=f"Failed to map quote: {str(e)}")
 
 @router.post("/rfq/{rfq_id}/export-report")
-async def export_comparison_report(rfq_id: str, db: Session = Depends(get_db)):
+async def export_comparison_report(rfq_id: str, db: Database = Depends(get_db)):
     """Export vendor comparison report as PDF"""
     try:
         vendor_service = VendorService(db)
         
         # Get RFQ details
-        rfq = await vendor_service.get_rfq_by_id(rfq_id)
+        rfq = vendor_service.get_rfq_by_id(rfq_id)
         if not rfq:
             raise HTTPException(status_code=404, detail="RFQ not found")
         
         # Get all participations with submissions
-        participations = await vendor_service.get_rfq_participations(rfq_id)
+        participations = vendor_service.get_rfq_participations(rfq_id)
         submitted_participations = [p for p in participations if p.status == "submitted"]
         
         if not submitted_participations:
