@@ -565,7 +565,7 @@ async def map_vendor_quote_to_template(
         raise HTTPException(status_code=500, detail=f"Failed to map quote: {str(e)}")
 
 @router.post("/rfq/{rfq_id}/export-report")
-async def export_comparison_report(rfq_id: str, db: Database = Depends(get_db)):
+async def export_comparison_report(rfq_id: str, db: Session = Depends(get_sqlalchemy_db)):
     """Export vendor comparison report as PDF"""
     try:
         vendor_service = VendorService(db)
