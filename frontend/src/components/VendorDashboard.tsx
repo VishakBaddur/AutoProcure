@@ -530,6 +530,34 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
                               Sent: {new Date(participation.email_sent_at!).toLocaleDateString()}
                             </div>
                           )}
+                          {/* Unique submission link actions */}
+                          <div className="hidden md:flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const shareUrl = `${window.location.origin}/vendor-portal/${participation.unique_link}`;
+                                  await navigator.clipboard.writeText(shareUrl);
+                                  alert('Submission link copied to clipboard');
+                                } catch {
+                                  alert('Could not copy link');
+                                }
+                              }}
+                              className="text-xs px-3 py-1 rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/40"
+                              title="Copy unique submission link"
+                            >
+                              Copy Link
+                            </button>
+                            <button
+                              onClick={() => {
+                                const shareUrl = `${window.location.origin}/vendor-portal/${participation.unique_link}`;
+                                window.open(shareUrl, '_blank');
+                              }}
+                              className="text-xs px-3 py-1 rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/40"
+                              title="Open vendor submission link"
+                            >
+                              Open
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
