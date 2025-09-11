@@ -44,8 +44,12 @@ async def upload_vendor_list(
         if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Only CSV and Excel files are supported")
         
-        # Read file content
+        # Read file content (limit size to prevent abuse)
         file_content = await file.read()
+        if len(file_content) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+        if len(file_content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File too large. Max 5MB")
         
         # Process vendor list
         vendor_service = VendorService(db)

@@ -165,10 +165,15 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
       formData.append('rfq_id', selectedRfq.rfq_id);
       formData.append('file', uploadFile);
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
       const response = await fetch(`${API_BASE_URL}/api/vendor/upload-vendor-list`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
+      clearTimeout(timeout);
 
       if (response.ok) {
         const result = await response.json();
@@ -179,11 +184,14 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
           loadDashboardData(selectedRfq.rfq_id);
         }
       } else {
-        throw new Error('Failed to upload vendor list');
+        const err = await response.json().catch(() => ({} as any));
+        const msg = err?.detail || `Failed to upload vendor list (HTTP ${response.status})`;
+        throw new Error(msg);
       }
     } catch (error) {
       console.error('Error uploading vendor list:', error);
-      alert('Failed to upload vendor list');
+      const message = error instanceof Error ? error.message : 'Failed to upload vendor list';
+      alert(message);
     } finally {
       setIsLoading(false);
     }

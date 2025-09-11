@@ -57,16 +57,43 @@ class VendorService:
                 df = pd.read_excel(io.BytesIO(file_content))
             else:
                 raise ValueError("Unsupported file format. Please upload CSV or Excel file.")
-            
+
+            # Normalize headers: case-insensitive, trim, common aliases
+            original_columns = list(df.columns)
+            normalized = {}
+            for col in original_columns:
+                key = str(col).strip().lower().replace('-', ' ').replace('_', ' ')
+                key = ' '.join(key.split())  # collapse spaces
+                if key in ['name', 'vendor', 'vendor name', 'contact', 'contact name']:
+                    normalized[col] = 'name'
+                elif key in ['company', 'company name', 'organisation', 'organization']:
+                    normalized[col] = 'company'
+                elif key in ['email', 'email address', 'e-mail']:
+                    normalized[col] = 'email'
+                elif key in ['phone', 'phone number', 'mobile']:
+                    normalized[col] = 'phone'
+                elif key in ['address', 'location']:
+                    normalized[col] = 'address'
+                else:
+                    # Keep untouched for any additional columns
+                    normalized[col] = str(col)
+
+            df = df.rename(columns=normalized)
+
             # Validate required columns
             required_columns = ['name', 'company', 'email']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
-                raise ValueError(f"Missing required columns: {missing_columns}")
-            
+                # Provide helpful message including what we saw
+                raise ValueError(
+                    f"Missing required columns: {missing_columns}. Found columns: {list(df.columns)}. "
+                    "Required: name, company, email (case-insensitive)."
+                )
+
             # Clean and validate data
             df = df.dropna(subset=required_columns)
-            df['email'] = df['email'].str.strip().str.lower()
+            if 'email' in df.columns:
+                df['email'] = df['email'].astype(str).str.strip().str.lower()
             
             # Remove duplicates based on email
             df = df.drop_duplicates(subset=['email'])
