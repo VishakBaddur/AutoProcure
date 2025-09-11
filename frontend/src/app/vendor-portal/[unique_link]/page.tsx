@@ -1,10 +1,6 @@
 import VendorSubmissionPortal from '../../../components/VendorSubmissionPortal';
 
-interface PageProps {
-  params: { unique_link: string };
-}
-
-export default function VendorPortalPage({ params }: PageProps) {
+export default function VendorPortalPage({ params }: { params: { unique_link: string } }) {
   const uniqueLink = params.unique_link;
   return <VendorSubmissionPortal uniqueLink={uniqueLink} />;
 }
