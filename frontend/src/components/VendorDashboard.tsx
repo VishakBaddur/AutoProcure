@@ -222,6 +222,10 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
   const analyzeRfqQuotes = async (rfqId: string) => {
     setIsLoading(true);
     try {
+      if (dashboardData && dashboardData.submissions_received < 2) {
+        alert('Demo: Analyze Quotes will be enabled after at least 2 submissions.');
+        return;
+      }
       const response = await fetch(`${API_BASE_URL}/api/vendor/rfq/${rfqId}/analyze-quotes`, {
         method: 'POST'
       });
@@ -369,7 +373,7 @@ export default function VendorDashboard({ onBack }: VendorDashboardProps) {
             </motion.button>
           )}
 
-          {selectedRfq && dashboardData && dashboardData.submitted_quotes > 0 && (
+          {selectedRfq && (
             <div className="flex gap-3">
               <motion.button
                 onClick={() => analyzeRfqQuotes(selectedRfq.rfq_id)}
