@@ -157,8 +157,8 @@ def parse_csv_to_quote(file_content: bytes, filename: str) -> VendorQuote:
                 total_str = row[5] if row[5] else "0"
                 delivery_time = row[6] if len(row) > 6 and row[6] else "N/A"
                 
-                # Set vendor name from first row
-                if row_num == 1:
+                # Set vendor name from first data row (skip header)
+                if row_num == 1 and vendor and vendor not in ["Vendor", "Company", "Supplier"]:
                     vendor_name = vendor
                 
                 # Convert strings to numbers, handling multiple currency symbols

@@ -854,7 +854,8 @@ JSON Response:"""
             if quantity <= 0 or quantity > 100000:
                 return None
             
-            if unit_price <= 0 or unit_price > 100000:
+            # Allow negative unit prices for discounts, but cap at reasonable range
+            if unit_price < -100000 or unit_price > 100000:
                 return None
             
             if len(description) < 2:
@@ -863,7 +864,8 @@ JSON Response:"""
             # Check for mathematical consistency
             expected_total = quantity * unit_price
             discrepancy = abs(total_price - expected_total)
-            percentage_error = (discrepancy / expected_total) * 100 if expected_total > 0 else 0
+            # Handle negative values for percentage calculation
+            percentage_error = (discrepancy / abs(expected_total)) * 100 if expected_total != 0 else 0
             
             # Track major corrections (>20% error) for reporting
             correction_info = None
