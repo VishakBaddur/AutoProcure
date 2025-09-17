@@ -148,14 +148,26 @@ def parse_csv_to_quote(file_content: bytes, filename: str) -> VendorQuote:
         items = []
         
         for row_num, row in enumerate(csv_reader, 1):
-            if len(row) >= 6:  # Ensure we have enough columns
+            if len(row) >= 5:  # Minimum required columns
                 vendor = row[0] if row[0] else "Unknown"
-                description = row[1] if row[1] else f"Item {row_num}"
-                sku = row[2] if row[2] else f"SKU-{row_num}"
-                quantity_str = row[3] if row[3] else "1"
-                unit_price_str = row[4] if row[4] else "0"
-                total_str = row[5] if row[5] else "0"
-                delivery_time = row[6] if len(row) > 6 and row[6] else "N/A"
+                
+                # Handle different CSV layouts
+                if len(row) == 6:  # Format: Vendor,Item,Quantity,Unit Price,Total,Delivery
+                    description = row[1] if row[1] else f"Item {row_num}"
+                    sku = f"SKU-{row_num}"  # Generate SKU
+                    quantity_str = row[2] if row[2] else "1"
+                    unit_price_str = row[3] if row[3] else "0"
+                    total_str = row[4] if row[4] else "0"
+                    delivery_time = row[5] if row[5] else "N/A"
+                elif len(row) >= 7:  # Format: Vendor,Description,SKU,Quantity,Unit Price,Total,Delivery
+                    description = row[1] if row[1] else f"Item {row_num}"
+                    sku = row[2] if row[2] else f"SKU-{row_num}"
+                    quantity_str = row[3] if row[3] else "1"
+                    unit_price_str = row[4] if row[4] else "0"
+                    total_str = row[5] if row[5] else "0"
+                    delivery_time = row[6] if len(row) > 6 and row[6] else "N/A"
+                else:
+                    continue  # Skip rows with insufficient data
                 
                 # Set vendor name from first data row (skip header)
                 if row_num == 1 and vendor and vendor not in ["Vendor", "Company", "Supplier"]:

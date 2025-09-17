@@ -161,9 +161,16 @@ JSON Response:"""
             total_cost = sum(item.total for item in quote.items)
             vendor_costs[quote.vendorName] = total_cost
         
-        # Find the cheapest vendor
-        cheapest_vendor = min(vendor_costs, key=vendor_costs.get)
-        cheapest_cost = vendor_costs[cheapest_vendor]
+        # Filter out vendors with $0.00 total (extraction failure)
+        valid_vendor_costs = {k: v for k, v in vendor_costs.items() if v > 0}
+        
+        if not valid_vendor_costs:
+            # All vendors have $0.00 - return fallback
+            return self._get_fallback_analysis(quotes)
+        
+        # Find the cheapest vendor among valid vendors
+        cheapest_vendor = min(valid_vendor_costs, key=valid_vendor_costs.get)
+        cheapest_cost = valid_vendor_costs[cheapest_vendor]
         
         # Generate recommendations for each vendor
         for quote in quotes:
