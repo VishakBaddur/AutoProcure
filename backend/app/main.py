@@ -186,6 +186,17 @@ def parse_csv_to_quote(file_content: bytes, filename: str) -> VendorQuote:
                     unit_price = 0
                     total = 0
                 
+                # Apply math validation and correction (same logic as AI processor)
+                if quantity > 0 and unit_price != 0:
+                    expected_total = quantity * unit_price
+                    discrepancy = abs(total - expected_total)
+                    percentage_error = (discrepancy / abs(expected_total)) * 100 if expected_total != 0 else 0
+                    
+                    # Apply correction if error is significant
+                    if percentage_error > 5:  # Correct if >5% error
+                        print(f"CSV MATH CORRECTION: {description}: ${total} → ${expected_total} ({percentage_error:.1f}% error)")
+                        total = expected_total
+                
                 # Create QuoteItem
                 item = QuoteItem(
                     sku=sku,
