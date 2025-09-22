@@ -384,28 +384,12 @@ export default function LandingPage() {
   }, []);
 
   // Load Calendly widget script once
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!document.querySelector('#calendly-widget')) {
-      const script = document.createElement('script');
-      script.id = 'calendly-widget';
-      script.async = true;
-      script.src = 'https://assets.calendly.com/assets/external/widget.js';
-      document.body.appendChild(script);
-    }
-  }, []);
-
   const openCalendly = () => {
     try {
-      // @ts-ignore - Calendly injected globally by widget.js
-      if (window.Calendly && typeof window.Calendly.initPopupWidget === 'function') {
-        // @ts-ignore
-        window.Calendly.initPopupWidget({ url: calendlyUrl });
-      } else {
-        alert('Loading scheduler... please try again in a second.');
-      }
+      window.open(calendlyUrl, '_blank', 'noopener,noreferrer');
     } catch (e) {
-      console.error('Calendly popup error', e);
+      console.error('Open Calendly error', e);
+      window.location.href = calendlyUrl;
     }
   };
 
