@@ -1584,7 +1584,7 @@ export default function LandingPage() {
     }
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-hidden">
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 relative overflow-x-hidden">
       {/* Anime.js Animation Components */}
       {showAnimations && (
         <>
