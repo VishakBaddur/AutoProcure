@@ -542,28 +542,40 @@ export default function LandingPage() {
 
   const features = [
     {
-      icon: Brain,
-      title: "AI-Powered Analysis",
-      description: "Advanced machine learning algorithms analyze every quote for hidden opportunities and risks.",
+      icon: Users,
+      title: "Vendor Outreach Automation",
+      description: "Upload vendor list → unique links + automated, personalized RFQ emails in one click.",
       gradient: "from-gray-600 to-gray-800"
     },
     {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "Process complex quotes in seconds, not hours. Get insights instantly when you need them most.",
+      icon: FileText,
+      title: "Template Matching",
+      description: "Vendors upload any file (PDF, Excel, CSV, scans). We auto-fit everything to your standard template.",
       gradient: "from-gray-700 to-gray-900"
     },
     {
-      icon: Shield,
-      title: "Enterprise Security",
-      description: "Bank-level encryption and compliance. Your data is protected with the highest security standards.",
+      icon: Calculator,
+      title: "Math & Data Validation",
+      description: "Auto-correct totals, discounts, currency and unit mismatches before they reach your team.",
       gradient: "from-gray-800 to-gray-950"
     },
     {
-      icon: TrendingUp,
-      title: "Smart Insights",
-      description: "Predictive analytics help you make better procurement decisions and maximize your savings.",
+      icon: Shield,
+      title: "Compliance Rules",
+      description: "Managers define rules. The system flags violations instantly for audit-ready decisions.",
+      gradient: "from-gray-700 to-gray-900"
+    },
+    {
+      icon: Target,
+      title: "Smart Recommendations",
+      description: "Winner badge plus split-order optimization with clear savings rationale.",
       gradient: "from-gray-600 to-gray-800"
+    },
+    {
+      icon: Download,
+      title: "Audit-Ready Exports",
+      description: "Board-ready PDF & Excel with executive summary, issues, and decision rationale in one click.",
+      gradient: "from-gray-700 to-gray-900"
     }
   ];
 
@@ -2058,3 +2070,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
