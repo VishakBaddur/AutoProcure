@@ -310,6 +310,7 @@ const uploadMultipleFiles = async (files: File[]) => {
 export default function LandingPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const calendlyUrl = 'https://calendly.com/vishakbaddurs/30min';
   
   // Animation components
   const [showAnimations, setShowAnimations] = useState(true);
@@ -381,6 +382,32 @@ export default function LandingPage() {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  // Load Calendly widget script once
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!document.querySelector('#calendly-widget')) {
+      const script = document.createElement('script');
+      script.id = 'calendly-widget';
+      script.async = true;
+      script.src = 'https://assets.calendly.com/assets/external/widget.js';
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  const openCalendly = () => {
+    try {
+      // @ts-ignore - Calendly injected globally by widget.js
+      if (window.Calendly && typeof window.Calendly.initPopupWidget === 'function') {
+        // @ts-ignore
+        window.Calendly.initPopupWidget({ url: calendlyUrl });
+      } else {
+        alert('Loading scheduler... please try again in a second.');
+      }
+    } catch (e) {
+      console.error('Calendly popup error', e);
+    }
+  };
 
   const handleFileUpload = async (files: File[]) => {
     setIsUploading(true);
@@ -1721,10 +1748,11 @@ export default function LandingPage() {
                <motion.button
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
-                 className="border border-gray-600 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-gray-800/50 transition-all"
+                onClick={openCalendly}
+                className="border border-gray-600 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-gray-800/50 transition-all"
                >
-                 <Play className="w-5 h-5 inline mr-2" />
-                 Watch Demo
+                <Play className="w-5 h-5 inline mr-2" />
+                Schedule Demo
                </motion.button>
              </div>
           </motion.div>
@@ -2000,9 +2028,10 @@ export default function LandingPage() {
                  <motion.button
                    whileHover={{ scale: 1.05 }}
                    whileTap={{ scale: 0.95 }}
-                   className="border border-gray-600 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-gray-800/50 transition-all"
+                  onClick={openCalendly}
+                  className="border border-gray-600 text-white px-8 py-4 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-gray-800/50 transition-all"
                  >
-                   Schedule Demo
+                  Schedule Demo
                  </motion.button>
               </div>
             </EnterpriseCard>
