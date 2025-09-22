@@ -563,6 +563,64 @@ export default function LandingPage() {
     }
   ];
 
+  // Pricing plans (2025 market-aligned)
+  const pricingPlans = [
+    {
+      name: 'Free',
+      price: '$0',
+      period: 'forever',
+      highlight: false,
+      features: [
+        '2 RFQs/month',
+        'Up to 5 vendors per RFQ',
+        'AI parsing & math validation',
+        'PDF/CSV export',
+      ],
+      cta: 'Get Started',
+    },
+    {
+      name: 'Starter',
+      price: '$99',
+      period: 'per month',
+      highlight: true,
+      features: [
+        '10 RFQs/month',
+        'Up to 15 vendors per RFQ',
+        'Template matching + compliance rules',
+        'PDF/Excel exports',
+        'Email support',
+      ],
+      cta: 'Start Trial',
+    },
+    {
+      name: 'Pro',
+      price: '$299',
+      period: 'per month',
+      highlight: false,
+      features: [
+        '50 RFQs/month',
+        'Unlimited vendors per RFQ',
+        'Split-order optimization',
+        'Advanced reporting & audit pack',
+        'Priority support',
+      ],
+      cta: 'Start Trial',
+    },
+    {
+      name: 'Enterprise',
+      price: 'Custom',
+      period: '',
+      highlight: false,
+      features: [
+        'SSO & role-based access',
+        'Custom workflows & SLAs',
+        'On-prem or VPC options',
+        'Dedicated CSM & onboarding',
+      ],
+      cta: 'Schedule Demo',
+    },
+  ];
+
   const renderResults = () => {
     if (!currentResult) return null;
 
@@ -1780,6 +1838,68 @@ export default function LandingPage() {
               </EnterpriseCard>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="relative z-20 px-6 py-20">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-gray-300 to-gray-100 bg-clip-text text-transparent">
+                Pricing
+              </span>
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Simple, transparent plans aligned with 2025 market standards. Start free, scale as you grow.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {pricingPlans.map((plan, index) => (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.05 }}
+              >
+                <EnterpriseCard className={`${plan.highlight ? 'border-green-500/40' : ''}`}>
+                  <div className="flex flex-col h-full">
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                      <div className="mt-2 text-3xl font-extrabold text-white">
+                        {plan.price}
+                        <span className="text-sm text-gray-400 font-semibold ml-2">{plan.period}</span>
+                      </div>
+                    </div>
+                    <ul className="space-y-2 text-gray-300 flex-1">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-400 mt-1" />
+                          <span className="text-sm">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-6">
+                      <motion.button
+                        onClick={() => plan.name === 'Enterprise' ? openCalendly() : scrollToUpload()}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`w-full px-6 py-3 rounded-xl font-semibold border ${plan.highlight ? 'bg-gradient-to-r from-green-600 to-green-700 border-green-500 text-white' : 'border-gray-600 text-white hover:bg-gray-800/50'}`}
+                      >
+                        {plan.cta}
+                      </motion.button>
+                    </div>
+                  </div>
+                </EnterpriseCard>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
