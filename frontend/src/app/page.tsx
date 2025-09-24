@@ -481,10 +481,12 @@ export default function LandingPage() {
     
     let content = '';
     let filename = 'autoprocure-analysis';
+    let mimeType: string = 'text/plain';
     
     if (format === 'json') {
       content = JSON.stringify(currentResult, null, 2);
       filename += '.json';
+      mimeType = 'application/json';
     } else if (format === 'csv') {
       // Create CSV content
       content = 'Vendor,Item,Quantity,Unit Price,Total\n';
@@ -494,9 +496,34 @@ export default function LandingPage() {
         });
       });
       filename += '.csv';
+      mimeType = 'text/csv';
+    } else if (format === 'pdf') {
+      // Lightweight HTML fallback for PDF export
+      // Users can open this file and print to PDF; RFQ dashboard has server-side PDF exports
+      const totalCost = quotes.reduce((sum: number, q: any) => sum + (q.items?.reduce((s: number, it: any) => s + it.total, 0) || 0), 0);
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>AutoProcure Report</title>
+      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px}h1{margin:0 0 8px}h2{margin:24px 0 8px}
+      table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #ddd;padding:8px;font-size:12px}
+      th{background:#f4f4f4;text-align:left}</style></head><body>
+      <h1>AutoProcure Analysis Report</h1>
+      <div>Date: ${new Date().toLocaleString()}</div>
+      <div>Total Vendors: ${quotes.length}</div>
+      <div>Total Cost: ${totalCost.toLocaleString()}</div>
+      <h2>Vendors</h2>
+      ${quotes.map((q: any) => `
+        <h3>${q.vendorName || 'Vendor'}</h3>
+        <table><thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody>
+        ${(q.items||[]).map((it: any) => `<tr><td>${it.description}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.total}</td></tr>`).join('')}
+        </tbody></table>
+      `).join('')}
+      </body></html>`;
+      content = html;
+      filename += '.html';
+      mimeType = 'text/html';
     }
     
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
