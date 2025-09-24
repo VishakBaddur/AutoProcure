@@ -518,6 +518,24 @@ export default function LandingPage() {
         </tbody></table>
       `).join('')}
       </body></html>`;
+      // Open print window for reliable Save-as-PDF across browsers
+      try {
+        const reportWindow = window.open('', '_blank');
+        if (reportWindow && reportWindow.document) {
+          reportWindow.document.open();
+          reportWindow.document.write(html);
+          reportWindow.document.close();
+          reportWindow.focus();
+          // Give the browser a moment to render before print
+          setTimeout(() => {
+            try { reportWindow.print(); } catch {}
+          }, 300);
+          return; // Avoid downloading empty file
+        }
+      } catch (e) {
+        console.warn('Print window failed, falling back to HTML download', e);
+      }
+      // Fallback: download HTML file if popup blocked
       content = html;
       filename += '.html';
       mimeType = 'text/html';
